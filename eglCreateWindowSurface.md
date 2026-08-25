@@ -773,3 +773,4 @@ surface_b -> gbm_surface_b
 - Başarılı çağrı `EGLSurface`, başarısız çağrı `EGL_NO_SURFACE` döndürür.
 - GBM, EGL 1.0 core standardının parçası değildir; native platform entegrasyonunu sağlar.
 - DRM/KMS fiziksel display ve scan-out işlemlerini yönetir; EGL/OpenGL ES rendering tarafını yönetir.
+- 
