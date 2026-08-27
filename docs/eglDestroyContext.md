@@ -9,7 +9,7 @@ EGLBoolean eglDestroyContext(EGLDisplay dpy,
 
 EGL 1.0'a göre context o anda herhangi bir thread üzerinde current değilse kaynakları mümkün olan en kısa sürede serbest bırakılır. Context current durumdaysa `eglDestroyContext` çağrısından sonra hemen ortadan kalkmaz; current kaldığı sürece kullanılmaya devam eder ve ilgili thread üzerinde sonraki geçerli `eglMakeCurrent` çağrısında gerçek anlamda yok edilir.
 
-## Mental Model
+## Kavramsal Akış
 
 Normal context yaşam döngüsü:
 
@@ -60,10 +60,10 @@ gerçek kaynak serbest bırakma
 
 `dpy`, yok edilecek context'in ait olduğu `EGLDisplay` nesnesidir.
 
-| Değer | Sonuç |
-|---|---|
-| Context'in oluşturulduğu geçerli `EGLDisplay` | Normal kullanım. |
-| GBM tabanlı initialized `EGLDisplay` | Bu projede kullanılacak display türüdür. |
+| Değer                                            | Sonuç                                       |
+| ------------------------------------------------- | -------------------------------------------- |
+| Context'in oluşturulduğu geçerli`EGLDisplay` | Normal kullanım.                            |
+| GBM tabanlı initialized`EGLDisplay`            | Bu projede kullanılacak display türüdür. |
 
 Bu projede:
 
@@ -201,127 +201,20 @@ if (!eglDestroyContext(egl_display, egl_context)) {
 }
 ```
 
-## Kullanım Senaryoları
-
-### 1. Normal context kapatma
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-
-EGLBoolean result =
-    eglDestroyContext(
-        egl_display,
-        egl_context
-    );
-```
-
-Sonuç:
-
-```text
-Context current değildir.
-Context yok edilmek üzere işaretlenir.
-Kaynaklar serbest bırakılabilir.
-```
-
-### 2. Context current iken destroy
-
-```c
-eglMakeCurrent(
-    egl_display,
-    egl_surface,
-    egl_surface,
-    egl_context
-);
-
-eglDestroyContext(
-    egl_display,
-    egl_context
-);
-```
-
-Bu noktada:
-
-```text
-egl_context hâlâ current
-```
-
-olduğu için EGL 1.0 context kaynaklarını hemen bırakmaz.
-
-Sonraki:
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-```
-
-çağrısından sonra context artık current değildir ve yok edilmesi tamamlanabilir.
-
-### 3. Direct-to-display proje kapanışı
-
-Bu projede EGL tarafının güvenli kapanış sırası:
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-
-eglDestroyContext(
-    egl_display,
-    egl_context
-);
-
-eglDestroySurface(
-    egl_display,
-    egl_surface
-);
-
-eglTerminate(
-    egl_display
-);
-```
-
-GBM ve DRM/KMS kaynakları bundan ayrı olarak daha sonra temizlenir.
-
-Örneğin:
-
-```text
-EGL context
-   ↓
-EGL surface
-   ↓
-EGL terminate
-   ↓
-GBM surface/device
-   ↓
-DRM resources/fd
-```
-
 ## Parametre Matrisi
 
-| `dpy` | `ctx` | Sonuç |
-|---|---|---|
-| Geçerli EGLDisplay | Current olmayan geçerli EGLContext | Context yok edilir. |
-| Geçerli EGLDisplay | Current olan geçerli EGLContext | Silinmek üzere işaretlenir; current kaldığı sürece kaynakları tutulur. |
-| Geçerli EGLDisplay | Geçersiz context | Çağrı başarısız olur. |
+| `dpy`             | `ctx`                             | Sonuç                                                                        |
+| ------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| Geçerli EGLDisplay | Current olmayan geçerli EGLContext | Context yok edilir.                                                           |
+| Geçerli EGLDisplay | Current olan geçerli EGLContext    | Silinmek üzere işaretlenir; current kaldığı sürece kaynakları tutulur. |
+| Geçerli EGLDisplay | Geçersiz context                   | Çağrı başarısız olur.                                                   |
 
 ## EGL 1.0 Hata Kodu
 
 EGL 1.0 bu fonksiyon için doğrudan şu hatayı tanımlar:
 
-| Hata | Ne zaman |
-|---|---|
+| Hata                | Ne zaman                                             |
+| ------------------- | ---------------------------------------------------- |
 | `EGL_BAD_CONTEXT` | `ctx` geçerli bir EGL rendering context değilse. |
 
 Fonksiyon başarısız olduğunda:
@@ -368,7 +261,7 @@ gbm_device_destroy(gbm);
 
 gibi ilgili GBM fonksiyonları kullanılır.
 
-## Minimal Doğru Kullanım
+## Temel Kullanım
 
 ```c
 /* Context'i thread'den ayır */
@@ -388,57 +281,7 @@ if (!eglDestroyContext(
 }
 ```
 
-## Parametre Değiştirme Örnekleri
-
-### 1. Current olmayan context
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-
-eglDestroyContext(
-    egl_display,
-    egl_context
-);
-```
-
-```text
-ctx = geçerli ve current olmayan context
-Sonuç = kaynaklar serbest bırakılabilir
-```
-
-### 2. Current context
-
-```c
-eglDestroyContext(
-    egl_display,
-    egl_context
-);
-```
-
-```text
-ctx = current context
-Sonuç = context silinmek üzere işaretlenir,
-        fakat current kaldığı sürece yaşamaya devam eder
-```
-
-### 3. Farklı context'ler
-
-```c
-eglDestroyContext(egl_display, context_a);
-eglDestroyContext(egl_display, context_b);
-```
-
-```text
-context_a ve context_b bağımsız EGLContext nesneleridir.
-Hangi handle verilirse o context yok edilmek üzere işaretlenir.
-```
-
-## EGL 1.0 İçin Pratik Özet
+## Bölüm Özeti
 
 - `eglDestroyContext`, bir `EGLContext` nesnesini yok edilmek üzere işaretler.
 - `dpy`, context'in ait olduğu `EGLDisplay` nesnesidir.
@@ -448,3 +291,4 @@ Hangi handle verilirse o context yok edilmek üzere işaretlenir.
 - `ctx` current ise hemen yok edilmez.
 - Current context'in gerçek silinmesi, thread üzerinde sonraki geçerli `eglMakeCurrent` çağrısıyla tamamlanır.
 - Bu fonksiyon GBM veya DRM/KMS kaynaklarını yok etmez.
+

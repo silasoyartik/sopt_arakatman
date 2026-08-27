@@ -8,7 +8,7 @@ EGLint eglGetError(void);
 
 Fonksiyon parametre almaz. Bunun nedeni hata bilgisinin belirli bir `EGLDisplay`, `EGLContext` veya `EGLSurface` handle'ı üzerinden değil, çağıran thread'in EGL hata durumu üzerinden okunmasıdır.
 
-## Mental Model
+## Kavramsal Akış
 
 ```text
 Thread
@@ -74,22 +74,22 @@ EGLint
 
 EGL 1.0'da dönebilecek hata kodları:
 
-| Değer | Anlamı |
-|---|---|
-| `EGL_SUCCESS` | Son ilgili EGL işlemi başarılıdır / hata yoktur. |
-| `EGL_NOT_INITIALIZED` | EGL ilgili display için initialize edilmemiştir veya initialize edilememiştir. |
-| `EGL_BAD_ACCESS` | İstenen kaynağa erişilememiştir. |
-| `EGL_BAD_ALLOC` | İstenen işlem için gerekli kaynak ayrılamamıştır. |
-| `EGL_BAD_ATTRIBUTE` | Tanınmayan attribute veya attribute değeri kullanılmıştır. |
-| `EGL_BAD_CONTEXT` | Bir `EGLContext` argümanı geçerli context değildir. |
-| `EGL_BAD_CONFIG` | Bir `EGLConfig` argümanı geçerli config değildir. |
-| `EGL_BAD_CURRENT_SURFACE` | Thread'in current surface'i artık geçerli değildir. |
-| `EGL_BAD_DISPLAY` | Bir `EGLDisplay` argümanı geçerli değildir veya display initialize edilmemiştir. |
-| `EGL_BAD_SURFACE` | Bir `EGLSurface` argümanı geçerli surface değildir. |
-| `EGL_BAD_MATCH` | Fonksiyon argümanları birbirleriyle uyumlu değildir. |
-| `EGL_BAD_PARAMETER` | Bir veya daha fazla argüman değeri geçersizdir. |
-| `EGL_BAD_NATIVE_PIXMAP` | Native pixmap geçerli değildir. |
-| `EGL_BAD_NATIVE_WINDOW` | Native window geçerli değildir. |
+| Değer                      | Anlamı                                                                                |
+| --------------------------- | -------------------------------------------------------------------------------------- |
+| `EGL_SUCCESS`             | Son ilgili EGL işlemi başarılıdır / hata yoktur.                                  |
+| `EGL_NOT_INITIALIZED`     | EGL ilgili display için initialize edilmemiştir veya initialize edilememiştir.      |
+| `EGL_BAD_ACCESS`          | İstenen kaynağa erişilememiştir.                                                   |
+| `EGL_BAD_ALLOC`           | İstenen işlem için gerekli kaynak ayrılamamıştır.                               |
+| `EGL_BAD_ATTRIBUTE`       | Tanınmayan attribute veya attribute değeri kullanılmıştır.                       |
+| `EGL_BAD_CONTEXT`         | Bir`EGLContext` argümanı geçerli context değildir.                               |
+| `EGL_BAD_CONFIG`          | Bir`EGLConfig` argümanı geçerli config değildir.                                 |
+| `EGL_BAD_CURRENT_SURFACE` | Thread'in current surface'i artık geçerli değildir.                                 |
+| `EGL_BAD_DISPLAY`         | Bir`EGLDisplay` argümanı geçerli değildir veya display initialize edilmemiştir. |
+| `EGL_BAD_SURFACE`         | Bir`EGLSurface` argümanı geçerli surface değildir.                               |
+| `EGL_BAD_MATCH`           | Fonksiyon argümanları birbirleriyle uyumlu değildir.                                |
+| `EGL_BAD_PARAMETER`       | Bir veya daha fazla argüman değeri geçersizdir.                                     |
+| `EGL_BAD_NATIVE_PIXMAP`   | Native pixmap geçerli değildir.                                                      |
+| `EGL_BAD_NATIVE_WINDOW`   | Native window geçerli değildir.                                                      |
 
 ## `EGL_SUCCESS`
 
@@ -258,7 +258,7 @@ if (surface == EGL_NO_SURFACE) {
 
 Thread üzerinde current olan surface artık geçerli olmadığında bazı EGL işlemlerinde görülebilir.
 
-Mental model:
+Kavramsal akış:
 
 ```text
 Thread
@@ -392,7 +392,7 @@ if (surface == EGL_NO_SURFACE) {
 }
 ```
 
-## Bu Projede Kullanım Modeli
+## Projedeki Kullanım Modeli
 
 En faydalı kullanım, her EGL fonksiyonunun dönüş değerini önce kontrol edip sadece başarısız durumda `eglGetError()` çağırmaktır.
 
@@ -526,7 +526,7 @@ printf(
 );
 ```
 
-## GBM / DRM Hatalarından Farkı
+## GBM ve DRM Hatalarıyla Ayrımı
 
 Bu proje üç ayrı API ailesi içerir:
 
@@ -565,7 +565,7 @@ DRM/Linux çağrısı        -> return value / errno
 GBM çağrısı              -> GBM fonksiyonunun dönüş kontrolü
 ```
 
-## Minimal Doğru Kullanım
+## Temel Kullanım
 
 ```c
 if (!eglMakeCurrent(
@@ -583,63 +583,7 @@ if (!eglMakeCurrent(
 }
 ```
 
-## Farklı Dönüş Değerlerine Göre Örnekler
-
-### 1. `EGL_SUCCESS`
-
-```c
-EGLint err = eglGetError();
-
-if (err == EGL_SUCCESS) {
-    printf("EGL error yok\n");
-}
-```
-
-### 2. `EGL_BAD_CONTEXT`
-
-```c
-if (!eglDestroyContext(dpy, invalid_ctx)) {
-    EGLint err = eglGetError();
-
-    if (err == EGL_BAD_CONTEXT) {
-        printf("Context gecersiz\n");
-    }
-}
-```
-
-### 3. `EGL_BAD_SURFACE`
-
-```c
-if (!eglDestroySurface(dpy, invalid_surface)) {
-    EGLint err = eglGetError();
-
-    if (err == EGL_BAD_SURFACE) {
-        printf("Surface gecersiz\n");
-    }
-}
-```
-
-### 4. `EGL_BAD_NATIVE_WINDOW`
-
-```c
-EGLSurface surface =
-    eglCreateWindowSurface(
-        dpy,
-        config,
-        native_window,
-        NULL
-    );
-
-if (surface == EGL_NO_SURFACE) {
-    EGLint err = eglGetError();
-
-    if (err == EGL_BAD_NATIVE_WINDOW) {
-        printf("Native window gecersiz\n");
-    }
-}
-```
-
-## EGL 1.0 İçin Pratik Özet
+## Bölüm Özeti
 
 - `eglGetError()` parametre almaz.
 - Dönüş tipi `EGLint`'tir.
@@ -649,3 +593,4 @@ if (surface == EGL_NO_SURFACE) {
 - En doğru kullanım, önce ilgili EGL fonksiyonunun başarısız olup olmadığını kontrol etmek ve ardından `eglGetError()` çağırmaktır.
 - GBM veya DRM/KMS hataları `eglGetError()` ile alınmaz.
 - Direct-to-display projede EGL, GBM ve DRM/KMS hata kontrolleri birbirinden ayrı tutulmalıdır.
+

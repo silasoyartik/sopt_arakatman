@@ -9,7 +9,7 @@ EGLBoolean eglDestroySurface(EGLDisplay dpy,
 
 Fonksiyon window, pbuffer veya pixmap türündeki EGL surface'lerde kullanılabilir. Bu projede ise `eglCreateWindowSurface` ile GBM native surface üzerinde oluşturulan window `EGLSurface` yok edilir.
 
-## Mental Model
+## Kavramsal Akış
 
 Bu projedeki surface zinciri:
 
@@ -172,126 +172,20 @@ if (!eglDestroySurface(
 }
 ```
 
-## Kullanım Senaryoları
-
-### 1. Normal surface kapatma
-
-Önce current bağ kaldırılır:
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-```
-
-Ardından:
-
-```c
-eglDestroySurface(
-    egl_display,
-    egl_surface
-);
-```
-
-Bu proje için en temiz kullanım şeklidir.
-
-### 2. Current surface üzerinde destroy
-
-Örneğin:
-
-```c
-eglMakeCurrent(
-    egl_display,
-    egl_surface,
-    egl_surface,
-    egl_context
-);
-
-eglDestroySurface(
-    egl_display,
-    egl_surface
-);
-```
-
-EGL 1.0'a göre surface current kaldığı için kaynakları hemen bırakılmaz.
-
-Daha sonra:
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-```
-
-çağrısıyla current bağı değiştiğinde surface'in yok edilmesi tamamlanabilir.
-
-### 3. GBM native surface ile ilişki
-
-Bu projede:
-
-```text
-gbm_surface
-     |
-     v
-EGLSurface
-```
-
-ilişkisi vardır.
-
-Ancak:
-
-```c
-eglDestroySurface(
-    egl_display,
-    egl_surface
-);
-```
-
-yalnızca EGL katmanını temizler.
-
-Native GBM surface ayrıca:
-
-```c
-gbm_surface_destroy(gbm_surface);
-```
-
-ile temizlenmelidir.
-
-Doğru mantık:
-
-```text
-EGLSurface'i bırak
-      |
-      v
-eglDestroySurface()
-      |
-      v
-GBM surface artık EGL tarafından kullanılmıyor
-      |
-      v
-gbm_surface_destroy()
-```
-
 ## Parametre Matrisi
 
-| `dpy` | `surface` | Sonuç |
-|---|---|---|
-| Geçerli EGLDisplay | Current olmayan geçerli EGLSurface | Surface yok edilir. |
-| Geçerli EGLDisplay | Current geçerli EGLSurface | Silinmek üzere işaretlenir; current kaldığı sürece kaynakları tutulur. |
-| Geçerli EGLDisplay | Geçersiz EGLSurface | Başarısız. |
+| `dpy`             | `surface`                         | Sonuç                                                                        |
+| ------------------- | ----------------------------------- | ----------------------------------------------------------------------------- |
+| Geçerli EGLDisplay | Current olmayan geçerli EGLSurface | Surface yok edilir.                                                           |
+| Geçerli EGLDisplay | Current geçerli EGLSurface         | Silinmek üzere işaretlenir; current kaldığı sürece kaynakları tutulur. |
+| Geçerli EGLDisplay | Geçersiz EGLSurface                | Başarısız.                                                                 |
 
 ## EGL 1.0 Hata Kodu
 
 EGL 1.0 bu fonksiyon için doğrudan:
 
-| Hata | Ne zaman |
-|---|---|
+| Hata                | Ne zaman                                                 |
+| ------------------- | -------------------------------------------------------- |
 | `EGL_BAD_SURFACE` | `surface` geçerli bir EGL rendering surface değilse. |
 
 tanımlar.
@@ -312,7 +206,7 @@ EGLint err = eglGetError();
 
 ile hata alınabilir.
 
-## Direct-to-Display Projede Kapanış
+## Doğrudan Görüntüleme Projesinde Kapanış
 
 Örneğin:
 
@@ -375,7 +269,7 @@ nesnelerinin aynı şey olmadığı unutulmamalıdır.
 
 `eglDestroySurface()` yalnızca ilkini yönetir.
 
-## Minimal Doğru Kullanım
+## Temel Kullanım
 
 ```c
 /* EGL surface/context bağını kaldır */
@@ -398,57 +292,7 @@ if (!eglDestroySurface(
 gbm_surface_destroy(gbm_surface);
 ```
 
-## Parametre Değiştirme Örnekleri
-
-### 1. Current olmayan surface
-
-```c
-eglDestroySurface(
-    egl_display,
-    egl_surface
-);
-```
-
-```text
-surface = geçerli ve current olmayan EGLSurface
-Sonuç = surface kaynakları serbest bırakılabilir
-```
-
-### 2. Current surface
-
-```c
-eglDestroySurface(
-    egl_display,
-    egl_surface
-);
-```
-
-```text
-surface = current EGLSurface
-Sonuç = hemen tamamen yok edilmez;
-        silinmek üzere işaretlenir
-```
-
-### 3. Farklı surface'ler
-
-```c
-eglDestroySurface(
-    egl_display,
-    surface_a
-);
-
-eglDestroySurface(
-    egl_display,
-    surface_b
-);
-```
-
-```text
-surface_a ve surface_b bağımsız EGLSurface handle'larıdır.
-Hangi handle verilirse o surface yok edilmek üzere işaretlenir.
-```
-
-## EGL 1.0 İçin Pratik Özet
+## Bölüm Özeti
 
 - `eglDestroySurface`, herhangi bir türdeki `EGLSurface` nesnesini yok edilmek üzere işaretler.
 - `dpy`, surface'in ait olduğu `EGLDisplay` nesnesidir.
@@ -458,3 +302,4 @@ Hangi handle verilirse o surface yok edilmek üzere işaretlenir.
 - Current surface hemen silinmez; current kaldığı sürece kaynakları tutulur.
 - Bu projede `eglDestroySurface` GBM surface'i yok etmez.
 - `struct gbm_surface *` ayrıca GBM API ile temizlenmelidir.
+
