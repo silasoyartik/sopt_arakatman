@@ -22,7 +22,7 @@ EGLSurface egl_surface = eglCreateWindowSurface(
 );
 ```
 
-## Mental Model
+## Kavramsal Akış
 
 EGL 1.0 açısından `eglCreateWindowSurface` native window'u kendisi oluşturmaz. Daha önce native platform tarafından oluşturulmuş window nesnesinin üzerine bir EGL rendering surface oluşturur.
 
@@ -80,10 +80,10 @@ EGLSurface            -> EGL rendering surface
 
 `dpy`, surface'in oluşturulacağı initialized `EGLDisplay` nesnesidir.
 
-| Değer | Sonuç |
-|---|---|
-| Geçerli ve initialized `EGLDisplay` | Diğer parametreler de uygunsa surface oluşturulabilir. |
-| GBM tabanlı initialized `EGLDisplay` | Bu projede kullanılacak normal durumdur. |
+| Değer                                 | Sonuç                                                   |
+| -------------------------------------- | -------------------------------------------------------- |
+| Geçerli ve initialized`EGLDisplay`  | Diğer parametreler de uygunsa surface oluşturulabilir. |
+| GBM tabanlı initialized`EGLDisplay` | Bu projede kullanılacak normal durumdur.                |
 
 Bu projede display zinciri kabaca:
 
@@ -466,14 +466,14 @@ EGLSurface surface_b = eglCreateWindowSurface(
 
 ## Parametre Matrisi
 
-| `dpy` | `config` | `win` | `attrib_list` | Sonuç |
-|---|---|---|---|---|
-| GBM tabanlı initialized display | Uyumlu window config | `gbm_surface` | `NULL` | Bu proje için temel kullanım |
-| GBM tabanlı initialized display | Uyumlu window config | `gbm_surface` | `{ EGL_NONE }` | Geçerli boş attribute listesi |
-| Aynı display | Config A | Aynı GBM surface | `NULL` | Config A kullanılır |
-| Aynı display | Config B | Aynı GBM surface | `NULL` | Config B kullanılır |
-| Aynı display | Aynı config | GBM surface A | `NULL` | Surface A'ya bağlanır |
-| Aynı display | Aynı config | GBM surface B | `NULL` | Surface B'ye bağlanır |
+| `dpy`                          | `config`           | `win`           | `attrib_list`  | Sonuç                          |
+| -------------------------------- | -------------------- | ----------------- | ---------------- | ------------------------------- |
+| GBM tabanlı initialized display | Uyumlu window config | `gbm_surface`   | `NULL`         | Bu proje için temel kullanım  |
+| GBM tabanlı initialized display | Uyumlu window config | `gbm_surface`   | `{ EGL_NONE }` | Geçerli boş attribute listesi |
+| Aynı display                    | Config A             | Aynı GBM surface | `NULL`         | Config A kullanılır           |
+| Aynı display                    | Config B             | Aynı GBM surface | `NULL`         | Config B kullanılır           |
+| Aynı display                    | Aynı config         | GBM surface A     | `NULL`         | Surface A'ya bağlanır         |
+| Aynı display                    | Aynı config         | GBM surface B     | `NULL`         | Surface B'ye bağlanır         |
 
 ## Dönüş Değeri
 
@@ -511,12 +511,12 @@ if (egl_surface == EGL_NO_SURFACE) {
 
 ## EGL 1.0 Hata Kodları
 
-| Hata | Ne zaman |
-|---|---|
-| `EGL_BAD_MATCH` | `win` özellikleri `config` ile uyuşmuyorsa veya config window rendering desteklemiyorsa. |
-| `EGL_BAD_CONFIG` | `config` geçerli bir `EGLConfig` değilse. |
-| `EGL_BAD_NATIVE_WINDOW` | `win` geçerli bir native window handle değilse. |
-| `EGL_BAD_ALLOC` | Aynı native window ile daha önce bir EGLConfig ilişkilendirilmişse veya yeni surface için gerekli kaynaklar ayrılamıyorsa. |
+| Hata                      | Ne zaman                                                                                                                          |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| `EGL_BAD_MATCH`         | `win` özellikleri `config` ile uyuşmuyorsa veya config window rendering desteklemiyorsa.                                    |
+| `EGL_BAD_CONFIG`        | `config` geçerli bir `EGLConfig` değilse.                                                                                   |
+| `EGL_BAD_NATIVE_WINDOW` | `win` geçerli bir native window handle değilse.                                                                               |
+| `EGL_BAD_ALLOC`         | Aynı native window ile daha önce bir EGLConfig ilişkilendirilmişse veya yeni surface için gerekli kaynaklar ayrılamıyorsa. |
 
 Window surface için config'in:
 
@@ -571,7 +571,7 @@ DRM/KMS display yönetimi
 
 `eglCreateWindowSurface` fonksiyonunun kendisi değiştirilmez. Değişen nokta, native platformun X11/Wayland yerine GBM olmasıdır.
 
-## Direct-to-Display Akışındaki Yeri
+## Doğrudan Görüntüleme Akışındaki Yeri
 
 ```text
 open("/dev/dri/card*")
@@ -630,7 +630,7 @@ Physical Monitor
 
 `eglCreateWindowSurface` monitör connector'ını, CRTC'yi veya display mode'u seçmez. Bu görevler DRM/KMS tarafındadır.
 
-## Minimal Doğru Kullanım
+## Temel Kullanım
 
 ```c
 /* DRM device daha önce açılmıştır. */
@@ -672,95 +672,7 @@ if (egl_surface == EGL_NO_SURFACE) {
 }
 ```
 
-## Parametre Değiştirme Örnekleri
-
-### 1. `attrib_list = NULL`
-
-```c
-EGLSurface surface = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
-```
-
-```text
-Değiştirilen parametre: attrib_list
-Değer: NULL
-Sonuç: Ek EGL 1.0 window surface attribute'u belirtilmez.
-```
-
-### 2. `attrib_list = { EGL_NONE }`
-
-```c
-const EGLint attrs[] = {
-    EGL_NONE
-};
-
-EGLSurface surface = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)gbm_surface,
-    attrs
-);
-```
-
-```text
-Değiştirilen parametre: attrib_list
-Değer: boş attribute listesi
-Sonuç: Ek EGL 1.0 window surface attribute'u belirtilmez.
-```
-
-### 3. `config` değiştirme
-
-```c
-EGLSurface surface_a = eglCreateWindowSurface(
-    egl_display,
-    config_a,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
-
-EGLSurface surface_b = eglCreateWindowSurface(
-    egl_display,
-    config_b,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
-```
-
-```text
-Değiştirilen parametre: config
-Sonuç: Surface için kullanılan EGL framebuffer/pixel yapılandırması değişir.
-```
-
-### 4. `win` değiştirme
-
-```c
-EGLSurface surface_a = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)gbm_surface_a,
-    NULL
-);
-
-EGLSurface surface_b = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)gbm_surface_b,
-    NULL
-);
-```
-
-```text
-Değiştirilen parametre: win
-
-surface_a -> gbm_surface_a
-surface_b -> gbm_surface_b
-```
-
-## EGL 1.0 İçin Pratik Özet
+## Bölüm Özeti
 
 - `eglCreateWindowSurface`, mevcut bir native window üzerinde on-screen `EGLSurface` oluşturur.
 - Fonksiyon native window'u kendisi oluşturmaz.
@@ -774,3 +686,4 @@ surface_b -> gbm_surface_b
 - GBM, EGL 1.0 core standardının parçası değildir; native platform entegrasyonunu sağlar.
 - DRM/KMS fiziksel display ve scan-out işlemlerini yönetir; EGL/OpenGL ES rendering tarafını yönetir.
 - 
+

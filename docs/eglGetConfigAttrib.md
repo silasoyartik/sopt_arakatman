@@ -19,7 +19,7 @@ EGLBoolean eglGetConfigAttrib(EGLDisplay dpy,
 - transparency bilgileri
 - pbuffer limitleri
 
-## Mental Model
+## Kavramsal Akış
 
 ```text
 EGLDisplay
@@ -210,7 +210,7 @@ GBM kullanırken modern Mesa EGL tarafında `EGL_NATIVE_VISUAL_ID` pratikte GBM/
 
 `EGL_TRANSPARENT_TYPE == EGL_TRANSPARENT_RGB` ise bu değerler component bit derinliği aralığında integer framebuffer değerleridir.
 
-## EGL 1.0 Attribute Değilse
+## EGL 1.0 Dışındaki Attribute'lar
 
 Şu token'lar modern EGL header'larında olabilir ama EGL 1.0 Table 3.1 config attribute listesinde yoktur:
 
@@ -258,7 +258,7 @@ Bu tablo `eglGetConfigAttrib` çağrısının kendisini değil, sorguladığın 
 | `dpy` initialize edilmemiş                                                     | `EGL_FALSE`, tipik hata `EGL_NOT_INITIALIZED`.       |
 | `value == NULL`                                                                 | EGL 1.0 geçerli kullanım olarak tanımlamaz; kullanma. |
 
-## Minimal Kullanım
+## Temel Kullanım
 
 ```c
 EGLint red = 0;
@@ -272,7 +272,7 @@ eglGetConfigAttrib(dpy, config, EGL_BLUE_SIZE, &blue);
 eglGetConfigAttrib(dpy, config, EGL_SURFACE_TYPE, &surface_type);
 ```
 
-## Bütün EGL 1.0 Attribute'larını Sorgulama
+## Tüm EGL 1.0 Attribute'larını Sorgulama
 
 ```c
 static const EGLint attrs[] = {
@@ -311,10 +311,11 @@ for (unsigned i = 0; i < sizeof(attrs) / sizeof(attrs[0]); ++i) {
 }
 ```
 
-## Pratik Özet
+## Bölüm Özeti
 
 - Bu fonksiyon config seçmez; seçilmiş config'i okur.
 - Her çağrı tek attribute döndürür.
 - EGL 1.0 uyumu için sadece Table 3.1 attribute'larını kullan.
 - `EGL_SURFACE_TYPE` bitmask'tir; exact integer gibi yorumlama.
 - `EGL_NATIVE_VISUAL_ID` platform-dependent olduğundan anlamı X11, GBM veya başka native platforma göre değişebilir.
+

@@ -14,7 +14,7 @@ Kısa özet:
 - Pixmap surface için: etkisi yoktur.
 - EGL 1.0'da `surface`, çağıran thread'in current context'ine bağlı olmalıdır.
 
-## Mental Model
+## Kavramsal Akış
 
 Window surface için:
 
@@ -65,25 +65,25 @@ monitor
 
 ### `dpy`
 
-| Değer | Sonuç |
-|---|---|
-| Geçerli ve initialized `EGLDisplay` | Diğer parametreler de geçerliyse çağrı çalışır. |
-| `EGL_NO_DISPLAY` | Başarısız. Genel EGL hata modeliyle `EGL_BAD_DISPLAY` beklenir. |
-| Geçersiz display handle | Başarısız. Genel EGL hata modeliyle `EGL_BAD_DISPLAY` beklenir. |
-| Initialize edilmemiş display | Başarısız. Genel EGL hata modeliyle `EGL_NOT_INITIALIZED` beklenir. |
+| Değer                                | Sonuç                                                                  |
+| ------------------------------------- | ----------------------------------------------------------------------- |
+| Geçerli ve initialized`EGLDisplay` | Diğer parametreler de geçerliyse çağrı çalışır.                |
+| `EGL_NO_DISPLAY`                    | Başarısız. Genel EGL hata modeliyle`EGL_BAD_DISPLAY` beklenir.     |
+| Geçersiz display handle              | Başarısız. Genel EGL hata modeliyle`EGL_BAD_DISPLAY` beklenir.     |
+| Initialize edilmemiş display         | Başarısız. Genel EGL hata modeliyle`EGL_NOT_INITIALIZED` beklenir. |
 
 ### `surface`
 
-| Değer | Sonuç |
-|---|---|
-| Current context'e bağlı geçerli window surface | Color buffer native window'a post edilir. |
-| Current context'e bağlı geçerli pbuffer surface | EGL 1.0'a göre etkisi yoktur. |
-| Current context'e bağlı geçerli pixmap surface | EGL 1.0'a göre etkisi yoktur. |
-| Geçerli ama current context'e bağlı olmayan surface | Başarısız, `EGL_BAD_SURFACE`. |
-| `EGL_NO_SURFACE` | Başarısız, `EGL_BAD_SURFACE`. |
-| Geçersiz surface | Başarısız, `EGL_BAD_SURFACE`. |
-| Yok edilmiş surface | Başarısız, `EGL_BAD_SURFACE` veya tanımsız native durum. |
-| Native window'u geçersiz window surface | Başarısız, `EGL_BAD_NATIVE_WINDOW`. |
+| Değer                                                 | Sonuç                                                         |
+| ------------------------------------------------------ | -------------------------------------------------------------- |
+| Current context'e bağlı geçerli window surface      | Color buffer native window'a post edilir.                      |
+| Current context'e bağlı geçerli pbuffer surface     | EGL 1.0'a göre etkisi yoktur.                                 |
+| Current context'e bağlı geçerli pixmap surface      | EGL 1.0'a göre etkisi yoktur.                                 |
+| Geçerli ama current context'e bağlı olmayan surface | Başarısız,`EGL_BAD_SURFACE`.                              |
+| `EGL_NO_SURFACE`                                     | Başarısız,`EGL_BAD_SURFACE`.                              |
+| Geçersiz surface                                      | Başarısız,`EGL_BAD_SURFACE`.                              |
+| Yok edilmiş surface                                   | Başarısız,`EGL_BAD_SURFACE` veya tanımsız native durum. |
+| Native window'u geçersiz window surface               | Başarısız,`EGL_BAD_NATIVE_WINDOW`.                        |
 
 ## EGL 1.0 Current Surface Şartı
 
@@ -181,19 +181,19 @@ eglCopyBuffers(dpy, surface, native_pixmap);
 
 ## Hata Matrisi
 
-| Durum | Sonuç |
-|---|---|
-| Window surface current ve native window geçerli | `EGL_TRUE`; post yapılır. |
-| Pbuffer surface current | `EGL_TRUE` dönebilir; etkisi yoktur. |
-| Pixmap surface current | `EGL_TRUE` dönebilir; etkisi yoktur. |
-| Surface current değil | `EGL_FALSE`, `EGL_BAD_SURFACE`. |
-| Surface geçersiz | `EGL_FALSE`, `EGL_BAD_SURFACE`. |
-| `surface == EGL_NO_SURFACE` | `EGL_FALSE`, `EGL_BAD_SURFACE`. |
-| Native window artık geçersiz | `EGL_FALSE`, `EGL_BAD_NATIVE_WINDOW`. |
-| `dpy` geçersiz | `EGL_FALSE`, tipik hata `EGL_BAD_DISPLAY`. |
-| `dpy` initialized değil | `EGL_FALSE`, tipik hata `EGL_NOT_INITIALIZED`. |
+| Durum                                            | Sonuç                                             |
+| ------------------------------------------------ | -------------------------------------------------- |
+| Window surface current ve native window geçerli | `EGL_TRUE`; post yapılır.                      |
+| Pbuffer surface current                          | `EGL_TRUE` dönebilir; etkisi yoktur.            |
+| Pixmap surface current                           | `EGL_TRUE` dönebilir; etkisi yoktur.            |
+| Surface current değil                           | `EGL_FALSE`, `EGL_BAD_SURFACE`.                |
+| Surface geçersiz                                | `EGL_FALSE`, `EGL_BAD_SURFACE`.                |
+| `surface == EGL_NO_SURFACE`                    | `EGL_FALSE`, `EGL_BAD_SURFACE`.                |
+| Native window artık geçersiz                   | `EGL_FALSE`, `EGL_BAD_NATIVE_WINDOW`.          |
+| `dpy` geçersiz                                | `EGL_FALSE`, tipik hata `EGL_BAD_DISPLAY`.     |
+| `dpy` initialized değil                       | `EGL_FALSE`, tipik hata `EGL_NOT_INITIALIZED`. |
 
-## Swap Sonrası Color Buffer Neden Tanımsız?
+## Swap Sonrası Color Buffer Durumu
 
 EGL 1.0 spec'i başarılı `eglSwapBuffers` sonrası surface color buffer içeriğinin tanımsız olduğunu söyler.
 
@@ -216,7 +216,7 @@ eglSwapBuffers(dpy, surface);
 
 EGL 1.0 seviyesinde buffer preservation garantisi yoktur.
 
-## Implicit `glFlush`
+## Örtük `glFlush` Davranışı
 
 EGL 1.0 posting semantics:
 
@@ -227,15 +227,15 @@ eglSwapBuffers implicit glFlush yapar.
 
 Bu `glFinish` değildir.
 
-| Fonksiyon | Anlam |
-|---|---|
-| `glFlush` | Komutların GPU'ya gönderilmesini başlatır; tamamlanmasını beklemek zorunda değildir. |
-| `glFinish` | Önceki GL komutlarının tamamlanmasını bekler. |
-| `eglSwapBuffers` | Posting sırasında implicit `glFlush` yapar; swap/post tamamlanması implementation'a bağlıdır. |
+| Fonksiyon          | Anlam                                                                                                |
+| ------------------ | ---------------------------------------------------------------------------------------------------- |
+| `glFlush`        | Komutların GPU'ya gönderilmesini başlatır; tamamlanmasını beklemek zorunda değildir.          |
+| `glFinish`       | Önceki GL komutlarının tamamlanmasını bekler.                                                   |
+| `eglSwapBuffers` | Posting sırasında implicit`glFlush` yapar; swap/post tamamlanması implementation'a bağlıdır. |
 
 EGL 1.0 metni, sonraki OpenGL ES komutlarının hemen verilebileceğini ama posting bitene kadar yürütülmeyebileceğini belirtir. Window surface için bu zamanlama tipik olarak vertical retrace ile ilişkilidir.
 
-## Native Window Resize
+## Native Window Boyut Değişimi
 
 Eğer native window swap öncesinde resize edilmişse, EGL surface native window ile uyumlu hale gelmelidir.
 
@@ -288,14 +288,14 @@ drmModePageFlip(fd, crtc_id, next_fb_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);
 
 Özet:
 
-| Katman | Sorumluluk |
-|---|---|
-| OpenGL ES | Pixel üretir. |
-| EGL | Context/surface bağlar ve swap/post işlemini yapar. |
-| GBM | GPU/display paylaşılabilir buffer nesneleri sağlar. |
-| DRM/KMS | Framebuffer'ı CRTC/connector üzerinden monitöre scanout eder. |
+| Katman    | Sorumluluk                                                       |
+| --------- | ---------------------------------------------------------------- |
+| OpenGL ES | Pixel üretir.                                                   |
+| EGL       | Context/surface bağlar ve swap/post işlemini yapar.            |
+| GBM       | GPU/display paylaşılabilir buffer nesneleri sağlar.           |
+| DRM/KMS   | Framebuffer'ı CRTC/connector üzerinden monitöre scanout eder. |
 
-## Minimal Window Surface Kullanımı
+## Temel Window Surface Kullanımı
 
 ```c
 eglMakeCurrent(dpy, window_surface, window_surface, ctx);
@@ -309,7 +309,7 @@ if (!eglSwapBuffers(dpy, window_surface)) {
 }
 ```
 
-## Minimal Pbuffer Kullanımı
+## Temel Pbuffer Kullanımı
 
 ```c
 eglMakeCurrent(dpy, pbuffer_surface, pbuffer_surface, ctx);
@@ -322,22 +322,7 @@ eglSwapBuffers(dpy, pbuffer_surface); /* EGL 1.0: no effect */
 
 Pbuffer için `eglSwapBuffers` çağrısı öğretici olabilir ama görünür output beklenmemelidir.
 
-## Bilerek Hata Üretme Örnekleri
-
-```c
-/* EGL_BAD_SURFACE: surface yok */
-eglSwapBuffers(dpy, EGL_NO_SURFACE);
-
-/* EGL_BAD_SURFACE: surface current değil */
-eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-eglSwapBuffers(dpy, surface);
-
-/* EGL_BAD_NATIVE_WINDOW: native window yok edilmişse */
-destroy_native_window();
-eglSwapBuffers(dpy, window_surface);
-```
-
-## EGL 1.0 İçin Pratik Özet
+## Bölüm Özeti
 
 - `eglSwapBuffers` window surface için anlamlıdır.
 - Pbuffer ve pixmap surface için etkisi yoktur.
@@ -345,3 +330,4 @@ eglSwapBuffers(dpy, window_surface);
 - Başarılı swap sonrası color buffer içeriğini korunmuş sayma.
 - `eglSwapBuffers` implicit `glFlush` yapar ama `glFinish` değildir.
 - GBM/DRM kullanıyorsan swap sonrası ayrıca BO alma ve KMS scanout gerekir.
+

@@ -18,7 +18,7 @@ En yaygın kullanımda `draw` ve `read` aynı surface'tir:
 eglMakeCurrent(dpy, surface, surface, ctx);
 ```
 
-## Mental Model
+## Kavramsal Akış
 
 EGL 1.0 açısından current context thread-local bir durumdur:
 
@@ -39,12 +39,12 @@ Thread
 
 `dpy`, context ve surface nesnelerinin ait olduğu initialized `EGLDisplay` olmalıdır.
 
-| Değer | Sonuç |
-|---|---|
-| Geçerli ve initialized `EGLDisplay` | Diğer parametreler de geçerliyse çağrı başarılıdır. |
-| `EGL_NO_DISPLAY` | Başarısız. Genel EGL hata modeliyle `EGL_BAD_DISPLAY` beklenir. |
-| Geçersiz display handle | Başarısız. Genel EGL hata modeliyle `EGL_BAD_DISPLAY` beklenir. |
-| Initialize edilmemiş display | Başarısız. Genel EGL hata modeliyle `EGL_NOT_INITIALIZED` beklenir. |
+| Değer                                | Sonuç                                                                  |
+| ------------------------------------- | ----------------------------------------------------------------------- |
+| Geçerli ve initialized`EGLDisplay` | Diğer parametreler de geçerliyse çağrı başarılıdır.            |
+| `EGL_NO_DISPLAY`                    | Başarısız. Genel EGL hata modeliyle`EGL_BAD_DISPLAY` beklenir.     |
+| Geçersiz display handle              | Başarısız. Genel EGL hata modeliyle`EGL_BAD_DISPLAY` beklenir.     |
+| Initialize edilmemiş display         | Başarısız. Genel EGL hata modeliyle`EGL_NOT_INITIALIZED` beklenir. |
 
 Pratik kural:
 
@@ -59,48 +59,48 @@ eglInitialize(dpy, &major, &minor);
 
 `draw`, çizim hedefidir.
 
-| Değer | Sonuç |
-|---|---|
-| `ctx` ile uyumlu geçerli `EGLSurface` | Geçerli. OpenGL ES draw komutları buraya yazar. |
-| `read` ile aynı surface | Geçerli ve normal kullanım. |
-| `read`'den farklı ama uyumlu surface | Geçerli. |
-| `EGL_NO_SURFACE` ve `ctx == EGL_NO_CONTEXT` ve `read == EGL_NO_SURFACE` | Geçerli. Current context release edilir. |
-| `EGL_NO_SURFACE` ve `ctx != EGL_NO_CONTEXT` | Başarısız, `EGL_BAD_MATCH`. |
-| Geçersiz surface | Başarısız, `EGL_BAD_SURFACE`. |
-| Yok edilmiş surface | Başarısız veya sonraki framebuffer davranışı tanımsız. |
-| Native window'u geçersiz window surface | Başarısız, `EGL_BAD_NATIVE_WINDOW`. |
-| `ctx` ile uyumsuz surface | Başarısız, `EGL_BAD_MATCH`. |
-| Başka thread'de başka context'e bağlı surface | Başarısız, `EGL_BAD_ACCESS`. |
+| Değer                                                                        | Sonuç                                                         |
+| ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `ctx` ile uyumlu geçerli `EGLSurface`                                    | Geçerli. OpenGL ES draw komutları buraya yazar.              |
+| `read` ile aynı surface                                                    | Geçerli ve normal kullanım.                                  |
+| `read`'den farklı ama uyumlu surface                                       | Geçerli.                                                      |
+| `EGL_NO_SURFACE` ve `ctx == EGL_NO_CONTEXT` ve `read == EGL_NO_SURFACE` | Geçerli. Current context release edilir.                      |
+| `EGL_NO_SURFACE` ve `ctx != EGL_NO_CONTEXT`                               | Başarısız,`EGL_BAD_MATCH`.                                |
+| Geçersiz surface                                                             | Başarısız,`EGL_BAD_SURFACE`.                              |
+| Yok edilmiş surface                                                          | Başarısız veya sonraki framebuffer davranışı tanımsız. |
+| Native window'u geçersiz window surface                                      | Başarısız,`EGL_BAD_NATIVE_WINDOW`.                        |
+| `ctx` ile uyumsuz surface                                                   | Başarısız,`EGL_BAD_MATCH`.                                |
+| Başka thread'de başka context'e bağlı surface                             | Başarısız,`EGL_BAD_ACCESS`.                               |
 
 ### `read`
 
 `read`, framebuffer okuma kaynağıdır.
 
-| Değer | Sonuç |
-|---|---|
-| `ctx` ile uyumlu geçerli `EGLSurface` | Geçerli. `glReadPixels` buradan okur. |
-| `draw` ile aynı surface | Geçerli ve normal kullanım. |
-| `draw`'dan farklı ama uyumlu surface | Geçerli. |
-| `EGL_NO_SURFACE` ve `ctx == EGL_NO_CONTEXT` ve `draw == EGL_NO_SURFACE` | Geçerli. Current context release edilir. |
-| `EGL_NO_SURFACE` ve `ctx != EGL_NO_CONTEXT` | Başarısız, `EGL_BAD_MATCH`. |
-| Geçersiz surface | Başarısız, `EGL_BAD_SURFACE`. |
-| Yok edilmiş surface | Başarısız veya readback sonucu tanımsız. |
-| Native window'u geçersiz window surface | Başarısız, `EGL_BAD_NATIVE_WINDOW`. |
-| `ctx` ile uyumsuz surface | Başarısız, `EGL_BAD_MATCH`. |
-| Başka thread'de başka context'e bağlı surface | Başarısız, `EGL_BAD_ACCESS`. |
+| Değer                                                                        | Sonuç                                        |
+| ----------------------------------------------------------------------------- | --------------------------------------------- |
+| `ctx` ile uyumlu geçerli `EGLSurface`                                    | Geçerli.`glReadPixels` buradan okur.       |
+| `draw` ile aynı surface                                                    | Geçerli ve normal kullanım.                 |
+| `draw`'dan farklı ama uyumlu surface                                       | Geçerli.                                     |
+| `EGL_NO_SURFACE` ve `ctx == EGL_NO_CONTEXT` ve `draw == EGL_NO_SURFACE` | Geçerli. Current context release edilir.     |
+| `EGL_NO_SURFACE` ve `ctx != EGL_NO_CONTEXT`                               | Başarısız,`EGL_BAD_MATCH`.               |
+| Geçersiz surface                                                             | Başarısız,`EGL_BAD_SURFACE`.             |
+| Yok edilmiş surface                                                          | Başarısız veya readback sonucu tanımsız. |
+| Native window'u geçersiz window surface                                      | Başarısız,`EGL_BAD_NATIVE_WINDOW`.       |
+| `ctx` ile uyumsuz surface                                                   | Başarısız,`EGL_BAD_MATCH`.               |
+| Başka thread'de başka context'e bağlı surface                             | Başarısız,`EGL_BAD_ACCESS`.              |
 
 ### `ctx`
 
 `ctx`, current yapılacak rendering context'tir.
 
-| Değer | Sonuç |
-|---|---|
-| Geçerli `EGLContext` | Çağıran thread'in current context'i olur. |
-| `EGL_NO_CONTEXT`, `draw == EGL_NO_SURFACE`, `read == EGL_NO_SURFACE` | Geçerli. Current context kaldırılır. |
-| `EGL_NO_CONTEXT`, ama `draw` veya `read` gerçek surface | Başarısız, `EGL_BAD_MATCH`. |
-| Geçersiz context | Başarısız, `EGL_BAD_CONTEXT`. |
-| Başka thread'de current olan context | Başarısız, `EGL_BAD_ACCESS`. |
-| Surface'lerle uyumsuz context | Başarısız, `EGL_BAD_MATCH`. |
+| Değer                                                                     | Sonuç                                       |
+| -------------------------------------------------------------------------- | -------------------------------------------- |
+| Geçerli`EGLContext`                                                     | Çağıran thread'in current context'i olur. |
+| `EGL_NO_CONTEXT`, `draw == EGL_NO_SURFACE`, `read == EGL_NO_SURFACE` | Geçerli. Current context kaldırılır.     |
+| `EGL_NO_CONTEXT`, ama `draw` veya `read` gerçek surface             | Başarısız,`EGL_BAD_MATCH`.              |
+| Geçersiz context                                                          | Başarısız,`EGL_BAD_CONTEXT`.            |
+| Başka thread'de current olan context                                      | Başarısız,`EGL_BAD_ACCESS`.             |
+| Surface'lerle uyumsuz context                                              | Başarısız,`EGL_BAD_MATCH`.              |
 
 ## Geçerli Kombinasyonlar
 
@@ -143,34 +143,34 @@ Bu, EGL 1.0'da current context'i release etmenin doğru biçimidir.
 
 ## Geçersiz Kombinasyon Matrisi
 
-| `draw` | `read` | `ctx` | Sonuç |
-|---|---|---|---|
-| surface | surface | context | Geçerli, uyumluysalar. |
-| surface A | surface B | context | Geçerli, ikisi de uyumluysa. |
-| `EGL_NO_SURFACE` | `EGL_NO_SURFACE` | `EGL_NO_CONTEXT` | Geçerli release çağrısı. |
-| surface | surface | `EGL_NO_CONTEXT` | `EGL_BAD_MATCH` |
-| `EGL_NO_SURFACE` | surface | context | `EGL_BAD_MATCH` |
-| surface | `EGL_NO_SURFACE` | context | `EGL_BAD_MATCH` |
-| `EGL_NO_SURFACE` | `EGL_NO_SURFACE` | context | `EGL_BAD_MATCH` |
-| invalid surface | surface | context | `EGL_BAD_SURFACE` |
-| surface | invalid surface | context | `EGL_BAD_SURFACE` |
-| surface | surface | invalid context | `EGL_BAD_CONTEXT` |
-| incompatible surface | surface | context | `EGL_BAD_MATCH` |
-| surface | incompatible surface | context | `EGL_BAD_MATCH` |
+| `draw`             | `read`             | `ctx`            | Sonuç                        |
+| -------------------- | -------------------- | ------------------ | ----------------------------- |
+| surface              | surface              | context            | Geçerli, uyumluysalar.       |
+| surface A            | surface B            | context            | Geçerli, ikisi de uyumluysa. |
+| `EGL_NO_SURFACE`   | `EGL_NO_SURFACE`   | `EGL_NO_CONTEXT` | Geçerli release çağrısı. |
+| surface              | surface              | `EGL_NO_CONTEXT` | `EGL_BAD_MATCH`             |
+| `EGL_NO_SURFACE`   | surface              | context            | `EGL_BAD_MATCH`             |
+| surface              | `EGL_NO_SURFACE`   | context            | `EGL_BAD_MATCH`             |
+| `EGL_NO_SURFACE`   | `EGL_NO_SURFACE`   | context            | `EGL_BAD_MATCH`             |
+| invalid surface      | surface              | context            | `EGL_BAD_SURFACE`           |
+| surface              | invalid surface      | context            | `EGL_BAD_SURFACE`           |
+| surface              | surface              | invalid context    | `EGL_BAD_CONTEXT`           |
+| incompatible surface | surface              | context            | `EGL_BAD_MATCH`             |
+| surface              | incompatible surface | context            | `EGL_BAD_MATCH`             |
 
 ## Hata Kodları
 
-| Hata | Ne zaman |
-|---|---|
-| `EGL_BAD_MATCH` | Surface/context uyumsuzsa; `EGL_NO_CONTEXT`/`EGL_NO_SURFACE` kombinasyonu yanlışsa; draw/read aynı anda belleğe sığamıyorsa. |
-| `EGL_BAD_ACCESS` | `ctx` başka thread'de current ise; `draw` veya `read` başka thread'de bir context'e bağlıysa. |
-| `EGL_BAD_CONTEXT` | `ctx` geçerli EGL context değilse. |
-| `EGL_BAD_SURFACE` | `draw` veya `read` geçerli EGL surface değilse. |
-| `EGL_BAD_NATIVE_WINDOW` | Surface'in altında yatan native window artık geçerli değilse. |
-| `EGL_BAD_CURRENT_SURFACE` | Önceki current context'in flush edilmemiş komutları varsa ve önceki surface artık geçerli değilse. |
-| `EGL_BAD_ALLOC` | Draw/read için gerekli ancillary buffer'lar ayrılamazsa. |
+| Hata                        | Ne zaman                                                                                                                               |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `EGL_BAD_MATCH`           | Surface/context uyumsuzsa;`EGL_NO_CONTEXT`/`EGL_NO_SURFACE` kombinasyonu yanlışsa; draw/read aynı anda belleğe sığamıyorsa. |
+| `EGL_BAD_ACCESS`          | `ctx` başka thread'de current ise; `draw` veya `read` başka thread'de bir context'e bağlıysa.                                |
+| `EGL_BAD_CONTEXT`         | `ctx` geçerli EGL context değilse.                                                                                                 |
+| `EGL_BAD_SURFACE`         | `draw` veya `read` geçerli EGL surface değilse.                                                                                  |
+| `EGL_BAD_NATIVE_WINDOW`   | Surface'in altında yatan native window artık geçerli değilse.                                                                      |
+| `EGL_BAD_CURRENT_SURFACE` | Önceki current context'in flush edilmemiş komutları varsa ve önceki surface artık geçerli değilse.                              |
+| `EGL_BAD_ALLOC`           | Draw/read için gerekli ancillary buffer'lar ayrılamazsa.                                                                             |
 
-## State Değişimi
+## Durum Değişimi
 
 Başarılı çağrı öncesi:
 
@@ -212,7 +212,7 @@ glScissor(0, 0, draw_width, draw_height)
 
 Bu yalnızca context'in ilk current yapılma anı için önemlidir. Sonraki bind işlemlerinde viewport/scissor'ın otomatik güncelleneceğini varsayma.
 
-## Destroy Sonrası Davranış
+## Yok Etme Sonrası Davranış
 
 `eglMakeCurrent` başarılı olduktan sonra:
 
@@ -229,7 +229,7 @@ eglDestroyContext(dpy, ctx);
 eglTerminate(dpy);
 ```
 
-## Minimal Doğru Kullanım
+## Temel Kullanım
 
 ```c
 EGLDisplay dpy = eglGetDisplay(native_display);
@@ -248,23 +248,7 @@ if (!eglMakeCurrent(dpy, surface, surface, ctx)) {
 eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 ```
 
-## Bilerek Hata Üretme Örnekleri
-
-```c
-/* EGL_BAD_MATCH: context yok ama surface var */
-eglMakeCurrent(dpy, surface, surface, EGL_NO_CONTEXT);
-
-/* EGL_BAD_MATCH: context var ama draw yok */
-eglMakeCurrent(dpy, EGL_NO_SURFACE, surface, ctx);
-
-/* EGL_BAD_MATCH: context var ama read yok */
-eglMakeCurrent(dpy, surface, EGL_NO_SURFACE, ctx);
-
-/* Doğru release */
-eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
-```
-
-## EGL 1.0 İçin Pratik Özet
+## Bölüm Özeti
 
 - `eglMakeCurrent` thread-local current context'i değiştirir.
 - OpenGL ES komutlarının hangi context/surface üzerinde çalışacağını bu çağrı belirler.
@@ -272,3 +256,4 @@ eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 - `EGL_NO_CONTEXT` sadece iki surface de `EGL_NO_SURFACE` ise geçerlidir.
 - Context veya surface başka thread'de bağlıysa `EGL_BAD_ACCESS` beklenir.
 - Surface/context format ve display açısından uyumsuzsa `EGL_BAD_MATCH` beklenir.
+
