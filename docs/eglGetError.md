@@ -8,7 +8,7 @@ EGLint eglGetError(void);
 
 Fonksiyon parametre almaz. Bunun nedeni hata bilgisinin belirli bir `EGLDisplay`, `EGLContext` veya `EGLSurface` handle'ı üzerinden değil, çağıran thread'in EGL hata durumu üzerinden okunmasıdır.
 
-## Kavramsal Akış
+## Kavramsal Akış 
 
 ```text
 Thread
