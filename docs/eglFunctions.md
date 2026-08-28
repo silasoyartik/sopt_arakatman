@@ -1,4 +1,10 @@
-# EGL 1.0 Fonksiyonları 
+<!--
+AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
+Run: python scripts/build_presentation.py
+Source order: docs/presentation-order.txt
+-->
+
+# EGL 1.0 Fonksiyonları
 
 Bu rapor, temel EGL 1.0 fonksiyonlarını tipik EGL yaşam döngüsüne göre sıralı biçimde sunar. Her fonksiyon bölümü bağımsız olarak sunulabilecek şekilde fonksiyonun amacı, parametreleri, dönüş değeri ve ilgili EGL kavramlarını içerir.
 
@@ -4156,6 +4162,8 @@ if (!eglMakeCurrent(
 - En doğru kullanım, önce ilgili EGL fonksiyonunun başarısız olup olmadığını kontrol etmek ve ardından `eglGetError()` çağırmaktır.
 - GBM veya DRM/KMS hataları `eglGetError()` ile alınmaz.
 - Direct-to-display projede EGL, GBM ve DRM/KMS hata kontrolleri birbirinden ayrı tutulmalıdır.
+
+---
 
 # Kaynakça
 

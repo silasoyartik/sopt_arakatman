@@ -8,7 +8,7 @@ EGLint eglGetError(void);
 
 Fonksiyon parametre almaz. Bunun nedeni hata bilgisinin belirli bir `EGLDisplay`, `EGLContext` veya `EGLSurface` handle'ı üzerinden değil, çağıran thread'in EGL hata durumu üzerinden okunmasıdır.
 
-## Kavramsal Akış 
+## Kavramsal Akış
 
 ```text
 Thread
@@ -593,4 +593,3 @@ if (!eglMakeCurrent(
 - En doğru kullanım, önce ilgili EGL fonksiyonunun başarısız olup olmadığını kontrol etmek ve ardından `eglGetError()` çağırmaktır.
 - GBM veya DRM/KMS hataları `eglGetError()` ile alınmaz.
 - Direct-to-display projede EGL, GBM ve DRM/KMS hata kontrolleri birbirinden ayrı tutulmalıdır.
-

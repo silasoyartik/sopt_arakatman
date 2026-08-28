@@ -9,7 +9,7 @@ EGLBoolean eglDestroyContext(EGLDisplay dpy,
 
 EGL 1.0'a göre context o anda herhangi bir thread üzerinde current değilse kaynakları mümkün olan en kısa sürede serbest bırakılır. Context current durumdaysa `eglDestroyContext` çağrısından sonra hemen ortadan kalkmaz; current kaldığı sürece kullanılmaya devam eder ve ilgili thread üzerinde sonraki geçerli `eglMakeCurrent` çağrısında gerçek anlamda yok edilir.
 
-## Kavramsal Akış 
+## Kavramsal Akış
 
 Normal context yaşam döngüsü:
 
@@ -291,4 +291,3 @@ if (!eglDestroyContext(
 - `ctx` current ise hemen yok edilmez.
 - Current context'in gerçek silinmesi, thread üzerinde sonraki geçerli `eglMakeCurrent` çağrısıyla tamamlanır.
 - Bu fonksiyon GBM veya DRM/KMS kaynaklarını yok etmez.
-
