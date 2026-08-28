@@ -767,6 +767,11 @@ EGLDisplay
 
 `eglGetConfigAttrib` sadece bir `EGLConfig` ve bir `attribute` için değer döndürür.
 
+Bu fonksiyon bir ayar yapmaz ve config'i değiştirmez. Örneğin
+`EGL_SAMPLES` değerini sorgulamak multisampling'i açmaz; yalnızca config'in
+kaç sample sağlayacağını bildirir. Kullanılacak özellikler surface ve context
+oluşturulmadan önce config seçimiyle belirlenir.
+
 ## Parametreler
 
 ### `dpy`
@@ -849,7 +854,7 @@ if (!eglGetConfigAttrib(dpy, config, EGL_RED_SIZE, &red_bits)) {
 
 ## Attribute Ayrıntıları
 
-### Color Buffer
+### Color Buffer: bit sayısı gerçekte neyi değiştirir?
 
 ```text
 EGL_BUFFER_SIZE = EGL_RED_SIZE
@@ -865,15 +870,168 @@ R=8, G=8, B=8, A=8 -> EGL_BUFFER_SIZE = 32
 R=5, G=6, B=5, A=0 -> EGL_BUFFER_SIZE = 16
 ```
 
-### `EGL_CONFIG_CAVEAT`
+Buradaki bit sayıları bir rengin bellekte kaç farklı tamsayı seviyesiyle
+tutulabildiğini belirler. Bir component `n` bit ise alabileceği değer sayısı
+`2^n`, saklanan tamsayı aralığı ise `0 ... 2^n - 1` olur.
 
-| Değer                        | Anlam                                                                        |
-| ----------------------------- | ---------------------------------------------------------------------------- |
-| `EGL_NONE`                  | Config için caveat yok.                                                     |
-| `EGL_SLOW_CONFIG`           | Render yavaş olabilir. Örneğin donanım doğrudan desteklemiyor olabilir. |
-| `EGL_NON_CONFORMANT_CONFIG` | OpenGL ES conformance gereksinimlerini karşılamayabilir.                   |
+| Component bit sayısı | Ayrı seviye sayısı | Tamsayı aralığı | Normalize edilmiş iki komşu seviye arası |
+| --------------------: | ------------------: | ---------------: | -----------------------------------------: |
+| 3 bit                 |                   8 |          `0..7` | `1/7 ≈ 0,1429`                           |
+| 5 bit                 |                  32 |         `0..31` | `1/31 ≈ 0,0323`                          |
+| 6 bit                 |                  64 |         `0..63` | `1/63 ≈ 0,0159`                          |
+| 8 bit                 |                 256 |        `0..255` | `1/255 ≈ 0,00392`                        |
 
-### `EGL_SURFACE_TYPE`
+Örneğin kırmızı component 3 bit olduğunda yalnızca şu normalize edilmiş
+değerler temsil edilebilir:
+
+```text
+0/7, 1/7, 2/7, 3/7, 4/7, 5/7, 6/7, 7/7
+```
+
+OpenGL ES işlemleri veya `glClearColor` ara bir değer üretse bile sonuç color buffer'a
+yazılırken en yakın temsil edilebilir seviyeye quantize edilir. Dolayısıyla 3
+bit kırmızı, yumuşak bir kırmızı gradyanda basamakların belirginleşmesine
+(`color banding`) yol açabilir. 5 bitte 32, 8 bitte 256 seviye bulunduğu için
+geçiş giderek daha pürüzsüz görünür.
+
+#### Yaygın color format karşılaştırması
+
+| Format       | Config değerleri       | Alpha | Toplam teorik RGB renk | Tipik sonuç |
+| ------------ | ---------------------- | ----: | ----------------------: | ----------- |
+| RGB332       | R3 G3 B2 A0            |   Yok |                     256 | Çok düşük bellek, belirgin banding |
+| RGB565       | R5 G6 B5 A0            |   Yok |                  65.536 | 16 bit ekranlarda yaygın; yeşile insan gözü daha duyarlı olduğu için 6 bit ayrılır |
+| RGB888       | R8 G8 B8 A0            |   Yok |              16.777.216 | Yüksek renk doğruluğu, alpha kanalı yok |
+| RGBA8888     | R8 G8 B8 A8            | 8 bit |              16.777.216 | Renge ek olarak 256 alpha seviyesi |
+
+`EGL_BUFFER_SIZE`, yalnızca bir pixel'in color buffer kısmındaki toplam bit
+sayısıdır. Ekran çözünürlüğü, depth/stencil buffer'ları, MSAA sample'ları ve
+kaç adet sunum buffer'ı bulunduğu bu değere dahil değildir.
+
+1920 × 1080 tek bir color buffer için kaba alt sınır hesabı:
+
+```text
+RGB565:   1920 * 1080 * 16 / 8 = 4.147.200 byte ≈ 3,96 MiB
+RGBA8888: 1920 * 1080 * 32 / 8 = 8.294.400 byte ≈ 7,91 MiB
+```
+
+Bu yalnızca teorik payload hesabıdır. Satır hizalama, tiling, sıkıştırma,
+driver metadata'sı ve birden fazla buffer gerçek bellek kullanımını
+değiştirebilir.
+
+#### `EGL_ALPHA_SIZE` ne sağlar, ne sağlamaz?
+
+Alpha component genellikle saydamlık/opaklık bilgisini taşır:
+
+| `EGL_ALPHA_SIZE` | Saklanabilen alpha seviyeleri |
+| ----------------: | ----------------------------- |
+| 0                 | Alpha component yoktur. |
+| 1                 | Yalnızca tamamen saydam veya tamamen opak gibi iki değer vardır. |
+| 8                 | `0..255`, yani 256 alpha seviyesi vardır. |
+
+Ancak alpha buffer bulunması tek başına blending'i açmaz, pencereyi masaüstüne
+karşı saydam yapmaz ve `EGL_TRANSPARENT_RGB` anlamına gelmez. OpenGL ES
+blending ayrı bir render state'idir; native pencere kompozisyonu da platformun
+pencere sistemi/compositor kurallarına bağlıdır. EGL 1.0'ın aşağıda anlatılan
+transparent RGB özelliği ise alpha değil, exact RGB color key kullanır.
+
+### Ancillary buffer'lar: depth ve stencil
+
+Depth ve stencil, color buffer'ın parçaları değildir; bu yüzden bitleri
+`EGL_BUFFER_SIZE` toplamına girmez.
+
+#### `EGL_DEPTH_SIZE`
+
+Depth buffer her fragment'ın kameraya göre derinlik değerini saklar ve öndeki
+yüzeyin arkadakini kapatmasını sağlar.
+
+| Değer | Anlam ve pratik etki |
+| ----: | -------------------- |
+| 0     | Depth buffer yoktur; `GL_DEPTH_TEST` ile güvenilir gizli yüzey eleme yapılamaz. |
+| 16    | Daha az bellek/bant genişliği, fakat birbirine yakın yüzeylerde `z-fighting` riski daha yüksek. |
+| 24    | Daha yüksek depth hassasiyeti; 3B sahnelerde sık tercih edilir. |
+
+`n` bit depth teorik olarak `2^n` saklama kodu verir: 16 bit 65.536, 24 bit
+16.777.216 kod. Fakat perspektif projeksiyonda bu hassasiyet dünya uzayına
+eşit dağılmaz; near plane yakınında daha fazla, far plane tarafında daha az
+hassasiyet vardır. Bu nedenle yalnızca 16 bitten 24 bite çıkmak yerine gereksiz
+derecede küçük `near` ve çok büyük `far` değerlerinden de kaçınmak gerekir.
+
+#### `EGL_STENCIL_SIZE`
+
+Stencil buffer pixel başına küçük bir tamsayı/bit maskesi tutar. Maskeleme,
+ayna/portal bölgeleri, outline ve çok geçişli render tekniklerinde kullanılır.
+
+```text
+0 bit -> stencil buffer yok
+1 bit -> 0 veya 1
+8 bit -> 0..255; sekiz ayrı bit bayrak olarak da kullanılabilir
+```
+
+8 bit stencil “sekiz kat daha kaliteli görüntü” demek değildir; uygulamanın
+daha çok stencil değeri veya bağımsız maske biti kullanabilmesi demektir.
+
+### Multisampling: `EGL_SAMPLE_BUFFERS` ve `EGL_SAMPLES`
+
+Normal, tek sample'lı rasterization'da pixel için çoğunlukla tek coverage örneği
+vardır. Üçgen o örnek noktasını kapsıyorsa pixel tamamen boyanır, kapsamıyorsa
+boyanmaz. Eğik kenarlar bu yüzden merdiven biçiminde (`aliasing`) görünebilir.
+
+MSAA'da her pixel içinde birden fazla sample konumu test edilir. 4× MSAA için
+bir kenarın pixel içindeki dört sample'dan ikisini kaplaması yaklaşık yüzde 50
+coverage üretir. Sunum öncesindeki resolve işleminde sample sonuçları tek pixel
+rengine birleştirilir; kenar daha yumuşak görünür.
+
+| Attribute | Örnek değer | Doğru yorum |
+| --------- | -----------: | ----------- |
+| `EGL_SAMPLE_BUFFERS` | 0 | Multisample buffer yoktur ve `EGL_SAMPLES` da 0'dır. |
+| `EGL_SAMPLE_BUFFERS` | 1 | Bir multisample buffer vardır. Bu değer sample sayısı değildir. |
+| `EGL_SAMPLES` | 4 | Multisample buffer içinde pixel başına dört sample vardır: 4× MSAA. |
+
+Önemli ayrım:
+
+```text
+EGL_SAMPLE_BUFFERS = 1, EGL_SAMPLES = 4
+```
+
+“Dört ayrı framebuffer” veya “quad buffering” demek değildir. Bir multisample
+buffer ve onun her pixel'inde dört sample demektir. EGL 1.0'da
+`EGL_SAMPLE_BUFFERS` yalnızca `0` ya da `1` olabilir. Multisample config'te
+color, depth ve stencil bit büyüklükleri sample başına ilgili `EGL_*_SIZE`
+attribute'larıyla tarif edilir; ayrı single-sample depth/stencil buffer bulunmaz.
+
+![Tek sample rasterization: pixel merkezindeki tek örnek nedeniyle üçgen kenarı basamaklı görünür](eglFunctions/image/eglGetConfigAttrib/1787900930170.png)
+
+Yukarıdaki ilk diyagramda artı işaretleri tek sample konumunu gösterir. Ortadaki
+karar tamamen içeride/dışarıda, sağdaki sonuç ise sert basamaklı kenardır.
+
+![Dört sample rasterization: pixel içindeki sample coverage oranı ara kenar renkleri üretir](eglFunctions/image/eglGetConfigAttrib/1787900906533.png)
+
+İkinci diyagramda her pixel'deki dört daire dört sample konumudur. Kapsanan
+sample sayısı 0/4, 1/4, 2/4, 3/4 veya 4/4 olabildiği için kenarda ara coverage
+değerleri oluşur.
+
+MSAA'nın bedeli daha fazla sample coverage/depth/stencil çalışması, bellek ve
+bant genişliğidir. 4× her durumda tam dört kat yavaşlık demek değildir; GPU'nun
+mimarisi, sıkıştırma ve sahnenin shader maliyeti sonucu değiştirir. MSAA esas
+olarak geometri kenarlarını düzeltir; texture içindeki yüksek frekans, shader
+aliasing'i veya hareket aliasing'ini tek başına tamamen çözmez.
+
+Config seçerken:
+
+```c
+const EGLint attrs[] = {
+    EGL_SAMPLE_BUFFERS, 1,
+    EGL_SAMPLES,        4,
+    EGL_NONE
+};
+```
+
+Bu liste en az bir sample buffer ve en az dört sample ister. Seçilen config'in
+gerçekte kaç sample verdiği yine `eglGetConfigAttrib` ile okunmalıdır; istek 4
+iken dönen değer implementation'ın config listesine göre 4 veya daha büyük
+olabilir.
+
+### `EGL_SURFACE_TYPE`: tek değer değil bitmask
 
 Bitmask döner:
 
@@ -902,6 +1060,61 @@ Geçerli bitler:
 | `EGL_PIXMAP_BIT`  | Pixmap surface oluşturulabilir.  |
 | `EGL_PBUFFER_BIT` | Pbuffer surface oluşturulabilir. |
 
+Örneğin sonuç `EGL_WINDOW_BIT | EGL_PBUFFER_BIT` ise aynı config window ve
+pbuffer surface oluşturabilir, fakat pixmap oluşturamaz. Bu nedenle eşitlik
+yerine bit testi yapılır:
+
+```c
+/* Yanlış: başka destek bitleri de set ise false olur. */
+if (surface_type == EGL_WINDOW_BIT) { /* ... */ }
+
+/* Doğru: window desteği maskenin içinde var mı? */
+if ((surface_type & EGL_WINDOW_BIT) != 0) { /* ... */ }
+```
+
+### Pbuffer limitleri
+
+Üç limit birlikte sağlanmalıdır:
+
+```text
+width  <= EGL_MAX_PBUFFER_WIDTH
+height <= EGL_MAX_PBUFFER_HEIGHT
+width * height <= EGL_MAX_PBUFFER_PIXELS
+```
+
+Örneğin width ve height limiti 4096, pixel limiti 4.194.304 ise 4096 × 4096
+boyutlar ayrı ayrı limite uysa bile çarpım 16.777.216 olduğu için bu pbuffer
+istenemez. 2048 × 2048 ise pixel limitine tam uyar.
+
+Bu değerler garanti edilmiş boş bellek miktarı değildir. EGL 1.0'a göre
+`EGL_MAX_PBUFFER_PIXELS` statik bir üst sınırdır ve başka kaynakların framebuffer
+belleğiyle yarışmadığını varsayar; limit içindeki bir istek bile çalışma anında
+`EGL_BAD_ALLOC` ile başarısız olabilir.
+
+### `EGL_CONFIG_ID`, `EGL_LEVEL` ve `EGL_CONFIG_CAVEAT`
+
+#### `EGL_CONFIG_ID`
+
+Display içindeki config'i ayırt eden küçük pozitif tamsayıdır. Loglarda bir
+config'i tekrar tanımak veya `eglChooseConfig` ile tam o ID'yi istemek için
+kullanışlıdır. Bir kalite puanı değildir; ID 12'nin ID 4'ten daha iyi olduğu
+anlamına gelmez.
+
+#### `EGL_LEVEL`
+
+Native framebuffer katmanını belirtir. `0` normal katmandır; pozitif değerler
+overlay, negatif değerler underlay katmanlarını temsil edebilir. Bunun görünür
+etkisi ve desteklenip desteklenmediği native pencere sistemine bağlıdır. Bu değer
+3B sahnedeki object Z sırası veya `EGL_DEPTH_SIZE` ile ilgili değildir.
+
+#### `EGL_CONFIG_CAVEAT`
+
+| Değer | Anlam |
+| ----- | ----- |
+| `EGL_NONE` | Config için bilinen caveat yoktur; genellikle ilk tercih budur. |
+| `EGL_SLOW_CONFIG` | Render düşük performanslı olabilir; örneğin format donanımda doğal olmayıp dönüşüm veya yazılım yolu gerektirebilir. |
+| `EGL_NON_CONFORMANT_CONFIG` | Bu config'e render etmek gerekli OpenGL ES conformance testlerini geçmez. “Kesin çalışmaz” değil, standart uyumluluk garantisi yok demektir. |
+
 ### Native Visual
 
 `EGL_NATIVE_VISUAL_ID` ve `EGL_NATIVE_VISUAL_TYPE` platforma bağlıdır.
@@ -916,19 +1129,21 @@ EGL 1.0 davranışı:
 
 GBM kullanırken modern Mesa EGL tarafında `EGL_NATIVE_VISUAL_ID` pratikte GBM/DRM formatını seçmek için kullanışlı olabilir. Bu EGL 1.0 spec'in platform-dependent native visual alanına girer.
 
-### Multisampling
+### `EGL_NATIVE_RENDERABLE`
 
-| Attribute              | Anlam                                                                          |
-| ---------------------- | ------------------------------------------------------------------------------ |
-| `EGL_SAMPLE_BUFFERS` | `0` ise multisample yok, `1` ise multisample buffer var.                   |
-| `EGL_SAMPLES`        | Sample sayısı.`EGL_SAMPLE_BUFFERS == 0` ise `EGL_SAMPLES` da `0` olur. |
+`EGL_TRUE`, native pencere sisteminin rendering API'lerinin bu config ile
+oluşturulan surface'e render edebildiğini bildirir. Bu EGL/OpenGL ES
+rendering'inin hızlı olduğu anlamına gelmez ve native API ile GL'nin aynı
+surface'e eşzamanlı, senkronizasyonsuz yazabileceği anlamına da gelmez. İki API
+aynı buffer'ı kullanıyorsa sıralama için EGL 1.0'daki `eglWaitNative` ve
+`eglWaitGL` gibi senkronizasyon kuralları gerekir.
 
-### Transparency
+### Transparency: alpha blending değil, color key
 
-| Attribute                                       | Anlam                                         |
-| ----------------------------------------------- | --------------------------------------------- |
-| `EGL_TRANSPARENT_TYPE == EGL_NONE`            | Transparent pixel desteği yok.               |
-| `EGL_TRANSPARENT_TYPE == EGL_TRANSPARENT_RGB` | RGB key değerleri transparent pixel üretir. |
+| Attribute | Anlam |
+| --------- | ----- |
+| `EGL_TRANSPARENT_TYPE == EGL_NONE` | Bu config ile oluşturulan window'larda transparent pixel yoktur. |
+| `EGL_TRANSPARENT_TYPE == EGL_TRANSPARENT_RGB` | Framebuffer'daki RGB değerleri üç key değeriyle tam eşleşen pixel transparent kabul edilir. |
 
 `EGL_TRANSPARENT_TYPE == EGL_NONE` ise şu değerler tanımsızdır:
 
@@ -937,6 +1152,82 @@ GBM kullanırken modern Mesa EGL tarafında `EGL_NATIVE_VISUAL_ID` pratikte GBM/
 - `EGL_TRANSPARENT_BLUE_VALUE`
 
 `EGL_TRANSPARENT_TYPE == EGL_TRANSPARENT_RGB` ise bu değerler component bit derinliği aralığında integer framebuffer değerleridir.
+
+Her component için aralık ayrı hesaplanır:
+
+```text
+red key   : 0 .. (2^EGL_RED_SIZE)   - 1
+green key : 0 .. (2^EGL_GREEN_SIZE) - 1
+blue key  : 0 .. (2^EGL_BLUE_SIZE)  - 1
+```
+
+RGB565 config'te key değerleri `(0, 63, 0)` ise framebuffer'da saklanan tam
+yeşil pixel transparent olur:
+
+```text
+(R=0, G=63, B=0)  -> transparent
+(R=0, G=62, B=0)  -> opaque; key ile tam eşleşmedi
+```
+
+Bu mekanizma kısmi saydamlık üretmez: pixel ya key ile eşleşir ve transparent
+olur ya da eşleşmez. Kenar yumuşatma veya blending sonucu key renginin biraz
+değişmesi eşleşmeyi bozabilir. Bu nedenle `EGL_TRANSPARENT_RGB`, 8 bit alpha
+kanalındaki 256 opacity seviyesinin yerine geçen bir özellik değildir.
+
+Transparency bilgisi config'in window davranışını tarif eder; pbuffer'ın zaten
+native ekranda görünen bir penceresi yoktur.
+
+## Config'leri somut olarak karşılaştırma
+
+Aşağıdaki iki varsayımsal config de pencere oluşturabilir, fakat kullanım
+amaçları farklıdır:
+
+| Attribute | Config A | Config B | Sonuç |
+| --------- | -------: | -------: | ----- |
+| R/G/B/A | 5/6/5/0 | 8/8/8/8 | A daha az color belleği kullanır; B daha hassas renk ve alpha saklar. |
+| Depth | 16 | 24 | B karmaşık 3B sahnelerde daha az z-fighting riski taşır. |
+| Stencil | 0 | 8 | Yalnızca B stencil tekniklerini destekler. |
+| Sample buffers / samples | 0/0 | 1/4 | B 4× MSAA ile geometri kenarlarını yumuşatabilir. |
+| Caveat | `EGL_NONE` | `EGL_NONE` | İkisinde de bildirilen performans/uyumluluk caveat'i yoktur. |
+
+Config B daha çok özellik sağladığı için otomatik olarak her uygulamada “daha
+iyi” değildir. Basit 2B arayüzde Config A bellek ve bant genişliği tasarrufu
+sağlayabilir; alpha, stencil, yüksek depth hassasiyeti ve MSAA gereken 3B
+sahnede Config B doğru seçim olabilir.
+
+Bir config'i seçtikten sonra en kritik değerleri birlikte doğrulamak için:
+
+```c
+static EGLBoolean get_attrib(EGLDisplay dpy, EGLConfig config,
+                             EGLint name, EGLint *out)
+{
+    if (eglGetConfigAttrib(dpy, config, name, out) == EGL_TRUE) {
+        return EGL_TRUE;
+    }
+
+    fprintf(stderr, "eglGetConfigAttrib(0x%04x) failed: 0x%04x\n",
+            name, eglGetError());
+    return EGL_FALSE;
+}
+
+EGLint red, green, blue, alpha;
+EGLint depth, stencil, sample_buffers, samples, surface_type;
+
+if (get_attrib(dpy, config, EGL_RED_SIZE, &red) &&
+    get_attrib(dpy, config, EGL_GREEN_SIZE, &green) &&
+    get_attrib(dpy, config, EGL_BLUE_SIZE, &blue) &&
+    get_attrib(dpy, config, EGL_ALPHA_SIZE, &alpha) &&
+    get_attrib(dpy, config, EGL_DEPTH_SIZE, &depth) &&
+    get_attrib(dpy, config, EGL_STENCIL_SIZE, &stencil) &&
+    get_attrib(dpy, config, EGL_SAMPLE_BUFFERS, &sample_buffers) &&
+    get_attrib(dpy, config, EGL_SAMPLES, &samples) &&
+    get_attrib(dpy, config, EGL_SURFACE_TYPE, &surface_type)) {
+    printf("RGBA=%d/%d/%d/%d depth=%d stencil=%d MSAA=%d x%d window=%s\n",
+           red, green, blue, alpha, depth, stencil,
+           sample_buffers, samples,
+           (surface_type & EGL_WINDOW_BIT) ? "yes" : "no");
+}
+```
 
 ## EGL 1.0 Dışındaki Attribute'lar
 
@@ -1024,9 +1315,6 @@ static const EGLint attrs[] = {
     EGL_STENCIL_SIZE,
     EGL_SURFACE_TYPE,
     EGL_TRANSPARENT_TYPE,
-    EGL_TRANSPARENT_RED_VALUE,
-    EGL_TRANSPARENT_GREEN_VALUE,
-    EGL_TRANSPARENT_BLUE_VALUE,
 };
 
 for (unsigned i = 0; i < sizeof(attrs) / sizeof(attrs[0]); ++i) {
@@ -1037,15 +1325,40 @@ for (unsigned i = 0; i < sizeof(attrs) / sizeof(attrs[0]); ++i) {
         printf("attr 0x%04x failed: 0x%04x\n", attrs[i], eglGetError());
     }
 }
+
+EGLint transparent_type = EGL_NONE;
+if (eglGetConfigAttrib(dpy, config,
+                       EGL_TRANSPARENT_TYPE, &transparent_type) &&
+    transparent_type == EGL_TRANSPARENT_RGB) {
+    EGLint key_r, key_g, key_b;
+    eglGetConfigAttrib(dpy, config, EGL_TRANSPARENT_RED_VALUE, &key_r);
+    eglGetConfigAttrib(dpy, config, EGL_TRANSPARENT_GREEN_VALUE, &key_g);
+    eglGetConfigAttrib(dpy, config, EGL_TRANSPARENT_BLUE_VALUE, &key_b);
+    printf("transparent RGB key = (%d, %d, %d)\n", key_r, key_g, key_b);
+}
 ```
+
+Transparent component değerleri `EGL_TRANSPARENT_TYPE == EGL_NONE` iken
+tanımsız olduğu için örnek kod bunları yalnızca type gerçekten
+`EGL_TRANSPARENT_RGB` olduğunda okur.
 
 ## Bölüm Özeti
 
 - Bu fonksiyon config seçmez; seçilmiş config'i okur.
+- Attribute sorgulamak ilgili özelliği açmaz veya config'i değiştirmez.
 - Her çağrı tek attribute döndürür.
+- `n` bit component `2^n` ayrı tamsayı seviyesi saklar; daha az bit daha fazla color banding oluşturabilir.
+- `EGL_ALPHA_SIZE` ile `EGL_TRANSPARENT_RGB` aynı özellik değildir; ikincisi exact RGB color key'dir.
+- `EGL_SAMPLE_BUFFERS = 1, EGL_SAMPLES = 4`, dört buffer değil pixel başına dört sample kullanan bir multisample buffer demektir.
 - EGL 1.0 uyumu için sadece Table 3.1 attribute'larını kullan.
 - `EGL_SURFACE_TYPE` bitmask'tir; exact integer gibi yorumlama.
 - `EGL_NATIVE_VISUAL_ID` platform-dependent olduğundan anlamı X11, GBM veya başka native platforma göre değişebilir.
+
+## Kaynak
+
+Attribute tanımları, sınırlar ve EGL 1.0'a özgü davranışlar için Khronos'un
+[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
+belgesindeki 3.4 “Configuration Management” bölümü esas alınmıştır.
 
 ---
 
@@ -1951,6 +2264,20 @@ Thread
 
 `eglMakeCurrent` bu dörtlüyü değiştirir. OpenGL ES komutları doğrudan `EGLContext` handle'ına parametre olarak verilmez; komutlar çağıran thread'in current context'i üzerinden çalışır.
 
+Context'i bir “OpenGL ES makinesinin durumu”, surface'i ise bu makinenin
+okuduğu/yazdığı pixel depoları gibi düşünmek yararlıdır:
+
+```text
+EGLContext -> renk, depth test, blending, texture binding gibi GL state
+draw       -> sonuçların yazıldığı color/depth/stencil buffer'ları
+read       -> pixel okuma işlemlerinin kaynak buffer'ı
+thread     -> GL komutlarını hangi current bağlantının yorumlayacağını belirler
+```
+
+Depth, stencil ve multisample buffer'lar context'in içinde değil, surface ile
+ilişkilidir. Aynı uyumlu surface'e farklı zamanlarda farklı context'ler bağlanırsa
+bu surface buffer'larını paylaşırlar; her context'in GL state'i ise kendisine aittir.
+
 ## Parametreler
 
 ### `dpy`
@@ -2058,6 +2385,62 @@ eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 ```
 
 Bu, EGL 1.0'da current context'i release etmenin doğru biçimidir.
+
+## “Context ile surface uyumlu” ne demektir?
+
+EGL 1.0'da yalnızca handle'ların geçerli olması yetmez. Context ve surface:
+
+- aynı `EGLDisplay` ile oluşturulmuş olmalı,
+- color ve ancillary buffer derinlikleri uyumlu olmalıdır.
+
+Ancillary buffer; depth, stencil ve multisample buffer gibi color dışındaki
+buffer'ları kapsar. Örneğin context'in config'i RGBA8888 + depth24 + stencil8
+iken surface RGB565 + depth16 ise ikisi geçerli EGL nesneleri olsa bile birlikte
+current yapılamaz ve `EGL_BAD_MATCH` oluşur.
+
+Config ID'lerinin aynı olması zorunlu değildir. İki farklı config handle'ı aynı
+display üzerinde aynı color/ancillary buffer derinliklerini tarif ediyorsa uyumlu
+olabilir. Buna karşılık bit büyüklükleri aynı olsa bile farklı display'lerde
+oluşturulan nesneler uyumlu değildir.
+
+| Context config | Surface config | Display | Sonuç |
+| -------------- | -------------- | ------- | ----- |
+| RGBA8, D24, S8 | RGBA8, D24, S8 | Aynı | Uyumlu olabilir. |
+| RGBA8, D24, S8 | RGB565, D16, S0 | Aynı | `EGL_BAD_MATCH` |
+| RGBA8, D24, S8 | RGBA8, D24, S8 | Farklı | `EGL_BAD_MATCH` |
+
+## Ayrı draw/read surface için somut örnek
+
+İki surface de context ile uyumluysa çizim ve okuma hedefleri ayrılabilir:
+
+```c
+eglMakeCurrent(dpy, window_surface, pbuffer_surface, ctx);
+
+/* Çizim komutları window_surface'e gider. */
+glClear(GL_COLOR_BUFFER_BIT);
+
+/* Pixel okuma pbuffer_surface'ten gelir. */
+glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+```
+
+Bu çağrı pbuffer içeriğini window'a kopyalamaz. Yalnızca aynı context için draw
+ve read yönlerinin hangi surface'i kullandığını belirler.
+
+## İki thread arasında context devretme
+
+Bir context aynı anda yalnızca bir thread'de current olabilir. Thread A'da
+current olan `ctx` doğrudan Thread B'de bağlanırsa `EGL_BAD_ACCESS` oluşur.
+Güvenli mantıksal sıra şöyledir:
+
+```text
+Thread A: GL işini bitir
+Thread A: eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)
+Thread A -> Thread B: uygulama düzeyinde mutex/condition ile haber ver
+Thread B: eglMakeCurrent(dpy, surface, surface, ctx)
+```
+
+EGL çağrıları uygulamanın thread'leri arasındaki iş teslim protokolünün yerini
+almaz; aynı context'e erişimi uygulama ayrıca senkronize etmelidir.
 
 ## Geçersiz Kombinasyon Matrisi
 
@@ -2171,9 +2554,17 @@ eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 - `eglMakeCurrent` thread-local current context'i değiştirir.
 - OpenGL ES komutlarının hangi context/surface üzerinde çalışacağını bu çağrı belirler.
 - `draw` çizim hedefidir, `read` okuma hedefidir.
+- Context GL state'ini, surface ise color/depth/stencil gibi framebuffer depolarını taşır.
+- Uyum için nesnelerin aynı display'e ait olması ve color/ancillary buffer derinliklerinin eşleşmesi gerekir.
 - `EGL_NO_CONTEXT` sadece iki surface de `EGL_NO_SURFACE` ise geçerlidir.
 - Context veya surface başka thread'de bağlıysa `EGL_BAD_ACCESS` beklenir.
 - Surface/context format ve display açısından uyumsuzsa `EGL_BAD_MATCH` beklenir.
+
+## Kaynak
+
+Bağlama, uyumluluk, thread ve hata kuralları için Khronos'un
+[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
+belgesindeki 2.2 ve 3.6.3 bölümleri esas alınmıştır.
 
 ---
 
@@ -2509,6 +2900,25 @@ eglSwapBuffers
 native window'a post/copy
 ```
 
+Somut olarak bir frame boyunca ön ve arka buffer'ı şöyle düşünebiliriz:
+
+```text
+Frame N çizilirken:
+  front buffer -> ekranda önceki frame görünür
+  back buffer  -> OpenGL ES yeni frame'i çizer
+
+eglSwapBuffers çağrısı:
+  back buffer'daki tamamlanmış renk görüntüsü native window'a post edilir
+
+Çağrıdan sonra:
+  uygulama önceki color buffer içeriğinin korunduğunu varsayamaz
+```
+
+“Swap” adı her implementation'ın iki bellek adresini mutlaka değiştirdiği
+anlamına gelmez. EGL 1.0'ın gözlemlenebilir garantisi color buffer'ın native
+window'a post edilmesidir; driver copy, buffer exchange veya page flip benzeri
+bir yöntem seçebilir.
+
 GBM + DRM/KMS için daha uzun zincir gerekir:
 
 ```text
@@ -2560,8 +2970,13 @@ monitor
 | Geçerli ama current context'e bağlı olmayan surface | Başarısız,`EGL_BAD_SURFACE`.                              |
 | `EGL_NO_SURFACE`                                     | Başarısız,`EGL_BAD_SURFACE`.                              |
 | Geçersiz surface                                      | Başarısız,`EGL_BAD_SURFACE`.                              |
-| Yok edilmiş surface                                   | Başarısız,`EGL_BAD_SURFACE` veya tanımsız native durum. |
+| Yok edilmiş ve artık current olmayan surface          | Başarısız,`EGL_BAD_SURFACE`.                              |
 | Native window'u geçersiz window surface               | Başarısız,`EGL_BAD_NATIVE_WINDOW`.                        |
+
+Current durumdayken `eglDestroySurface` ile silinmek üzere işaretlenmiş bir
+surface hemen yok olmaz; current kaldığı sürece geçerlidir. İlgili thread'deki
+sonraki geçerli `eglMakeCurrent` ile bağlantı değiştiğinde gerçek silme
+tamamlanır ve bundan sonraki swap girişimi `EGL_BAD_SURFACE` olur.
 
 ## EGL 1.0 Current Surface Şartı
 
@@ -2713,6 +3128,19 @@ Bu `glFinish` değildir.
 
 EGL 1.0 metni, sonraki OpenGL ES komutlarının hemen verilebileceğini ama posting bitene kadar yürütülmeyebileceğini belirtir. Window surface için bu zamanlama tipik olarak vertical retrace ile ilişkilidir.
 
+Buradaki “typically” önemlidir: EGL 1.0 tek başına her swap'ın VSync beklediğini,
+tearing'in kesin engellendiğini veya swap'ın monitör yenileme hızında sabit FPS
+üreteceğini garanti etmez. Sunum yöntemi ve bloklama davranışı implementation ve
+native platforma bağlıdır.
+
+## Swap ne yapmaz?
+
+- Yeni bir frame çizmez; o ana kadar üretilmiş color buffer'ı post eder.
+- `glFinish` gibi bütün GPU işlerinin tamamlanmasını zorunlu olarak beklemez.
+- Pbuffer'ı görünür pencereye dönüştürmez.
+- GBM/DRM yolunda tek başına KMS scanout veya page flip programlamaz.
+- Başarılı dönmesi, bir sonraki frame'de eski color içeriğinin korunacağını garanti etmez.
+
 ## Native Window Boyut Değişimi
 
 Eğer native window swap öncesinde resize edilmişse, EGL surface native window ile uyumlu hale gelmelidir.
@@ -2807,7 +3235,15 @@ Pbuffer için `eglSwapBuffers` çağrısı öğretici olabilir ama görünür ou
 - EGL 1.0'da surface current context'e bağlı olmalıdır.
 - Başarılı swap sonrası color buffer içeriğini korunmuş sayma.
 - `eglSwapBuffers` implicit `glFlush` yapar ama `glFinish` değildir.
+- “Swap” fiziksel olarak mutlaka pointer değişimi demek değildir; gözlemlenebilir işlem window'a post edilmesidir.
+- EGL 1.0 VSync, tearing engelleme veya sabit FPS garantisi vermez.
 - GBM/DRM kullanıyorsan swap sonrası ayrıca BO alma ve KMS scanout gerekir.
+
+## Kaynak
+
+Posting, resize, implicit flush ve hata kuralları için Khronos'un
+[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
+belgesindeki 3.8 bölümü esas alınmıştır.
 
 ---
 

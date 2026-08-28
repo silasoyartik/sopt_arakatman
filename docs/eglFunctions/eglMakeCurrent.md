@@ -33,6 +33,20 @@ Thread
 
 `eglMakeCurrent` bu dörtlüyü değiştirir. OpenGL ES komutları doğrudan `EGLContext` handle'ına parametre olarak verilmez; komutlar çağıran thread'in current context'i üzerinden çalışır.
 
+Context'i bir “OpenGL ES makinesinin durumu”, surface'i ise bu makinenin
+okuduğu/yazdığı pixel depoları gibi düşünmek yararlıdır:
+
+```text
+EGLContext -> renk, depth test, blending, texture binding gibi GL state
+draw       -> sonuçların yazıldığı color/depth/stencil buffer'ları
+read       -> pixel okuma işlemlerinin kaynak buffer'ı
+thread     -> GL komutlarını hangi current bağlantının yorumlayacağını belirler
+```
+
+Depth, stencil ve multisample buffer'lar context'in içinde değil, surface ile
+ilişkilidir. Aynı uyumlu surface'e farklı zamanlarda farklı context'ler bağlanırsa
+bu surface buffer'larını paylaşırlar; her context'in GL state'i ise kendisine aittir.
+
 ## Parametreler
 
 ### `dpy`
@@ -140,6 +154,62 @@ eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 ```
 
 Bu, EGL 1.0'da current context'i release etmenin doğru biçimidir.
+
+## “Context ile surface uyumlu” ne demektir?
+
+EGL 1.0'da yalnızca handle'ların geçerli olması yetmez. Context ve surface:
+
+- aynı `EGLDisplay` ile oluşturulmuş olmalı,
+- color ve ancillary buffer derinlikleri uyumlu olmalıdır.
+
+Ancillary buffer; depth, stencil ve multisample buffer gibi color dışındaki
+buffer'ları kapsar. Örneğin context'in config'i RGBA8888 + depth24 + stencil8
+iken surface RGB565 + depth16 ise ikisi geçerli EGL nesneleri olsa bile birlikte
+current yapılamaz ve `EGL_BAD_MATCH` oluşur.
+
+Config ID'lerinin aynı olması zorunlu değildir. İki farklı config handle'ı aynı
+display üzerinde aynı color/ancillary buffer derinliklerini tarif ediyorsa uyumlu
+olabilir. Buna karşılık bit büyüklükleri aynı olsa bile farklı display'lerde
+oluşturulan nesneler uyumlu değildir.
+
+| Context config | Surface config | Display | Sonuç |
+| -------------- | -------------- | ------- | ----- |
+| RGBA8, D24, S8 | RGBA8, D24, S8 | Aynı | Uyumlu olabilir. |
+| RGBA8, D24, S8 | RGB565, D16, S0 | Aynı | `EGL_BAD_MATCH` |
+| RGBA8, D24, S8 | RGBA8, D24, S8 | Farklı | `EGL_BAD_MATCH` |
+
+## Ayrı draw/read surface için somut örnek
+
+İki surface de context ile uyumluysa çizim ve okuma hedefleri ayrılabilir:
+
+```c
+eglMakeCurrent(dpy, window_surface, pbuffer_surface, ctx);
+
+/* Çizim komutları window_surface'e gider. */
+glClear(GL_COLOR_BUFFER_BIT);
+
+/* Pixel okuma pbuffer_surface'ten gelir. */
+glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+```
+
+Bu çağrı pbuffer içeriğini window'a kopyalamaz. Yalnızca aynı context için draw
+ve read yönlerinin hangi surface'i kullandığını belirler.
+
+## İki thread arasında context devretme
+
+Bir context aynı anda yalnızca bir thread'de current olabilir. Thread A'da
+current olan `ctx` doğrudan Thread B'de bağlanırsa `EGL_BAD_ACCESS` oluşur.
+Güvenli mantıksal sıra şöyledir:
+
+```text
+Thread A: GL işini bitir
+Thread A: eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT)
+Thread A -> Thread B: uygulama düzeyinde mutex/condition ile haber ver
+Thread B: eglMakeCurrent(dpy, surface, surface, ctx)
+```
+
+EGL çağrıları uygulamanın thread'leri arasındaki iş teslim protokolünün yerini
+almaz; aynı context'e erişimi uygulama ayrıca senkronize etmelidir.
 
 ## Geçersiz Kombinasyon Matrisi
 
@@ -253,7 +323,14 @@ eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 - `eglMakeCurrent` thread-local current context'i değiştirir.
 - OpenGL ES komutlarının hangi context/surface üzerinde çalışacağını bu çağrı belirler.
 - `draw` çizim hedefidir, `read` okuma hedefidir.
+- Context GL state'ini, surface ise color/depth/stencil gibi framebuffer depolarını taşır.
+- Uyum için nesnelerin aynı display'e ait olması ve color/ancillary buffer derinliklerinin eşleşmesi gerekir.
 - `EGL_NO_CONTEXT` sadece iki surface de `EGL_NO_SURFACE` ise geçerlidir.
 - Context veya surface başka thread'de bağlıysa `EGL_BAD_ACCESS` beklenir.
 - Surface/context format ve display açısından uyumsuzsa `EGL_BAD_MATCH` beklenir.
 
+## Kaynak
+
+Bağlama, uyumluluk, thread ve hata kuralları için Khronos'un
+[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
+belgesindeki 2.2 ve 3.6.3 bölümleri esas alınmıştır.

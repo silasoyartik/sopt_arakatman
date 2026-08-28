@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import re
 import sys
 import tempfile
 
@@ -19,6 +20,9 @@ Source order: docs/presentation-order.txt
 
 class BuildError(Exception):
     """An expected, user-actionable build error."""
+
+
+MARKDOWN_IMAGE = re.compile(r"(!\[[^\]\n]*\]\()([^\s)]+)([^)\n]*\))")
 
 
 def parse_args() -> argparse.Namespace:
@@ -121,12 +125,39 @@ def read_order(order_path: Path, output_path: Path) -> list[Path]:
     return sources
 
 
+def rebase_local_images(text: str, source_path: Path, output_directory: Path) -> str:
+    """Keep source-relative Markdown images valid in the combined document."""
+
+    def replace(match: re.Match[str]) -> str:
+        destination = match.group(2)
+        if (
+            destination.startswith(("#", "/", "<", "data:"))
+            or "://" in destination
+        ):
+            return match.group(0)
+
+        image_path = (source_path.parent / destination).resolve()
+        if not image_path.is_file():
+            return match.group(0)
+
+        rebased = Path(os.path.relpath(image_path, output_directory)).as_posix()
+        return f"{match.group(1)}{rebased}{match.group(3)}"
+
+    return MARKDOWN_IMAGE.sub(replace, text)
+
+
 def build_document(
-    preamble_path: Path, footer_path: Path, source_paths: list[Path]
+    preamble_path: Path,
+    footer_path: Path,
+    source_paths: list[Path],
+    output_directory: Path,
 ) -> str:
     preamble = read_markdown(preamble_path, "preamble")
     footer = read_markdown(footer_path, "footer")
-    source_documents = [read_markdown(path, "source") for path in source_paths]
+    source_documents = [
+        rebase_local_images(read_markdown(path, "source"), path, output_directory)
+        for path in source_paths
+    ]
 
     toc = ["## İçindekiler", ""]
     toc.extend(
@@ -183,7 +214,12 @@ def main() -> int:
     try:
         validate_inputs(args.preamble, args.footer, args.output)
         source_paths = read_order(args.order, args.output)
-        content = build_document(args.preamble, args.footer, source_paths)
+        content = build_document(
+            args.preamble,
+            args.footer,
+            source_paths,
+            args.output.resolve().parent,
+        )
 
         if args.check:
             try:

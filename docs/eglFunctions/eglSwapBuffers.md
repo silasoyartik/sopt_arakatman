@@ -31,6 +31,25 @@ eglSwapBuffers
 native window'a post/copy
 ```
 
+Somut olarak bir frame boyunca ön ve arka buffer'ı şöyle düşünebiliriz:
+
+```text
+Frame N çizilirken:
+  front buffer -> ekranda önceki frame görünür
+  back buffer  -> OpenGL ES yeni frame'i çizer
+
+eglSwapBuffers çağrısı:
+  back buffer'daki tamamlanmış renk görüntüsü native window'a post edilir
+
+Çağrıdan sonra:
+  uygulama önceki color buffer içeriğinin korunduğunu varsayamaz
+```
+
+“Swap” adı her implementation'ın iki bellek adresini mutlaka değiştirdiği
+anlamına gelmez. EGL 1.0'ın gözlemlenebilir garantisi color buffer'ın native
+window'a post edilmesidir; driver copy, buffer exchange veya page flip benzeri
+bir yöntem seçebilir.
+
 GBM + DRM/KMS için daha uzun zincir gerekir:
 
 ```text
@@ -82,8 +101,13 @@ monitor
 | Geçerli ama current context'e bağlı olmayan surface | Başarısız,`EGL_BAD_SURFACE`.                              |
 | `EGL_NO_SURFACE`                                     | Başarısız,`EGL_BAD_SURFACE`.                              |
 | Geçersiz surface                                      | Başarısız,`EGL_BAD_SURFACE`.                              |
-| Yok edilmiş surface                                   | Başarısız,`EGL_BAD_SURFACE` veya tanımsız native durum. |
+| Yok edilmiş ve artık current olmayan surface          | Başarısız,`EGL_BAD_SURFACE`.                              |
 | Native window'u geçersiz window surface               | Başarısız,`EGL_BAD_NATIVE_WINDOW`.                        |
+
+Current durumdayken `eglDestroySurface` ile silinmek üzere işaretlenmiş bir
+surface hemen yok olmaz; current kaldığı sürece geçerlidir. İlgili thread'deki
+sonraki geçerli `eglMakeCurrent` ile bağlantı değiştiğinde gerçek silme
+tamamlanır ve bundan sonraki swap girişimi `EGL_BAD_SURFACE` olur.
 
 ## EGL 1.0 Current Surface Şartı
 
@@ -235,6 +259,19 @@ Bu `glFinish` değildir.
 
 EGL 1.0 metni, sonraki OpenGL ES komutlarının hemen verilebileceğini ama posting bitene kadar yürütülmeyebileceğini belirtir. Window surface için bu zamanlama tipik olarak vertical retrace ile ilişkilidir.
 
+Buradaki “typically” önemlidir: EGL 1.0 tek başına her swap'ın VSync beklediğini,
+tearing'in kesin engellendiğini veya swap'ın monitör yenileme hızında sabit FPS
+üreteceğini garanti etmez. Sunum yöntemi ve bloklama davranışı implementation ve
+native platforma bağlıdır.
+
+## Swap ne yapmaz?
+
+- Yeni bir frame çizmez; o ana kadar üretilmiş color buffer'ı post eder.
+- `glFinish` gibi bütün GPU işlerinin tamamlanmasını zorunlu olarak beklemez.
+- Pbuffer'ı görünür pencereye dönüştürmez.
+- GBM/DRM yolunda tek başına KMS scanout veya page flip programlamaz.
+- Başarılı dönmesi, bir sonraki frame'de eski color içeriğinin korunacağını garanti etmez.
+
 ## Native Window Boyut Değişimi
 
 Eğer native window swap öncesinde resize edilmişse, EGL surface native window ile uyumlu hale gelmelidir.
@@ -329,5 +366,12 @@ Pbuffer için `eglSwapBuffers` çağrısı öğretici olabilir ama görünür ou
 - EGL 1.0'da surface current context'e bağlı olmalıdır.
 - Başarılı swap sonrası color buffer içeriğini korunmuş sayma.
 - `eglSwapBuffers` implicit `glFlush` yapar ama `glFinish` değildir.
+- “Swap” fiziksel olarak mutlaka pointer değişimi demek değildir; gözlemlenebilir işlem window'a post edilmesidir.
+- EGL 1.0 VSync, tearing engelleme veya sabit FPS garantisi vermez.
 - GBM/DRM kullanıyorsan swap sonrası ayrıca BO alma ve KMS scanout gerekir.
 
+## Kaynak
+
+Posting, resize, implicit flush ve hata kuralları için Khronos'un
+[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
+belgesindeki 3.8 bölümü esas alınmıştır.
