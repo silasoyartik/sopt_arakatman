@@ -1,0 +1,25 @@
+|                     |                   |
+| ------------------- | ----------------- |
+| **Module Name**     | EGL10             |
+| **Sub-Module Name** | RenderingSurfaces |
+| **Target Function** | eglCreateWindowSurface |
+| **Safety Level**    | DAL A             |
+| **Rationale**       | Not derived       |
+| **Create Date**     | 30.08.2026        |
+---
+
+| Requirement ID       | Requirement | Information | Definitions | Reference | Impl.-Dep. | Source | Verification Method |
+| :------------------- | :---------- | :---------- | :---------- | :-------- | :--------- | :----- | :------------------ |
+| GS-EGL10-RS-CWS-001 | The graphics library shall provide API function (eglCreateWindowSurface) that creates an on-screen EGL rendering surface for a native window. | | EGLSurface eglCreateWindowSurface ( EGLDisplay **dpy**, EGLConfig **config**, NativeWindowType **win**, const EGLint * **attrib_list** );<br/>_Input Parameters:_<br/>&emsp;**dpy:** Specifies the initialized EGL display connection.<br/>&emsp;**config:** Specifies the EGLConfig for the surface.<br/>&emsp;**win:** Specifies the native window.<br/>&emsp;**attrib_list:** Specifies attribute/value pairs terminated by EGL_NONE. | EGL 1.0 Full Specification, 3.5.1 Creating On-Screen Rendering Surfaces, p. 19 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-002 | The eglCreateWindowSurface function shall create an on-screen EGLSurface associated with _win_ and return its handle when the call succeeds. | | | EGL 1.0 Full Specification, 3.5.1 Creating On-Screen Rendering Surfaces, p. 19 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-003 | The graphics library shall permit any EGL rendering context created with a compatible EGLConfig to render into the window surface returned by eglCreateWindowSurface. | Compatible contexts and surfaces have equal color and ancillary buffer depths and were created for the same EGLDisplay. | | EGL 1.0 Full Specification, 2.2 Rendering Contexts and Drawing Surfaces, p. 3; 3.5.1, p. 19 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-004 | The eglCreateWindowSurface function shall accept _attrib_list_ as NULL or as an empty list whose first attribute is EGL_NONE. | EGL 1.0 defines no core window-surface creation attributes. Platform extensions may define additional attributes. | | EGL 1.0 Full Specification, 3.5.1 Creating On-Screen Rendering Surfaces, p. 19 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-005 | The eglCreateWindowSurface function shall return EGL_NO_SURFACE and generate EGL_BAD_MATCH when the attributes of _win_ do not correspond to _config_. | | | EGL 1.0 Full Specification, 3.5.1 Creating On-Screen Rendering Surfaces, p. 19 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-006 | The eglCreateWindowSurface function shall return EGL_NO_SURFACE and generate EGL_BAD_MATCH when the EGL_SURFACE_TYPE attribute of _config_ does not contain EGL_WINDOW_BIT. | | | EGL 1.0 Full Specification, 3.5.1 Creating On-Screen Rendering Surfaces, p. 19 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-007 | The eglCreateWindowSurface function shall return EGL_NO_SURFACE and generate EGL_BAD_CONFIG when _config_ does not name a valid EGLConfig. | | | EGL 1.0 Full Specification, 3.5.1 Creating On-Screen Rendering Surfaces, p. 19 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-008 | The eglCreateWindowSurface function shall return EGL_NO_SURFACE and generate EGL_BAD_NATIVE_WINDOW when _win_ does not name a valid native window and the invalid native handle can be detected. | Detection of invalid native objects may not always be possible. | | EGL 1.0 Full Specification, 3.5.1 Creating On-Screen Rendering Surfaces, pp. 19-20 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-009 | The eglCreateWindowSurface function shall return EGL_NO_SURFACE and generate EGL_BAD_ALLOC when an EGLConfig is already associated with _win_ as a result of an earlier eglCreateWindowSurface call. | | | EGL 1.0 Full Specification, 3.5.1 Creating On-Screen Rendering Surfaces, p. 20 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-010 | The eglCreateWindowSurface function shall return EGL_NO_SURFACE and generate EGL_BAD_ALLOC when resources for the new EGL window surface cannot be allocated. | | | EGL 1.0 Full Specification, 3.5.1 Creating On-Screen Rendering Surfaces, p. 20 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-011 | The eglCreateWindowSurface function shall return EGL_NO_SURFACE and generate EGL_BAD_ATTRIBUTE when _attrib_list_ contains an unrecognized attribute or attribute value. | | | EGL 1.0 Full Specification, 3.1 Errors, p. 9; 3.5.1, p. 19 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-012 | The eglCreateWindowSurface function shall return EGL_NO_SURFACE and generate EGL_NOT_INITIALIZED when EGL is not initialized on _dpy_. | | | EGL 1.0 Full Specification, 3.1 Errors, pp. 8-9 | No | Req-EGL-001 | Test |
+| GS-EGL10-RS-CWS-013 | The eglCreateWindowSurface function shall return EGL_NO_SURFACE and generate EGL_BAD_DISPLAY when _dpy_ does not name a valid EGLDisplay. | | | EGL 1.0 Full Specification, 3.1 Errors, p. 9 | No | Req-EGL-001 | Test |
