@@ -1,4 +1,4 @@
-# EGL 1.0: `eglCreateContext`
+# EGL 1.0 Fonksiyon İncelemesi: `eglCreateContext`
 
 ```c
 EGLContext eglCreateContext(EGLDisplay dpy,
@@ -7,168 +7,274 @@ EGLContext eglCreateContext(EGLDisplay dpy,
                             const EGLint *attrib_list);
 ```
 
-`eglCreateContext`, OpenGL ES veya diğer Khronos API'lerinin komutlarını çalıştıracağı durumu (state machine) ve bellek alanını (rendering context) temsil eden soyut bir bağlam oluşturur.
+`eglCreateContext`, EGL tarafında OpenGL ES komutlarının çalışacağı rendering context'i oluşturur. Context; çizim durumunu, bağlanacak client API bilgisini ve GPU tarafında kullanılacak bazı kaynak ilişkilerini temsil eder. Tek başına ekrana çizim yapmaz. Oluşturulan context'in gerçekten çizim yapabilmesi için daha sonra bir surface ile birlikte `eglMakeCurrent` çağrısına verilmesi gerekir.
 
-## Kavramsal Akış
+Bu çalışmanın amacı, `eglCreateContext` fonksiyonundaki dört parametrenin sadece formal birer argüman olmadığını; ekranda görülen sonucu, kaynak paylaşımını ve çalışma yolunu doğrudan etkilediğini göstermektir.
+
+| Parametre | İncelenen fark | Senaryo klasörü |
+|---|---|---|
+| `dpy` | Ana ekran ile yedek ekran display seçimi | `pDpyID_farki/` |
+| `config` | Depth buffer yok/var seçimi | `uConfigID_farki/` |
+| `share_context` | Kaynak paylaşımı yok/var seçimi | `uShareContext_farki/` |
+| `attrib_list` | EGL 1.0 varsayılan kullanım ile GLES2 context talebi | `pAttribList_farki/` |
+
+## Genel Çalışma Modeli
+
+![eglCreateContext genel modeli](assets/eglCreateContext_genel_model.svg)
+
+Temel fikir şudur: `eglCreateContext`, display bağlantısı (`dpy`), framebuffer özellikleri (`config`), isteğe bağlı ortak context (`share_context`) ve context attribute listesi (`attrib_list`) bilgilerini birleştirerek yeni bir `EGLContext` üretir.
 
 ```text
-       [İşletim Sistemi / Native Pencerelendirme (X11, DRM, vs.)]
-                              |
-                        Native Display
-                              |
-[EGL Katmanı]                 v
-                      +---------------+
-                      |  EGLDisplay   |
-                      +-------+-------+
-                              |
-                      +-------v-------+
-                      |   EGLConfig   | (Frame buffer yetenekleri: RGB565 vs)
-                      +-------+-------+
-                              |
-        +---------------------+---------------------+
-        |                                           |
-+-------v-------+                           +-------v-------+
-|  EGLContext   | (Main)                    |  EGLContext   | (Shared)
-+-------+-------+                           +-------+-------+
-        |  - OpenGL State                           |  - Kendi OpenGL State'i
-        |  - Kendi VRAM Objeleri (FBO, PBO)         |
-        |                                           |
-        +--< Paylaşılan (Shared) VRAM Objeleri >----+ (Texture, VBO)
-                    (VRAM Bellek Tasarrufu)
+Native Display / GBM device
+        |
+        v
+eglGetDisplay + eglInitialize
+        |
+        v
+eglChooseConfig
+        |
+        v
+eglCreateContext
+        |
+        v
+eglCreateWindowSurface + eglMakeCurrent
+        |
+        v
+OpenGL ES çizimi
 ```
 
-## Parametreler
+Bu akışta `eglCreateContext` kritik bir eşiktir. Çünkü bu çağrıdan sonra artık hangi display üzerinde, hangi framebuffer özellikleriyle, hangi kaynak paylaşım ilişkisiyle ve hangi client API beklentisiyle çizim yapılacağı belirlenmiş olur.
 
-### `dpy` (EGLDisplay)
+## 1. Parametre: `dpy` (`EGLDisplay`)
 
-Bağlantı kurulan fiziksel veya sanal ekranın (display) tanıtıcısıdır.
+`dpy`, context'in hangi EGL display bağlantısı üzerinde oluşturulacağını belirler. Çok ekranlı sistemlerde bu parametre, çizim yolunun ana kokpit ekranına mı yoksa yedek/standby ekrana mı bağlanacağını etkiler.
 
-| Değer                                        | Sonuç                                               |
-| --------------------------------------------- | ---------------------------------------------------- |
-| Geçerli ve initialize edilmiş`EGLDisplay` | İşlem diğer parametreler de doğruysa devam eder. |
-| `EGL_NO_DISPLAY` veya sahte display handle  | Başarısız.`EGL_BAD_DISPLAY` hatası döner.     |
-| `eglInitialize` çağrılmamış display    | Başarısız.`EGL_NOT_INITIALIZED` hatası döner. |
+![dpy parametresi senaryoları](assets/dpy_senaryolari.svg)
 
-### `config` (EGLConfig)
+### Senaryo A: Ana ekran
 
-Oluşturulacak bağlamın renk, derinlik (depth) ve stencil tampon gereksinimlerini belirleyen donanım konfigürasyonudur.
+Kaynak dosya: `pDpyID_farki/senaryo_A_ana_ekran.c`
 
-| Değer                                                                       | Sonuç                                                            |
-| ---------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `dpy` üzerinden `eglChooseConfig` ile alınmış geçerli `EGLConfig` | Başarılı. Context bu formatta render yapmak üzere ayarlanır. |
-| Geçersiz veya uyuşmaz config handle                                        | Başarısız.`EGL_BAD_CONFIG` hatası döner.                   |
+Bu senaryoda `init_native_display_at(0)` ile 0 numaralı bağlı ekran seçilir. Ardından bu native display üzerinden `EGLDisplay` alınır ve context bu display üzerinde oluşturulur.
 
-### `share_context` (EGLContext)
+Beklenen çıktı:
 
-Doku ve vertex buffer object (VBO) gibi paylaşılabilir grafik kaynaklarının ortak kullanılacağı mevcut context'tir.
+```text
+--- SENARYO A: pDpyID - Kokpit Ana Ekrani (PFD) ---
+DEGER A: dpy = ana ekranin EGLDisplay handle'i.
+ -> GORSEL SONUC: Ana ekran senaryosu koyu mavi zemin,
+    camgobegi alt bant ve yesil ucgen cizer.
+```
 
-| Değer                                              | Sonuç                                                                                                       |
-| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `EGL_NO_CONTEXT`                                  | İzolasyon. Context hiçbir VRAM verisini paylaşmaz, izole çalışır.                                     |
-| Geçerli bir`EGLContext` handle                   | Paylaşım. İki context texture gibi objelere ortak erişim sağlar. State'ler (viewport vb.) ayrı kalır. |
-| Geçersiz handle veya farklı`dpy`'ye ait context | Başarısız.`EGL_BAD_CONTEXT` veya `EGL_BAD_MATCH` hatası döner.                                      |
+Görsel yorum: Ana ekran yolu koyu mavi zemin, camgöbeği alt bant ve yeşil üçgen ile temsil edilmiştir. Burada amaç, context'in 0 numaralı display yolunda oluşturulduğunu gözle seçilebilir hale getirmektir.
 
-### `attrib_list` (const EGLint *)
+### Senaryo B: Yedek ekran
 
-Context oluşturulurken istenen ekstra özellikleri (API sürümü vb.) belirten anahtar-değer (key-value) çifti listesidir.
+Kaynak dosya: `pDpyID_farki/senaryo_B_yedek_ekran.c`
 
-| Değer                                             | Sonuç                                                                                          |
-| -------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `NULL` veya `{ EGL_NONE }`                     | EGL 1.0 standart kullanımı. Varsayılan (default) context (genellikle GLES 1.x) oluşturulur. |
-| Geçerli attribute listesi (Örn: GLES 2.0 talebi) | İlgili gereksinimleri karşılayan bağlam oluşturulur.                                       |
-| Geçersiz/Desteklenmeyen attribute                 | Başarısız.`EGL_BAD_ATTRIBUTE` hatası döner.                                              |
+Bu senaryoda `init_native_display_at(1)` ile ikinci bağlı ekran hedeflenir. Sistemde ikinci connector yoksa yardımcı kod 0 numaralı ekrana düşebilir; yine de farklı renk/desen kullanıldığı için seçilen senaryo görsel olarak ayırt edilir.
 
-## Geçerli Attribute Listesi
+Beklenen çıktı:
 
-`attrib_list`, `{ anahtar, değer, ..., EGL_NONE }` formatında sonlanan bir dizidir.
+```text
+--- SENARYO B: pDpyID - Yedek Ekran (Standby/EICAS) ---
+DEGER B: dpy = yedek ekran icin secilen EGLDisplay/native display yolu.
+ -> GORSEL SONUC: Yedek ekran senaryosu kahverengi zemin,
+    turuncu ust bant ve sari ucgen cizer.
+```
 
-| Attribute                      | Tip        | Anlam                                                                                                                                     |
-| ------------------------------ | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
-| `EGL_CONTEXT_CLIENT_VERSION` | `EGLint` | İstenen OpenGL ES sürümünü belirtir. EGL 1.0 core attribute kümesinin parçası değildir; sonraki EGL sürümlerinde kullanılır. |
-| `EGL_NONE`                   | `EGLint` | Liste sonlandırıcı belirteç.**Zorunludur.**                                                                                     |
+Sonuç: `dpy` değiştiğinde context farklı native display yoluna bağlanır. Bu nedenle çizimin hangi fiziksel ya da mantıksal ekranda görüneceği `dpy` seçimiyle ilişkilidir.
 
-*Not: `eglCreateContext` doğrudan buffer tiplerine (single buffered pixmap veya back buffered window) bağımlı değildir; bu uyumluluk yüzey (surface) oluşturulurken (`eglCreateWindowSurface`) ve bağlam yüzeye bağlanırken (`eglMakeCurrent`) denetlenir.*
+## 2. Parametre: `config` (`EGLConfig`)
 
-## Ayrıntılar ve Yaşam Döngüsü
+`config`, context'in birlikte kullanılacağı framebuffer özelliklerini belirler. Renk kanal boyutları, surface tipi, renderable API ve depth buffer gibi özellikler `EGLConfig` seçiminde yer alır. Bu çalışmada özellikle `EGL_DEPTH_SIZE` farkı incelenmiştir.
 
-- **Thread Güvenliği (Thread Safety):** EGLContext aynı anda (concurrently) sadece bir iş parçacığında (thread) aktif (`current`) olabilir. Başka bir thread bu context'i `eglMakeCurrent` ile aktif etmek isterse, mevcut thread'in önce bağlamı serbest bırakması (unbind) gerekir. EGL spesifikasyonu, bir context'in birden fazla thread'de kullanılmasını yasaklar (`EGL_BAD_ACCESS` döner).
-- **Yaşam Döngüsü:** Context oluşturulduğunda bellek tahsisi yapılır ancak ekrana çizim yapamaz. Çizim için `eglMakeCurrent` şarttır. Yok edilmesi ise `eglDestroyContext` ile yapılır.
-- **Eşzamanlama (Synchronization):** `share_context` ile VRAM paylaşımı yapıldığında, OpenGL ES komutları otomatik olarak senkronize olmaz. İki farklı thread, paylaşılan bir dokuya (texture) aynı anda yazmaya/okumaya çalışırsa Undefined Behavior (tanımsız davranış) oluşur. Bu durumu engellemek için `glFinish()`, `eglWaitGL()` veya `eglWaitNative()` gibi açık eşzamanlama bariyerleri kullanılmalıdır.
+![config parametresi depth buffer farkı](assets/config_depth_senaryolari.svg)
 
-## Hata Matrisi
+### Senaryo A: Depth buffer yok
 
-Khronos spesifikasyonu (Bölüm 3.6.1) kuralı gereği: Fonksiyon başarısız olduğunda state machine'de hiçbir değişiklik olmaz, VRAM veya RAM sızıntısı yaşanmaz (No side effects). Hata durumunda `EGL_NO_CONTEXT` döner. Hatayı okumak için `eglGetError()` çağrılmalıdır.
+Kaynak dosya: `uConfigID_farki/senaryo_A_derinlik_yok.c`
 
-| Durum                                                                       | Sonuç (EGL Hata Kodu)                      |
-| --------------------------------------------------------------------------- | ------------------------------------------- |
-| Geçerli parametreler ve yeterli donanım/bellek                            | Başarılı (Geçerli`EGLContext` döner) |
-| `dpy` geçerli bir display değilse                                       | `EGL_BAD_DISPLAY`                         |
-| `dpy` EGL ile initialize edilmemişse                                     | `EGL_NOT_INITIALIZED`                     |
-| `config` geçersiz bir EGL konfigürasyonu ise                            | `EGL_BAD_CONFIG`                          |
-| `share_context` geçersizse (`EGL_NO_CONTEXT` değilse)                 | `EGL_BAD_CONTEXT`                         |
-| Context'ler paylaşılamıyorsa (uyuşmaz API veya donanım kısıtlaması) | `EGL_BAD_MATCH`                           |
-| `attrib_list` geçersiz bir attribute içeriyorsa                         | `EGL_BAD_ATTRIBUTE`                       |
-| İşletim sistemi veya GPU belleğinde yer kalmadıysa                      | `EGL_BAD_ALLOC`                           |
+Bu senaryoda config attribute listesinde `EGL_DEPTH_SIZE, 0` kullanılır. Kodda depth test açılsa bile depth buffer olmadığı için z karşılaştırması beklenen şekilde çalışmaz; çizim sırası daha baskın hale gelir.
+
+Beklenen çıktı:
+
+```text
+--- SENARYO A: uConfigID - Derinlik Tamponu Olmayan Config (EGL_DEPTH_SIZE = 0) ---
+DEGER A: config = EGL_DEPTH_SIZE 0.
+ -> GORSEL SONUC: Derinlik tamponu yok.
+    Son cizilen mavi ucgen kirmizinin ustune biner.
+```
+
+Görsel yorum: Kırmızı üçgen önce, mavi üçgen sonra çizilir. Depth buffer olmadığı için son çizilen mavi üçgen üstte görünür.
+
+### Senaryo B: Depth buffer var
+
+Kaynak dosya: `uConfigID_farki/senaryo_B_derinlik_var.c`
+
+Bu senaryoda config attribute listesinde `EGL_DEPTH_SIZE, 16` kullanılır. Aynı iki üçgen aynı sırayla çizilir; fakat depth buffer devrede olduğu için z değeri sonucu belirler.
+
+Beklenen çıktı:
+
+```text
+--- SENARYO B: uConfigID - Derinlik Tamponu Olan Config (EGL_DEPTH_SIZE = 16) ---
+DEGER B: config = EGL_DEPTH_SIZE 16.
+ -> GORSEL SONUC: Derinlik tamponu var.
+    Kirmizi ucgen onde kalir, mavi ucgen arkada elenir.
+```
+
+Sonuç: `config` parametresindeki depth buffer seçimi, aynı çizim komutlarının ekranda farklı sonuç üretmesine neden olur. Bu yüzden `EGLConfig`, yalnızca renk formatı seçimi değil, render davranışını etkileyen temel bir karardır.
+
+## 3. Parametre: `share_context` (`EGLContext`)
+
+`share_context`, yeni context'in mevcut bir context ile GL nesnelerini paylaşıp paylaşmayacağını belirler. Texture, buffer object ve benzeri bazı GL kaynakları paylaşılabilir. Buna karşılık viewport, current program, enable/disable state gibi context state'leri context'e özgü kalır.
+
+![share_context parametresi senaryoları](assets/share_context_senaryolari.svg)
+
+### Senaryo A: Paylaşım yok
+
+Kaynak dosya: `uShareContext_farki/senaryo_A_paylasim_yok.c`
+
+Bu senaryoda iki context de `EGL_NO_CONTEXT` ile oluşturulur. Birinci context içinde sarı-siyah checkerboard texture oluşturulur. İkinci context'e geçildiğinde `glIsTexture(texture)` kontrolü yapılır.
+
+Beklenen çıktı:
+
+```text
+--- SENARYO A: uShareContext - Paylasim Yok (EGL_NO_CONTEXT) ---
+[VRAM] 1. baglamda sari-siyah doku yaratildi. Texture ID: <id>
+
+DEGER A: share_context = EGL_NO_CONTEXT
+ -> SONUC: 2. baglam 1. baglamin dokusunu TANIMIYOR.
+ -> GORSEL SONUC: Texture paylasilamadigi icin ekranda kirmizi hata/desen alani gorulur.
+```
+
+Görsel yorum: İkinci context birinci context'te üretilen texture nesnesini tanımaz. Bu nedenle texture yerine hata/desen alanı gösterilir.
+
+### Senaryo B: Ortak context
+
+Kaynak dosya: `uShareContext_farki/senaryo_B_ortak_context.c`
+
+Bu senaryoda önce `main_ctx` oluşturulur. Sonra ikinci context şu şekilde oluşturulur:
+
+```c
+EGLContext shared_ctx = eglCreateContext(display, config, main_ctx, ctx_attribs);
+```
+
+Bu kullanımda ikinci context, birinci context'in paylaşıma uygun GL nesnelerini görebilir.
+
+Beklenen çıktı:
+
+```text
+--- SENARYO B: uShareContext - Ortak Context (Paylasimli) ---
+[VRAM] 1. baglamda sari-siyah doku yaratildi. Texture ID: <id>
+
+DEGER B: share_context = main_ctx
+ -> SONUC: 2. baglam 1. baglamin dokusunu TANIYOR.
+ -> GORSEL SONUC: Paylasim calisinca 1. context'te uretilen
+    sari-siyah doku 2. context'te gorunur.
+```
+
+Sonuç: `share_context = EGL_NO_CONTEXT` izolasyon sağlar. Geçerli bir context handle'ı verilirse kaynak paylaşımı yapılabilir. Çok ekranlı kokpit uygulamalarında bu özellik; font, sembol, harita texture'ı ve ortak buffer gibi GPU kaynaklarının tekrar tekrar yüklenmesini önler.
+
+## 4. Parametre: `attrib_list` (`const EGLint *`)
+
+`attrib_list`, context oluşturulurken istenen ek özellikleri anahtar-değer çiftleriyle belirtir. Liste mutlaka `EGL_NONE` ile bitmelidir.
+
+![attrib_list parametresi senaryoları](assets/attrib_list_senaryolari.svg)
+
+### Senaryo A: EGL 1.0 standart kullanım
+
+Kaynak dosya: `pAttribList_farki/senaryo_A_egl10_standart.c`
+
+Bu senaryoda attribute listesi sadece `EGL_NONE` içerir:
+
+```c
+EGLint egl10_attribs[] = { EGL_NONE };
+```
+
+Beklenen çıktı:
+
+```text
+--- SENARYO A: pAttribList - EGL 1.0 Standart Kullanimi ---
+DEGER A: pAttribList = { EGL_NONE }
+ -> SONUC: EGL 1.0 standart bicimde ek client-version istegi vermeden context olusturur.
+ -> GORSEL SONUC: Duz gri ekran. Shader/modern pipeline talebi yapilmadi.
+    Aktif OpenGL ES versiyonu: <sistemden gelen GL_VERSION>
+```
+
+Görsel yorum: Ek client-version talebi yapılmadığı için senaryo düz gri ekranla temsil edilmiştir.
+
+### Senaryo B: Modern pipeline talebi
+
+Kaynak dosya: `pAttribList_farki/senaryo_B_modern_pipeline.c`
+
+Bu senaryoda attribute listesinde GLES2 context istenir:
+
+```c
+EGLint modern_attribs[] = {
+    EGL_CONTEXT_CLIENT_VERSION, 2,
+    EGL_NONE
+};
+```
+
+Beklenen çıktı:
+
+```text
+--- SENARYO B: pAttribList - Modern Pipeline (EGL_CONTEXT_CLIENT_VERSION) ---
+DEGER B: pAttribList = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE }
+ -> SONUC: GLES2/SC2.0 icin programmable shader pipeline talep edildi.
+ -> GORSEL SONUC: Koyu zemin uzerinde mavi bant ve shader ile cizilen mor ucgen gorulur.
+    Aktif OpenGL ES versiyonu: <sistemden gelen GL_VERSION>
+```
+
+Sonuç: `attrib_list`, context'in hangi client API beklentisiyle oluşturulacağını somutlaştırır. EGL 1.0 temelinde attribute listesi sınırlıdır; pratik sistemlerde ise `EGL_CONTEXT_CLIENT_VERSION` gibi alanlar GLES2 ve üstü pipeline seçimi için önemlidir.
+
+## Hata Durumları
+
+Fonksiyon başarısız olursa `EGL_NO_CONTEXT` döner. Hata nedeni `eglGetError()` ile okunmalıdır.
+
+| Durum | Beklenen hata |
+|---|---|
+| `dpy` geçerli bir display değilse | `EGL_BAD_DISPLAY` |
+| `dpy` initialize edilmemişse | `EGL_NOT_INITIALIZED` |
+| `config` geçersizse | `EGL_BAD_CONFIG` |
+| `share_context` geçersizse | `EGL_BAD_CONTEXT` |
+| Context'ler paylaşım için uyumsuzsa | `EGL_BAD_MATCH` |
+| `attrib_list` geçersiz attribute içeriyorsa | `EGL_BAD_ATTRIBUTE` |
+| Bellek/GPU kaynağı yetersizse | `EGL_BAD_ALLOC` |
 
 ## Güvenli Kullanım Örneği
 
 ```c
 #include <EGL/egl.h>
 #include <stdio.h>
-#include <stdlib.h>
 
-// Context oluşturma ve hata kontrolü
-EGLContext CreateSecureContext(EGLDisplay dpy, EGLConfig config, EGLContext shared_ctx) {
-    // EGL 1.0 uyumlu null-terminated liste
+EGLContext CreateCheckedContext(EGLDisplay dpy,
+                                EGLConfig config,
+                                EGLContext shared_ctx) {
     const EGLint attrib_list[] = {
-        EGL_NONE // GLES 1.x / EGL 1.0 Default
+        EGL_CONTEXT_CLIENT_VERSION, 2,
+        EGL_NONE
     };
 
-    // Context oluştur (Thread güvenli ve state-protected çağrı)
     EGLContext context = eglCreateContext(dpy, config, shared_ctx, attrib_list);
-
-    // Error checking (Hata kontrolü) - Zero Side Effect kuralı denetimi
     if (context == EGL_NO_CONTEXT) {
         EGLint err = eglGetError();
-        switch (err) {
-            case EGL_BAD_DISPLAY:
-                fprintf(stderr, "Hata: Gecersiz Display Handle.\n");
-                break;
-            case EGL_NOT_INITIALIZED:
-                fprintf(stderr, "Hata: EGL sistemi baslatilmamis.\n");
-                break;
-            case EGL_BAD_CONFIG:
-                fprintf(stderr, "Hata: Donanim konfigürasyonu gecersiz veya uyuşmuyor.\n");
-                break;
-            case EGL_BAD_ALLOC:
-                fprintf(stderr, "OOM (Out of Memory): GPU veya Sistem bellegi yetersiz!\n");
-                // Aviyonik sistemlerde bu durum watchdog timer veya soft-reset tetiklemelidir.
-                break;
-            case EGL_BAD_MATCH:
-                fprintf(stderr, "Hata: Paylasimli context konfigürasyonu uyusmazligi.\n");
-                break;
-            case EGL_BAD_ATTRIBUTE:
-                fprintf(stderr, "Hata: Desteklenmeyen EGL_ATTRIBUTE (API surumu vb.).\n");
-                break;
-            case EGL_BAD_CONTEXT:
-                fprintf(stderr, "Hata: Paylasilmak istenen kaynak context gecersiz.\n");
-                break;
-            default:
-                fprintf(stderr, "Bilinmeyen EGL hatasi: 0x%04x\n", err);
-                break;
-        }
+        fprintf(stderr, "eglCreateContext basarisiz oldu. EGL hata kodu: 0x%04x\n", err);
         return EGL_NO_CONTEXT;
     }
 
-    // Basarili: Bellek tahsisi ve state machine hazir.
     return context;
 }
 ```
 
-## Bölüm Özeti
+## Pratik Özet
 
-- **State Yönetimi:** `eglCreateContext`, rendering state'ini oluşturur. OpenGL ES komutlarının işlenebilmesi için context daha sonra `eglMakeCurrent` ile bir thread'e ve uygun surface'lere bağlanmalıdır.
-- **Kaynak Paylaşımı:** `share_context`, texture, buffer ve benzeri paylaşılabilir grafik kaynaklarının birden fazla context tarafından kullanılmasını sağlar.
-- **Thread Kısıtlaması:** Bir context aynı anda yalnızca bir thread üzerinde current olabilir. Başka bir thread'de kullanılmadan önce mevcut bağlantısı kaldırılmalıdır.
-- **Hata Kontrolü:** Dönüş değeri `EGL_NO_CONTEXT` ile karşılaştırılmalı; başarısızlık durumunun ayrıntısı `eglGetError()` ile alınmalıdır.
+| Parametre | Değiştiğinde ne olur? | Bu projedeki somut kanıt |
+|---|---|---|
+| `dpy` | Context farklı display/native ekran yolu üzerinde oluşturulur. | Ana ekran ve yedek ekran farklı renk/desen üretir. |
+| `config` | Framebuffer özellikleri değişir. | Depth yokken mavi üçgen üstte; depth varken kırmızı üçgen önde kalır. |
+| `share_context` | GL nesnelerinin context'ler arasında paylaşılıp paylaşılmayacağı belirlenir. | Paylaşım yokken texture tanınmaz; paylaşım varken checkerboard texture görünür. |
+| `attrib_list` | Context'in istenen client API/pipeline davranışı belirlenir. | `{ EGL_NONE }` gri ekran; GLES2 talebi shader ile mor üçgen üretir. |
 
+`eglCreateContext` bu nedenle yalnızca bir handle üretme fonksiyonu değildir. Parametreleri; context'in hangi display üzerinde yaşayacağını, hangi framebuffer özelliklerini kullanacağını, hangi kaynakları paylaşacağını ve hangi API beklentisiyle çalışacağını belirler.
