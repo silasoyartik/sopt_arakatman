@@ -1,225 +1,129 @@
 #include <EGL/egl.h>
+#include <stdio.h>
 
 /*
- * ============================================================
- * Scenario 1:
- * Geçerli EGLDisplay ile normal eglInitialize kullanımı
- * ============================================================
- *
- * Amaç:
- * Geçerli bir EGLDisplay'i initialize etmek ve EGL implementation
- * tarafından kullanılan major ve minor sürüm numaralarını almak.
- *
- * Önce eglGetDisplay ile bir EGLDisplay elde edilir:
- *
- *     EGLDisplay dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
- *
- * Daha sonra major ve minor output parametreleri verilerek
- * eglInitialize çağrılır.
- *
- * Başarılı durumda:
- *
- *     result == EGL_TRUE
- *
- * olur ve major/minor değişkenlerine EGL sürüm bilgisi yazılır.
- *
- * Bizim test ortamımızda olası örnek sonuç:
- *
- *     result: EGL_TRUE
- *     EGL version: 1.5
- *
- * Buradaki 1.5 değeri test ortamındaki EGL implementation'a aittir.
- * Farklı sistemlerde farklı bir EGL sürümü dönebilir.
- *
- * major ve minor değişkenlerine başlangıçta -1 verilmesi,
- * fonksiyonun bu değerleri gerçekten değiştirip değiştirmediğini
- * gözlemlemeyi kolaylaştırır.
+ * eglInitialize(dpy, major, minor) icin all-in-one senaryo dosyasi.
+ * A-D senaryolari icin tercihen fresh EGLDisplay kullanilmalidir.
  */
-void scenario_normal_initialize(EGLDisplay dpy)
+
+static const char *egl_error_name(EGLint error)
+{
+    switch (error) {
+    case EGL_SUCCESS:         return "EGL_SUCCESS";
+    case EGL_NOT_INITIALIZED: return "EGL_NOT_INITIALIZED";
+    case EGL_BAD_ACCESS:      return "EGL_BAD_ACCESS";
+    case EGL_BAD_ALLOC:       return "EGL_BAD_ALLOC";
+    case EGL_BAD_ATTRIBUTE:   return "EGL_BAD_ATTRIBUTE";
+    case EGL_BAD_CONTEXT:     return "EGL_BAD_CONTEXT";
+    case EGL_BAD_CONFIG:      return "EGL_BAD_CONFIG";
+    case EGL_BAD_SURFACE:     return "EGL_BAD_SURFACE";
+    case EGL_BAD_DISPLAY:     return "EGL_BAD_DISPLAY";
+    case EGL_BAD_MATCH:       return "EGL_BAD_MATCH";
+    case EGL_BAD_PARAMETER:   return "EGL_BAD_PARAMETER";
+    default:                  return "UNKNOWN_EGL_ERROR";
+    }
+}
+
+
+/*
+ * SENARYO A - major ve minor birlikte verilir.
+ * Beklenen: EGL_TRUE ve test ortamimizda version=1.5.
+ */
+void scenario_a_major_and_minor(EGLDisplay dpy)
 {
     EGLint major = -1;
     EGLint minor = -1;
 
-    EGLBoolean result =
-        eglInitialize(dpy, &major, &minor);
-
-    (void)result;
-    (void)major;
-    (void)minor;
+    if (eglInitialize(dpy, &major, &minor) == EGL_TRUE) {
+        printf("Senaryo A basarili: version=%d.%d\n",
+               major, minor);
+    } else {
+        printf("Senaryo A hatali: %s\n",
+               egl_error_name(eglGetError()));
+    }
 }
 
 
 /*
- * ============================================================
- * Scenario 2A:
- * major = NULL kullanımı
- * ============================================================
- *
- * Amaç:
- * Sürüm bilgisi hakkında sadece major parametresinin NULL
- * olarak verildiğinde initialization davranışının yine de başarılı olabildiğini göstermek.
- *
- * Çağrı:
- *
- *     eglInitialize(dpy, NULL, &minor);
- *
- * Başarılı durumda:
- *
- *     result == EGL_TRUE
- *
- * olur.
- *
- * Bizim test ortamımızda olası örnek sonuç:
- *
- *     result: EGL_TRUE
- *     minor: -1
- *
- * Test edilen Mesa implementation'ında major parametresi NULL
- * olduğunda çağrı başarılı olmasına rağmen minor değişkeni
- * güncellenmemiştir.
- *
- * Buradaki -1 değeri bir EGL sürüm numarası değildir.
- * Değişkenin başlangıç değeridir ve bu çağrıda minor output
- * parametresine sürüm bilgisinin yazılmadığını gösterir.
+ * SENARYO B - major=NULL, minor pointer.
+ * Test edilen Mesa ortaminda EGL_TRUE, minor=-1 beklenir.
  */
-void scenario_major_null(EGLDisplay dpy)
+void scenario_b_major_null(EGLDisplay dpy)
 {
     EGLint minor = -1;
 
-    EGLBoolean result =
-        eglInitialize(dpy, NULL, &minor);
+    if (eglInitialize(dpy, NULL, &minor) == EGL_FALSE) {
+        printf("Senaryo B hatali: %s\n",
+               egl_error_name(eglGetError()));
+        return;
+    }
 
-    (void)result;
-    (void)minor;
+    if (minor == -1) {
+        printf("Senaryo B basarili: EGL_TRUE, minor=-1 kaldı.\n");
+    } else {
+        printf("Senaryo B farkli implementation davranisi: minor=%d\n",
+               minor);
+    }
 }
 
 
 /*
- * ============================================================
- * Scenario 2B:
- * minor = NULL kullanımı
- * ============================================================
- *
- * Amaç:
- * Sürüm bilgisi hakkında sadece minor parametresinin NULL
- * olarak verildiğinde initialization davranışının yine de başarılı olabildiğini göstermek.
- *
- * Çağrı:
- *
- *     eglInitialize(dpy, &major, NULL);
- *
- * Başarılı durumda:
- *
- *     result == EGL_TRUE
- *
- * olur.
- *
- * Bizim test ortamımızda olası örnek sonuç:
- *
- *     result: EGL_TRUE
- *     major: -1
- *
- * Test edilen Mesa implementation'ında minor parametresi NULL
- * olduğunda çağrı başarılı olmasına rağmen major değişkeni
- * güncellenmemiştir.
- *
- * Buradaki -1 değeri bir EGL sürüm numarası değildir.
- * Değişkenin başlangıç değeridir ve bu çağrıda major output
- * parametresine sürüm bilgisinin yazılmadığını gösterir.
+ * SENARYO C - major pointer, minor=NULL.
+ * Test edilen Mesa ortaminda EGL_TRUE, major=-1 beklenir.
  */
-void scenario_minor_null(EGLDisplay dpy)
+void scenario_c_minor_null(EGLDisplay dpy)
 {
     EGLint major = -1;
 
-    EGLBoolean result =
-        eglInitialize(dpy, &major, NULL);
+    if (eglInitialize(dpy, &major, NULL) == EGL_FALSE) {
+        printf("Senaryo C hatali: %s\n",
+               egl_error_name(eglGetError()));
+        return;
+    }
 
-    (void)result;
-    (void)major;
+    if (major == -1) {
+        printf("Senaryo C basarili: EGL_TRUE, major=-1 kaldı.\n");
+    } else {
+        printf("Senaryo C farkli implementation davranisi: major=%d\n",
+               major);
+    }
 }
 
 
 /*
- * ============================================================
- * Scenario 2C:
- * major = NULL ve minor = NULL kullanımı
- * ============================================================
- *
- * Amaç:
- * Uygulamanın EGL sürüm numarasına ihtiyacı olmadığında her iki
- * output parametresinin de NULL verilebildiğini göstermek.
- *
- * Çağrı:
- *
- *     eglInitialize(dpy, NULL, NULL);
- *
- * Bu kullanımda display yine initialize edilir ancak major ve
- * minor sürüm bilgileri uygulamaya döndürülmez.
- *
- * Başarılı durumda:
- *
- *     result == EGL_TRUE
- *
- * olur.
- *
- * Olası örnek sonuç:
- *
- *     result: EGL_TRUE
- *
- * Bu senaryoda major/minor çıktısı yoktur çünkü her iki output
- * pointer da NULL verilmiştir.
+ * SENARYO D - major=NULL ve minor=NULL.
+ * Beklenen: surum output'u alinmadan EGL_TRUE.
  */
-void scenario_major_minor_null(EGLDisplay dpy)
+void scenario_d_both_null(EGLDisplay dpy)
 {
-    EGLBoolean result =
-        eglInitialize(dpy, NULL, NULL);
-
-    (void)result;
+    if (eglInitialize(dpy, NULL, NULL) == EGL_TRUE) {
+        printf("Senaryo D basarili: EGL_TRUE dondu.\n");
+    } else {
+        printf("Senaryo D hatali: %s\n",
+               egl_error_name(eglGetError()));
+    }
 }
 
 
 /*
- * ============================================================
- * Scenario 3:
- * Geçersiz display - EGL_NO_DISPLAY
- * ============================================================
- *
- * Amaç:
- * eglInitialize fonksiyonuna geçerli bir EGLDisplay yerine
- * EGL_NO_DISPLAY verildiğinde oluşan hata davranışını göstermek.
- *
- * Çağrı:
- *
- *     eglInitialize(EGL_NO_DISPLAY, &major, &minor);
- *
- * Beklenen sonuç:
- *
- *     result == EGL_FALSE
- *
- * ve eglGetError çağrısından:
- *
- *     EGL_BAD_DISPLAY
- *
- * hata kodu alınır.
- *
- * Olası örnek çıktı:
- *
- *     result: EGL_FALSE
- *     error: EGL_BAD_DISPLAY
- *
- * Bu durumda display geçerli olmadığı için initialization
- * gerçekleştirilemez.
+ * SENARYO E - dpy=EGL_NO_DISPLAY.
+ * Beklenen: EGL_FALSE ve EGL_BAD_DISPLAY.
  */
-void scenario_invalid_display(void)
+void scenario_e_invalid_display(void)
 {
     EGLint major = -1;
     EGLint minor = -1;
 
-    EGLBoolean result =
-        eglInitialize(EGL_NO_DISPLAY, &major, &minor);
+    if (eglInitialize(EGL_NO_DISPLAY, &major, &minor) == EGL_FALSE) {
+        EGLint error = eglGetError();
 
-    EGLint error = eglGetError();
-
-    (void)result;
-    (void)error;
+        if (error == EGL_BAD_DISPLAY) {
+            printf("Senaryo E basarili: EGL_BAD_DISPLAY alindi.\n");
+        } else {
+            printf("Senaryo E farkli hata: %s\n",
+                   egl_error_name(error));
+        }
+    } else {
+        printf("Senaryo E beklenmeyen sonuc: EGL_TRUE dondu.\n");
+    }
 }
