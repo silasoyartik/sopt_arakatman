@@ -1,41 +1,12 @@
 #include <EGL/egl.h>
 
-/*
- * eglCreateContext - Toplu Senaryo Inceleme Dosyasi
- *
- * Bu dosya calistirilabilir bir test uygulamasi olarak hazirlanmamistir.
- * Amac, eglCreateContext fonksiyonunda degisen parametreleri tek yerde
- * sade sekilde gostermektir.
- *
- * Her senaryoda sadece o senaryoyu anlamak icin gerekli kisimlar tutuldu:
- *  - Degisen parametre
- *  - Ilgili eglCreateContext kullanimi
- *  - Beklenen anlam / sonuc
- */
+/* eglCreateContext icin farkli parametre senaryolarini sade sekilde gosterir. */
 
-/* =========================================================================
- * 1) pDpyID SENARYOLARI
- * -------------------------------------------------------------------------
- * pDpyID, eglCreateContext fonksiyonuna verilen EGLDisplay handle'idir.
- *
- * EGLContext eglCreateContext(
- *     EGLDisplay dpy,
- *     EGLConfig config,
- *     EGLContext share_context,
- *     const EGLint *attrib_list
- * );
- *
- * Bu grupta asil fark dpy parametresidir.
- * ========================================================================= */
+/* 1) pDpyID senaryolari: context'in hangi EGLDisplay uzerinde olusacagini gosterir. */
 
 /*
  * SENARYO A - Ana ekran icin context olusturma
- *
- * Degisen deger:
- *  - dpy = ana_ekran_dpy
- *
- * Anlam:
- *  - Context, ana ekranin EGLDisplay baglantisi uzerinde olusturulur.
+ * Ana ekran display'i ve ona ait config ile context olusturulur.
  */
 void senaryo_pDpyID_A_ana_ekran(EGLDisplay ana_ekran_dpy, EGLConfig ana_ekran_config) {
     EGLint context_attribs[] = {
@@ -55,13 +26,7 @@ void senaryo_pDpyID_A_ana_ekran(EGLDisplay ana_ekran_dpy, EGLConfig ana_ekran_co
 
 /*
  * SENARYO B - Yedek ekran icin context olusturma
- *
- * Degisen deger:
- *  - dpy = yedek_ekran_dpy
- *
- * Anlam:
- *  - Context, yedek ekranin EGLDisplay baglantisi uzerinde olusturulur.
- *  - A senaryosundan farki context'in baska bir display'e ait olmasidir.
+ * Yedek ekran display'i kullanilarak ayri bir context olusturulur.
  */
 void senaryo_pDpyID_B_yedek_ekran(EGLDisplay yedek_ekran_dpy, EGLConfig yedek_ekran_config) {
     EGLint context_attribs[] = {
@@ -79,24 +44,11 @@ void senaryo_pDpyID_B_yedek_ekran(EGLDisplay yedek_ekran_dpy, EGLConfig yedek_ek
     (void)yedek_ekran_context;
 }
 
-/* =========================================================================
- * 2) uConfigID SENARYOLARI
- * -------------------------------------------------------------------------
- * uConfigID, eglCreateContext fonksiyonuna verilen EGLConfig secimini temsil
- * eder. Context'in hangi framebuffer ozellikleriyle uyumlu olacagini belirler.
- *
- * Bu grupta asil fark EGL_DEPTH_SIZE degeridir.
- * ========================================================================= */
+/* 2) uConfigID senaryolari: secilen EGLConfig'in context davranisina etkisini gosterir. */
 
 /*
  * SENARYO A - Derinlik tamponu olmayan config
- *
- * Degisen deger:
- *  - config = EGL_DEPTH_SIZE 0 olan EGLConfig
- *
- * Anlam:
- *  - Derinlik tamponu yoktur.
- *  - Z sirasi korunmaz; cizim sirasi sonucu belirler.
+ * EGL_DEPTH_SIZE 0 olan config ile derinlik tamponsuz context olusturulur.
  */
 void senaryo_uConfigID_A_derinlik_yok(EGLDisplay dpy) {
     EGLint config_attribs[] = {
@@ -131,13 +83,7 @@ void senaryo_uConfigID_A_derinlik_yok(EGLDisplay dpy) {
 
 /*
  * SENARYO B - Derinlik tamponu olan config
- *
- * Degisen deger:
- *  - config = EGL_DEPTH_SIZE 16 olan EGLConfig
- *
- * Anlam:
- *  - Derinlik tamponu vardir.
- *  - Ayni cizim sirasinda bile z testi sonuc goruntuyu degistirir.
+ * EGL_DEPTH_SIZE 16 olan config ile derinlik tamponlu context olusturulur.
  */
 void senaryo_uConfigID_B_derinlik_var(EGLDisplay dpy) {
     EGLint config_attribs[] = {
@@ -170,24 +116,11 @@ void senaryo_uConfigID_B_derinlik_var(EGLDisplay dpy) {
     (void)context;
 }
 
-/* =========================================================================
- * 3) uShareContext SENARYOLARI
- * -------------------------------------------------------------------------
- * uShareContext, yeni context'in baska bir context ile GL kaynaklarini
- * paylasip paylasmayacagini belirler.
- *
- * Bu grupta asil fark share_context parametresidir.
- * ========================================================================= */
+/* 3) uShareContext senaryolari: yeni context'in kaynak paylasimini gosterir. */
 
 /*
  * SENARYO A - Paylasim yok
- *
- * Degisen deger:
- *  - share_context = EGL_NO_CONTEXT
- *
- * Anlam:
- *  - Yeni context herhangi bir context ile kaynak paylasmaz.
- *  - Baska context'te olusturulan texture gibi kaynaklari dogrudan kullanamaz.
+ * EGL_NO_CONTEXT verilerek izole bir context olusturulur.
  */
 void senaryo_uShareContext_A_paylasim_yok(EGLDisplay dpy, EGLConfig config) {
     EGLint context_attribs[] = {
@@ -207,14 +140,7 @@ void senaryo_uShareContext_A_paylasim_yok(EGLDisplay dpy, EGLConfig config) {
 
 /*
  * SENARYO B - Ortak context ile paylasim
- *
- * Degisen deger:
- *  - share_context = ana_context
- *
- * Anlam:
- *  - Yeni context, ana_context ile paylasim grubuna katilir.
- *  - Texture gibi paylasilabilir GL kaynaklari iki context tarafindan da
- *    kullanilabilir.
+ * Ana context share_context olarak verilerek kaynak paylasimli context olusturulur.
  */
 void senaryo_uShareContext_B_ortak_context(EGLDisplay dpy, EGLConfig config) {
     EGLint context_attribs[] = {
@@ -239,24 +165,11 @@ void senaryo_uShareContext_B_ortak_context(EGLDisplay dpy, EGLConfig config) {
     (void)paylasimli_context;
 }
 
-/* =========================================================================
- * 4) pAttribList SENARYOLARI
- * -------------------------------------------------------------------------
- * pAttribList, context olusturulurken verilen attribute listesidir.
- * Liste EGL_NONE ile sonlandirilir.
- *
- * Bu grupta asil fark attrib_list parametresidir.
- * ========================================================================= */
+/* 4) pAttribList senaryolari: context attribute listesinin kullanimini gosterir. */
 
 /*
  * SENARYO A - EGL 1.0 standart attribute listesi
- *
- * Degisen deger:
- *  - attrib_list = { EGL_NONE }
- *
- * Anlam:
- *  - Ek context attribute'u istenmez.
- *  - EGL 1.0 standart kullanimini temsil eder.
+ * Sadece EGL_NONE ile biten standart attribute listesi kullanilir.
  */
 void senaryo_pAttribList_A_egl10_standart(EGLDisplay dpy, EGLConfig config) {
     EGLint egl10_attribs[] = {
@@ -275,12 +188,7 @@ void senaryo_pAttribList_A_egl10_standart(EGLDisplay dpy, EGLConfig config) {
 
 /*
  * SENARYO B - OpenGL ES 2.0 context talebi
- *
- * Degisen deger:
- *  - attrib_list = { EGL_CONTEXT_CLIENT_VERSION, 2, EGL_NONE }
- *
- * Anlam:
- *  - OpenGL ES 2.0 / shader tabanli pipeline icin context talep edilir.
+ * EGL_CONTEXT_CLIENT_VERSION 2 verilerek OpenGL ES 2.0 context istenir.
  */
 void senaryo_pAttribList_B_modern_pipeline(EGLDisplay dpy, EGLConfig config) {
     EGLint modern_attribs[] = {

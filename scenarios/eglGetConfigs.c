@@ -4,12 +4,8 @@
 /*
  * eglGetConfigs - Tum senaryolar tek dosya
  *
- * Bu dosya calistirilabilir ornek olmak icin degil, senaryolari tek yerde
- * incelemek icin hazirlanmistir. Bu nedenle main(), native display kurulumu,
- * pencere/surface/context olusturma ve OpenGL cizim kodlari bilerek
- * cikarilmistir.
- *
- * Odak nokta sadece eglGetConfigs fonksiyonuna verilen parametrelerdir:
+ * Bu dosya, eglGetConfigs fonksiyonunun farkli parametre senaryolarini
+ * tek yerde incelemek icin hazirlanmistir.
  *
  *   EGLBoolean eglGetConfigs(EGLDisplay dpy,
  *                            EGLConfig *configs,
@@ -25,17 +21,8 @@
 /* SENARYO 1: pDpyID - Gecerli Display                                       */
 /* ------------------------------------------------------------------------- */
 /*
- * Amac:
- *   eglGetConfigs fonksiyonuna gecerli bir EGLDisplay verildiginde config
- *   listesinin okunabildigini gostermek.
- *
- * Kritik nokta:
- *   dpy parametresi EGL_NO_DISPLAY degildir ve initialize edilmis display'i
- *   temsil eder.
- *
- * Beklenen sonuc:
- *   Cagri EGL_TRUE doner. num_config icine diziye aktarilan config sayisi
- *   yazilir.
+ * Initialize edilmis gecerli bir EGLDisplay ile config listesinin
+ * okunabildigi durum gosterilir.
  */
 void senaryo_pDpyID_gecerli_display(EGLDisplay egl_dpy)
 {
@@ -43,16 +30,12 @@ void senaryo_pDpyID_gecerli_display(EGLDisplay egl_dpy)
     EGLint aktarilan_sayi = 0;
 
     EGLBoolean basari = eglGetConfigs(
-        egl_dpy,          /* Gecerli ve initialize edilmis EGLDisplay */
-        configs,          /* Config handle'larinin yazilacagi dizi */
-        64,               /* Dizinin alabilecegi maksimum config sayisi */
-        &aktarilan_sayi   /* EGL'in yazdigi config sayisi */
+        egl_dpy,
+        configs,
+        64,
+        &aktarilan_sayi
     );
 
-    /*
-     * basari == EGL_TRUE ise aktarilan_sayi kadar EGLConfig okunmustur.
-     * Bu configler daha sonra uygun surface/context secimi icin incelenebilir.
-     */
     (void)basari;
     (void)aktarilan_sayi;
 }
@@ -61,15 +44,8 @@ void senaryo_pDpyID_gecerli_display(EGLDisplay egl_dpy)
 /* SENARYO 2: pDpyID - Gecersiz Display                                      */
 /* ------------------------------------------------------------------------- */
 /*
- * Amac:
- *   Gecersiz display verildiginde eglGetConfigs'in basarisiz olmasi
- *   gerektigini gostermek.
- *
- * Kritik nokta:
- *   dpy parametresi EGL_NO_DISPLAY olarak verilir.
- *
- * Beklenen sonuc:
- *   Cagri EGL_FALSE doner. Hata ayrintisi eglGetError ile okunabilir.
+ * EGL_NO_DISPLAY verilerek gecersiz display durumunda cagrinin
+ * basarisiz olmasi beklenir.
  */
 void senaryo_pDpyID_gecersiz_display(void)
 {
@@ -78,17 +54,12 @@ void senaryo_pDpyID_gecersiz_display(void)
     EGLint aktarilan_sayi = 0;
 
     EGLBoolean basari = eglGetConfigs(
-        hatali_dpy,       /* Gecersiz display */
+        hatali_dpy,
         configs,
         10,
         &aktarilan_sayi
     );
 
-    /*
-     * Beklenen durum:
-     *   basari == EGL_FALSE
-     *   eglGetError() EGL_BAD_DISPLAY benzeri bir hata kodu dondurur.
-     */
     (void)basari;
     (void)aktarilan_sayi;
 }
@@ -97,17 +68,8 @@ void senaryo_pDpyID_gecersiz_display(void)
 /* SENARYO 3: pConfigs - Sadece Sayim Yapma                                  */
 /* ------------------------------------------------------------------------- */
 /*
- * Amac:
- *   Config handle'larini almadan sadece toplam config sayisini ogrenmek.
- *
- * Kritik nokta:
- *   configs = NULL
- *   config_size = 0
- *   num_config = gecerli isaretci
- *
- * Beklenen sonuc:
- *   Cagri EGL_TRUE doner. toplam_sayi icine sistemdeki toplam EGLConfig
- *   sayisi yazilir. Bu senaryoda config handle'i elde edilmez.
+ * configs NULL ve config_size 0 verilerek sadece toplam config sayisi
+ * sorgulanir; config handle'i okunmaz.
  */
 void senaryo_pConfigs_sadece_sayim(EGLDisplay egl_dpy)
 {
@@ -115,15 +77,11 @@ void senaryo_pConfigs_sadece_sayim(EGLDisplay egl_dpy)
 
     EGLBoolean basari = eglGetConfigs(
         egl_dpy,
-        NULL,            /* Config dizisi istenmiyor */
-        0,               /* Dizi olmadigi icin kapasite 0 */
-        &toplam_sayi     /* Toplam config sayisi buraya yazilir */
+        NULL,
+        0,
+        &toplam_sayi
     );
 
-    /*
-     * basari == EGL_TRUE ise toplam_sayi, ikinci adimda ayrilacak dizi
-     * boyutunu belirlemek icin kullanilabilir.
-     */
     (void)basari;
     (void)toplam_sayi;
 }
@@ -132,16 +90,8 @@ void senaryo_pConfigs_sadece_sayim(EGLDisplay egl_dpy)
 /* SENARYO 4: pConfigs - Veri Okuma                                          */
 /* ------------------------------------------------------------------------- */
 /*
- * Amac:
- *   Gecerli bir EGLConfig dizisine config handle'larini kopyalatmak.
- *
- * Kritik nokta:
- *   configs NULL degildir.
- *   config_size dizinin kapasitesini bildirir.
- *
- * Beklenen sonuc:
- *   Cagri EGL_TRUE doner. aktarilan_sayi, configs dizisine kac adet config
- *   yazildigini bildirir.
+ * Gecerli bir EGLConfig dizisi verilerek config handle'larinin diziye
+ * yazilmasi saglanir.
  */
 void senaryo_pConfigs_veri_okuma(EGLDisplay egl_dpy)
 {
@@ -150,15 +100,11 @@ void senaryo_pConfigs_veri_okuma(EGLDisplay egl_dpy)
 
     EGLBoolean basari = eglGetConfigs(
         egl_dpy,
-        configs,          /* EGLConfig handle'lari bu diziye yazilir */
-        64,               /* En fazla 64 config kopyalanabilir */
+        configs,
+        64,
         &aktarilan_sayi
     );
 
-    /*
-     * basari == EGL_TRUE ise configs[0] ... configs[aktarilan_sayi - 1]
-     * araligi gecerlidir.
-     */
     (void)basari;
     (void)aktarilan_sayi;
 }
@@ -167,15 +113,8 @@ void senaryo_pConfigs_veri_okuma(EGLDisplay egl_dpy)
 /* SENARYO 5: pNumConfig - Gecerli Isaretci                                  */
 /* ------------------------------------------------------------------------- */
 /*
- * Amac:
- *   num_config parametresine gecerli bir adres verildiginde EGL'in sonuc
- *   sayisini bu adrese yazdigini gostermek.
- *
- * Kritik nokta:
- *   num_config = &aktarilan_sayi
- *
- * Beklenen sonuc:
- *   Cagri basarili olursa aktarilan_sayi EGL tarafindan doldurulur.
+ * num_config parametresine gecerli bir adres verilerek okunan config
+ * sayisinin bu adrese yazilmasi gosterilir.
  */
 void senaryo_pNumConfig_gecerli_isaretci(EGLDisplay egl_dpy)
 {
@@ -186,13 +125,9 @@ void senaryo_pNumConfig_gecerli_isaretci(EGLDisplay egl_dpy)
         egl_dpy,
         configs,
         64,
-        &aktarilan_sayi   /* Gecerli output isaretcisi */
+        &aktarilan_sayi
     );
 
-    /*
-     * basari == EGL_TRUE ise aktarilan_sayi, configs dizisine yazilan eleman
-     * sayisini gosterir.
-     */
     (void)basari;
     (void)aktarilan_sayi;
 }
@@ -201,17 +136,8 @@ void senaryo_pNumConfig_gecerli_isaretci(EGLDisplay egl_dpy)
 /* SENARYO 6: pNumConfig - NULL Verilmesi                                    */
 /* ------------------------------------------------------------------------- */
 /*
- * Amac:
- *   EGL 1.0 icin num_config parametresinin NULL verilmemesi gerektigini
- *   gostermek.
- *
- * Kritik nokta:
- *   num_config EGL'in sonuc yazacagi output parametresidir. NULL verilirse
- *   surucuye gore EGL_FALSE yerine process crash gibi guvensiz davranislar
- *   gorulebilir.
- *
- * Beklenen sonuc:
- *   Uretim kodu bu durumu eglGetConfigs cagrisindan once reddetmelidir.
+ * num_config NULL ise eglGetConfigs cagrisi yapilmadan once durum
+ * reddedilir; output pointer'in gecerli olmasi beklenir.
  */
 EGLBoolean senaryo_pNumConfig_null_kontrolu(EGLDisplay egl_dpy,
                                             EGLConfig *configs,
@@ -219,10 +145,6 @@ EGLBoolean senaryo_pNumConfig_null_kontrolu(EGLDisplay egl_dpy,
                                             EGLint *num_config)
 {
     if (num_config == NULL) {
-        /*
-         * Guvenli davranis:
-         *   Gecersiz output pointer'i EGL'e gonderilmez.
-         */
         return EGL_FALSE;
     }
 
@@ -233,17 +155,8 @@ EGLBoolean senaryo_pNumConfig_null_kontrolu(EGLDisplay egl_dpy,
 /* SENARYO 7: ConfigSize - Yetersiz Kapasite                                 */
 /* ------------------------------------------------------------------------- */
 /*
- * Amac:
- *   config_size degeri toplam config sayisindan kucuk oldugunda sadece
- *   sinirli sayida config okunacagini gostermek.
- *
- * Kritik nokta:
- *   Once toplam config sayisi ogrenilir.
- *   Sonra bilerek kucuk kapasiteli bir dizi ile okuma yapilir.
- *
- * Beklenen sonuc:
- *   Cagri basarili olabilir; ancak configs dizisine sadece config_size kadar
- *   config kopyalanabilir. Bu nedenle tum config havuzu incelenmis sayilmaz.
+ * Toplam config sayisindan kucuk kapasite verilirse sadece dizinin
+ * alabildigi kadar config okunur.
  */
 void senaryo_ConfigSize_yetersiz_kapasite(EGLDisplay egl_dpy)
 {
@@ -261,15 +174,10 @@ void senaryo_ConfigSize_yetersiz_kapasite(EGLDisplay egl_dpy)
     EGLBoolean okuma_basari = eglGetConfigs(
         egl_dpy,
         configs,
-        2,                /* Bilerek yetersiz kapasite */
+        2,
         &aktarilan_sayi
     );
 
-    /*
-     * toplam_gercek_sayi daha buyuk olsa bile aktarilan_sayi en fazla 2 olur.
-     * Bu senaryo, kucuk config_size ile dogru config seciminin garanti
-     * edilemeyecegini gosterir.
-     */
     (void)sayim_basari;
     (void)okuma_basari;
     (void)toplam_gercek_sayi;
@@ -280,16 +188,8 @@ void senaryo_ConfigSize_yetersiz_kapasite(EGLDisplay egl_dpy)
 /* SENARYO 8: ConfigSize - Yeterli Kapasite                                  */
 /* ------------------------------------------------------------------------- */
 /*
- * Amac:
- *   config_size toplam config sayisini karsiladiginda tum config listesinin
- *   okunabildigini gostermek.
- *
- * Kritik nokta:
- *   Once toplam config sayisi sorgulanir, sonra o sayi kadar EGLConfig dizisi
- *   ayrilir.
- *
- * Beklenen sonuc:
- *   Cagri EGL_TRUE doner ve tum configler ayrilan diziye kopyalanir.
+ * Once toplam config sayisi sorgulanir, sonra yeterli kapasitede dizi
+ * ayrilarak tum config listesinin okunmasi hedeflenir.
  */
 void senaryo_ConfigSize_yeterli_kapasite(EGLDisplay egl_dpy)
 {
@@ -315,14 +215,10 @@ void senaryo_ConfigSize_yeterli_kapasite(EGLDisplay egl_dpy)
     EGLBoolean okuma_basari = eglGetConfigs(
         egl_dpy,
         configs,
-        toplam_config,    /* Toplam sayiyi karsilayan kapasite */
+        toplam_config,
         &aktarilan_sayi
     );
 
-    /*
-     * okuma_basari == EGL_TRUE ise aktarilan_sayi kadar config okunmustur.
-     * Kapasite toplam_config oldugu icin config listesinin tamami alinabilir.
-     */
     (void)okuma_basari;
     (void)aktarilan_sayi;
 
@@ -333,18 +229,8 @@ void senaryo_ConfigSize_yeterli_kapasite(EGLDisplay egl_dpy)
 /* SENARYO 9: Profesyonel 2 Adimli Sorgu                                     */
 /* ------------------------------------------------------------------------- */
 /*
- * Amac:
- *   eglGetConfigs icin en temiz ve genel kullanimi gostermek.
- *
- * Adim 1:
- *   configs = NULL, config_size = 0 ile toplam config sayisi ogrenilir.
- *
- * Adim 2:
- *   Ogrenilen sayi kadar dizi ayrilir ve tum configler okunur.
- *
- * Beklenen sonuc:
- *   Uygulama once gerekli kapasiteyi bilir, sonra eksiksiz config listesini
- *   alir. Bu yontem yetersiz kapasite riskini ortadan kaldirir.
+ * Iki adimli genel kullanim gosterilir: once toplam config sayisi
+ * ogrenilir, sonra o sayi kadar dizi ayrilip configler okunur.
  */
 void senaryo_profesyonel_iki_adimli_sorgu(EGLDisplay egl_dpy)
 {
@@ -372,11 +258,6 @@ void senaryo_profesyonel_iki_adimli_sorgu(EGLDisplay egl_dpy)
         &aktarilan_sayi
     );
 
-    /*
-     * basari == EGL_TRUE ise tum_configler dizisi artik secim/filtreleme icin
-     * kullanilabilir. Ornegin EGL_SURFACE_TYPE, EGL_RENDERABLE_TYPE veya
-     * EGL_DEPTH_SIZE gibi attribute'lar bu configler uzerinden sorgulanabilir.
-     */
     (void)basari;
     (void)aktarilan_sayi;
 
