@@ -4,26 +4,117 @@
 EGLint eglGetError(void);
 ```
 
-`eglGetError`, çağıran thread üzerinde en son EGL çağrısıyla ilişkili EGL hata durumunu döndürür.
+## 1. Bu Fonksiyon Ne Yapar?
 
-Fonksiyon parametre almaz. Bunun nedeni hata bilgisinin belirli bir `EGLDisplay`, `EGLContext` veya `EGLSurface` handle'ı üzerinden değil, çağıran thread'in EGL hata durumu üzerinden okunmasıdır.
+`eglGetError()`, çağıran thread'in EGL hata durumunu okur ve sonucu bir `EGLint` değeri olarak döndürür.
 
-## Kavramsal Akış
+Bu fonksiyonun önemli özelliği şudur:
 
 ```text
-Thread
-  |
-  +-- EGL fonksiyon çağrısı
-  |       |
-  |       +-- başarılı / başarısız
-  |       |
-  |       v
-  |    error state
-  |
-  +-- eglGetError()
-          |
-          v
-      EGLint hata kodu
+Parametre almaz.
+```
+
+Çünkü belirli bir `EGLDisplay`, `EGLContext` veya `EGLSurface` nesnesini sorgulamaz. Bunun yerine çağıran thread'in EGL hata durumunu okur.
+
+Kavramsal akış:
+
+```text
+EGL fonksiyonu çağrılır
+        |
+        v
+Başarılı / Başarısız
+        |
+        v
+Thread'in EGL error state'i
+        |
+        v
+eglGetError()
+        |
+        v
+EGLint hata kodu
+```
+
+---
+
+# 2. Neden Parametre Almaz?
+
+Diğer EGL fonksiyonlarında hangi nesneyle işlem yapılacağı parametrelerle belirtilir.
+
+Örneğin:
+
+```c
+eglDestroySurface(dpy, surface);
+```
+
+veya:
+
+```c
+eglDestroyContext(dpy, ctx);
+```
+
+Ancak `eglGetError()` şu soruları sormaz:
+
+```text
+Hangi surface'in hatası?
+Hangi context'in hatası?
+Hangi display'in hatası?
+```
+
+Bunun yerine:
+
+```text
+Bu thread için EGL'de kayıtlı hata durumu ne?
+```
+
+sorusunun cevabını verir.
+
+Kullanım:
+
+```c
+EGLint err = eglGetError();
+```
+
+---
+
+# 3. Dönüş Tipi
+
+Fonksiyonun dönüş tipi:
+
+```c
+EGLint
+```
+
+olur.
+
+Yani:
+
+```c
+EGLint err = eglGetError();
+```
+
+çağrısından sonra `err`, EGL tarafından tanımlanan hata değerlerinden birini içerir.
+
+---
+
+# 4. En Temel Kullanım Mantığı
+
+En doğru kullanım modeli şöyledir:
+
+```text
+Önce EGL fonksiyonunu çağır
+        |
+        v
+Fonksiyon başarısız mı?
+        |
+        +-- Hayır -> devam et
+        |
+        +-- Evet
+              |
+              v
+         eglGetError()
+              |
+              v
+        Hata kodunu öğren
 ```
 
 Örnek:
@@ -42,83 +133,185 @@ if (surface == EGL_NO_SURFACE) {
 }
 ```
 
-## Parametreler
-
-`eglGetError` parametre almaz:
-
-```c
-eglGetError();
-```
-
-Dolayısıyla bu fonksiyonda diğer EGL fonksiyonlarındaki gibi:
+Buradaki mantık:
 
 ```text
-dpy
-config
-surface
-context
-attribute
+eglCreateWindowSurface()
+        |
+        v
+EGL_NO_SURFACE döndü
+        |
+        v
+Bir hata oluştu
+        |
+        v
+eglGetError()
+        |
+        v
+Hatanın türü öğrenilir
 ```
 
-parametreleri yoktur.
+---
 
-İncelenecek ana konu fonksiyonun döndürebileceği `EGLint` değerleridir.
+# 5. Hata Kodunu Terminale Yazdırma
 
-## Dönüş Değeri
+`eglGetError()` hata adını otomatik olarak ekrana yazmaz.
 
-Fonksiyonun dönüş tipi:
+Fonksiyon yalnızca hata kodunu döndürür.
+
+Örneğin:
 
 ```c
-EGLint
+EGLint err = eglGetError();
+
+printf("Error code: 0x%X\n", err);
 ```
 
-EGL 1.0'da dönebilecek hata kodları:
+Bu kullanım hexadecimal hata kodunu gösterir.
 
-| Değer                      | Anlamı                                                                                |
-| --------------------------- | -------------------------------------------------------------------------------------- |
-| `EGL_SUCCESS`             | Son ilgili EGL işlemi başarılıdır / hata yoktur.                                  |
-| `EGL_NOT_INITIALIZED`     | EGL ilgili display için initialize edilmemiştir veya initialize edilememiştir.      |
-| `EGL_BAD_ACCESS`          | İstenen kaynağa erişilememiştir.                                                   |
-| `EGL_BAD_ALLOC`           | İstenen işlem için gerekli kaynak ayrılamamıştır.                               |
-| `EGL_BAD_ATTRIBUTE`       | Tanınmayan attribute veya attribute değeri kullanılmıştır.                       |
-| `EGL_BAD_CONTEXT`         | Bir`EGLContext` argümanı geçerli context değildir.                               |
-| `EGL_BAD_CONFIG`          | Bir`EGLConfig` argümanı geçerli config değildir.                                 |
-| `EGL_BAD_CURRENT_SURFACE` | Thread'in current surface'i artık geçerli değildir.                                 |
-| `EGL_BAD_DISPLAY`         | Bir`EGLDisplay` argümanı geçerli değildir veya display initialize edilmemiştir. |
-| `EGL_BAD_SURFACE`         | Bir`EGLSurface` argümanı geçerli surface değildir.                               |
-| `EGL_BAD_MATCH`           | Fonksiyon argümanları birbirleriyle uyumlu değildir.                                |
-| `EGL_BAD_PARAMETER`       | Bir veya daha fazla argüman değeri geçersizdir.                                     |
-| `EGL_BAD_NATIVE_PIXMAP`   | Native pixmap geçerli değildir.                                                      |
-| `EGL_BAD_NATIVE_WINDOW`   | Native window geçerli değildir.                                                      |
+Daha okunabilir bir çıktı için:
 
-## `EGL_SUCCESS`
+```c
+if (err == EGL_SUCCESS) {
+    printf("EGL_SUCCESS\n");
+}
+else if (err == EGL_BAD_DISPLAY) {
+    printf("EGL_BAD_DISPLAY\n");
+}
+else if (err == EGL_BAD_SURFACE) {
+    printf("EGL_BAD_SURFACE\n");
+}
+```
+
+Kavramsal akış:
+
+```text
+EGL fonksiyonu
+    |
+    v
+Hata oluşur
+    |
+    v
+EGL error state
+    |
+    v
+eglGetError()
+    |
+    v
+EGL_BAD_DISPLAY gibi değer döner
+    |
+    v
+printf()
+    |
+    v
+Terminalde hata adı görülür
+```
+
+---
+
+# 6. EGL 1.0'da `eglGetError()` ile Dönen 14 Temel Değer
+
+EGL 1.0 tarafında `eglGetError()` ile dönebilecek 14 temel değer vardır.
+
+> `EGL_SUCCESS` teknik olarak bir hata değildir; "kayıtlı EGL hatası yok" anlamına gelir.
+
+| Değer                      | Anlamı                                                                           |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| `EGL_SUCCESS`             | Kayıtlı EGL hatası yoktur.                                                     |
+| `EGL_NOT_INITIALIZED`     | EGL ilgili display için initialize edilmemiştir veya initialize edilememiştir. |
+| `EGL_BAD_ACCESS`          | Bir EGL kaynağına erişim kuralı ihlal edilmiştir.                            |
+| `EGL_BAD_ALLOC`           | İstenen işlem için gerekli kaynak ayrılamamıştır.                          |
+| `EGL_BAD_ATTRIBUTE`       | Tanınmayan/geçersiz attribute veya attribute değeri kullanılmıştır.        |
+| `EGL_BAD_CONTEXT`         | Bir`EGLContext` argümanı geçerli context değildir.                          |
+| `EGL_BAD_CONFIG`          | Bir`EGLConfig` argümanı geçerli config değildir.                            |
+| `EGL_BAD_CURRENT_SURFACE` | Thread'in current surface'i artık geçerli değildir.                            |
+| `EGL_BAD_DISPLAY`         | Bir`EGLDisplay` argümanı geçerli değildir veya uygun durumda değildir.     |
+| `EGL_BAD_SURFACE`         | Bir`EGLSurface` argümanı geçerli surface değildir.                          |
+| `EGL_BAD_MATCH`           | Argümanlar tek tek geçerli olsa da birbirleriyle uyumlu değildir.              |
+| `EGL_BAD_PARAMETER`       | Bir veya daha fazla parametre değeri geçersizdir.                               |
+| `EGL_BAD_NATIVE_PIXMAP`   | Native pixmap geçerli değildir.                                                 |
+| `EGL_BAD_NATIVE_WINDOW`   | Native window geçerli değildir.                                                 |
+
+Kısa ezber özeti:
+
+```text
+EGL_SUCCESS
+→ hata yok
+
+EGL_NOT_INITIALIZED
+→ EGL hazır değil
+
+EGL_BAD_ACCESS
+→ erişim problemi
+
+EGL_BAD_ALLOC
+→ kaynak ayrılamadı
+
+EGL_BAD_ATTRIBUTE
+→ attribute yanlış
+
+EGL_BAD_CONTEXT
+→ context yanlış
+
+EGL_BAD_CONFIG
+→ config yanlış
+
+EGL_BAD_CURRENT_SURFACE
+→ current surface geçersiz
+
+EGL_BAD_DISPLAY
+→ display yanlış
+
+EGL_BAD_SURFACE
+→ surface yanlış
+
+EGL_BAD_MATCH
+→ argümanlar uyumsuz
+
+EGL_BAD_PARAMETER
+→ parametre yanlış
+
+EGL_BAD_NATIVE_PIXMAP
+→ native pixmap yanlış
+
+EGL_BAD_NATIVE_WINDOW
+→ native window yanlış
+```
+
+---
+
+# 7. `EGL_SUCCESS`
+
+`EGL_SUCCESS`, kayıtlı EGL hata durumu olmadığını belirtir.
+
+Örnek:
 
 ```c
 EGLint err = eglGetError();
 
 if (err == EGL_SUCCESS) {
-    /* EGL hata durumu yok */
+    printf("EGL_SUCCESS\n");
 }
 ```
 
-Anlamı:
+Kavramsal gösterim:
 
 ```text
 EGL_SUCCESS
     |
     v
-Fonksiyon başarılı / kayıtlı EGL hatası yok
+Kayıtlı EGL hatası yok
 ```
 
-## `EGL_NOT_INITIALIZED`
+---
 
-Örneğin ilgili EGLDisplay initialize edilmeden EGL işlemi yapılmaya çalışılırsa görülebilir.
+# 8. `EGL_NOT_INITIALIZED`
 
-Doğru temel sıra:
+EGL ilgili display için initialize edilmemişse veya initialize işlemi başarısız olmuşsa görülebilir.
+
+Örnek:
 
 ```c
-EGLDisplay dpy = /* display'i elde et */;
-
 EGLint major;
 EGLint minor;
 
@@ -126,30 +319,48 @@ if (!eglInitialize(dpy, &major, &minor)) {
     EGLint err = eglGetError();
 
     if (err == EGL_NOT_INITIALIZED) {
-        /* Initialize başarısız */
+        printf("EGL_NOT_INITIALIZED\n");
     }
 }
 ```
 
-Bu projede EGL display GBM platformuyla ilişkili olduğundan GBM/EGL platform kurulumunun başarılı olması gerekir.
+Flow chart:
 
-## `EGL_BAD_ACCESS`
+```text
+EGLDisplay
+    |
+    v
+Initialize edilemedi
+    |
+    v
+eglInitialize() başarısız
+    |
+    v
+eglGetError()
+    |
+    v
+EGL_NOT_INITIALIZED
+```
 
-Bir EGL kaynağına erişim kuralları ihlal edildiğinde dönebilir.
+---
 
-Örneğin bir context başka thread üzerinde current ise:
+# 9. `EGL_BAD_ACCESS`
+
+Bir EGL kaynağına erişim kuralları ihlal edildiğinde oluşabilir.
+
+Örneğin bir context başka bir thread üzerinde current ise, ikinci thread aynı context'i current yapmaya çalışabilir.
 
 ```text
 Thread A
-  |
-  +-- ctx current
+   |
+   +-- Context current
 
 Thread B
-  |
-  +-- aynı ctx'yi current yapmaya çalışır
-          |
-          v
-      EGL_BAD_ACCESS
+   |
+   +-- Aynı context'i current yapmaya çalışır
+              |
+              v
+        EGL_BAD_ACCESS
 ```
 
 Örnek kontrol:
@@ -159,14 +370,16 @@ if (!eglMakeCurrent(dpy, surface, surface, ctx)) {
     EGLint err = eglGetError();
 
     if (err == EGL_BAD_ACCESS) {
-        /* Kaynak başka thread tarafından kullanılıyor olabilir */
+        printf("EGL_BAD_ACCESS\n");
     }
 }
 ```
 
-## `EGL_BAD_ALLOC`
+---
 
-EGL istenen işlem için yeterli kaynak ayıramazsa döner.
+# 10. `EGL_BAD_ALLOC`
+
+EGL istenen işlem için gerekli kaynakları ayıramazsa görülebilir.
 
 Örneğin:
 
@@ -183,22 +396,42 @@ if (surface == EGL_NO_SURFACE) {
     EGLint err = eglGetError();
 
     if (err == EGL_BAD_ALLOC) {
-        /* Surface için gerekli kaynak ayrılamadı */
+        printf("EGL_BAD_ALLOC\n");
     }
 }
 ```
 
-Bu, GBM fonksiyonlarının kendi hata modelinden ayrıdır. `eglGetError()` yalnızca EGL hata durumunu verir.
+Flow:
 
-## `EGL_BAD_ATTRIBUTE`
+```text
+eglCreateWindowSurface()
+        |
+        v
+Kaynak gerekli
+        |
+        v
+Kaynak ayrılamadı
+        |
+        v
+EGL_NO_SURFACE
+        |
+        v
+eglGetError()
+        |
+        v
+EGL_BAD_ALLOC
+```
 
-EGL attribute listesinde geçersiz attribute veya değer kullanıldığında oluşabilir.
+---
 
-Örnek genel EGL modeli:
+# 11. `EGL_BAD_ATTRIBUTE`
+
+Geçersiz veya tanınmayan bir EGL attribute'u/attribute değeri kullanıldığında oluşabilir.
+
+Örnek genel model:
 
 ```c
-const EGLint attribs[] = {
-    /* EGL 1.0 tarafından desteklenmeyen/geçersiz bir attribute */
+const EGLint attrs[] = {
     0x12345678, 1,
     EGL_NONE
 };
@@ -210,29 +443,51 @@ const EGLint attribs[] = {
 EGLint err = eglGetError();
 
 if (err == EGL_BAD_ATTRIBUTE) {
-    /* Attribute listesi geçersiz */
+    printf("EGL_BAD_ATTRIBUTE\n");
 }
 ```
 
-## `EGL_BAD_CONTEXT`
+---
 
-Bir EGL fonksiyonuna geçerli olmayan `EGLContext` verildiğinde oluşur.
+# 12. `EGL_BAD_CONTEXT`
 
-Örneğin `eglDestroyContext`:
+Bir EGL fonksiyonuna geçerli olmayan `EGLContext` verilirse oluşabilir.
+
+Örneğin:
 
 ```c
 if (!eglDestroyContext(dpy, invalid_context)) {
     EGLint err = eglGetError();
 
     if (err == EGL_BAD_CONTEXT) {
-        /* ctx geçerli EGLContext değil */
+        printf("EGL_BAD_CONTEXT\n");
     }
 }
 ```
 
-## `EGL_BAD_CONFIG`
+Flow chart:
 
-Geçersiz `EGLConfig` handle'ı kullanıldığında oluşur.
+```text
+Geçersiz context
+      |
+      v
+eglDestroyContext()
+      |
+      v
+EGL_FALSE
+      |
+      v
+eglGetError()
+      |
+      v
+EGL_BAD_CONTEXT
+```
+
+---
+
+# 13. `EGL_BAD_CONFIG`
+
+Geçersiz bir `EGLConfig` kullanıldığında oluşabilir.
 
 Örneğin:
 
@@ -249,63 +504,130 @@ if (surface == EGL_NO_SURFACE) {
     EGLint err = eglGetError();
 
     if (err == EGL_BAD_CONFIG) {
-        /* config geçersiz */
+        printf("EGL_BAD_CONFIG\n");
     }
 }
 ```
 
-## `EGL_BAD_CURRENT_SURFACE`
+Flow:
 
-Thread üzerinde current olan surface artık geçerli olmadığında bazı EGL işlemlerinde görülebilir.
+```text
+Geçersiz EGLConfig
+        |
+        v
+eglCreateWindowSurface()
+        |
+        v
+EGL_NO_SURFACE
+        |
+        v
+eglGetError()
+        |
+        v
+EGL_BAD_CONFIG
+```
+
+---
+
+# 14. `EGL_BAD_CURRENT_SURFACE`
+
+Thread üzerinde current olan surface artık geçerli değilse bazı EGL işlemlerinde görülebilir.
 
 Kavramsal akış:
 
 ```text
 Thread
   |
-  +-- current EGLSurface
-          |
-          X native/current surface geçersiz hale geldi
-          |
-          v
+  +-- Current EGLSurface
+           |
+           X
+      Surface geçersiz hale geldi
+           |
+           v
 EGL_BAD_CURRENT_SURFACE
 ```
 
-## `EGL_BAD_DISPLAY`
+Bu hata current surface state'i ile ilgilidir.
 
-Geçersiz veya uygun şekilde initialized edilmemiş display ile işlem yapılırsa görülebilir.
+---
 
-Örneğin:
+# 15. `EGL_BAD_DISPLAY`
+
+Geçersiz veya uygun şekilde initialize edilmemiş display ile işlem yapılırsa görülebilir.
+
+Örnek:
 
 ```c
 if (!eglInitialize(dpy, &major, &minor)) {
     EGLint err = eglGetError();
 
     if (err == EGL_BAD_DISPLAY) {
-        /* dpy geçerli EGLDisplay değil */
+        printf("EGL_BAD_DISPLAY\n");
     }
 }
 ```
 
-## `EGL_BAD_SURFACE`
+Flow:
 
-Bir EGL fonksiyonuna geçerli olmayan surface verilirse oluşur.
+```text
+Geçersiz/uygunsuz dpy
+        |
+        v
+EGL fonksiyonu
+        |
+        v
+İşlem başarısız
+        |
+        v
+eglGetError()
+        |
+        v
+EGL_BAD_DISPLAY
+```
 
-Bu grubunuzdaki `eglDestroySurface` için doğrudan örnek:
+---
+
+# 16. `EGL_BAD_SURFACE`
+
+Bir EGL fonksiyonuna geçerli olmayan `EGLSurface` verilirse oluşabilir.
+
+Örneğin grubumuzdaki `eglDestroySurface()`:
 
 ```c
 if (!eglDestroySurface(dpy, invalid_surface)) {
     EGLint err = eglGetError();
 
     if (err == EGL_BAD_SURFACE) {
-        /* surface geçerli değil */
+        printf("EGL_BAD_SURFACE\n");
     }
 }
 ```
 
-## `EGL_BAD_MATCH`
+Flow:
 
-Argümanlar tek tek geçerli olsa bile birbirleriyle uyumsuz olduğunda oluşabilir.
+```text
+Geçersiz EGLSurface
+        |
+        v
+eglDestroySurface()
+        |
+        v
+EGL_FALSE
+        |
+        v
+eglGetError()
+        |
+        v
+EGL_BAD_SURFACE
+```
+
+---
+
+# 17. `EGL_BAD_MATCH`
+
+Bu hata diğerlerinden biraz farklıdır.
+
+Argümanlar tek tek geçerli olabilir, ancak birbirleriyle uyumlu olmayabilir.
 
 Örneğin:
 
@@ -314,45 +636,57 @@ EGLContext geçerli
 EGLSurface geçerli
         |
         v
-ancak birbirleriyle uyumsuz
+Ama birbirleriyle uyumsuz
         |
         v
 EGL_BAD_MATCH
 ```
 
-`eglMakeCurrent` çağrısında context ile surface uyumsuzsa:
+Örnek:
 
 ```c
 if (!eglMakeCurrent(dpy, surface, surface, ctx)) {
     EGLint err = eglGetError();
 
     if (err == EGL_BAD_MATCH) {
-        /* context / surface eşleşmesi uygun değil */
+        printf("EGL_BAD_MATCH\n");
     }
 }
 ```
 
-Bu projede `eglCreateWindowSurface` sırasında native GBM surface ile EGLConfig uyumsuzluğu da `EGL_BAD_MATCH` üretebilir.
+---
 
-## `EGL_BAD_PARAMETER`
+# 18. `EGL_BAD_PARAMETER`
 
-Bir veya daha fazla parametre değeri ilgili fonksiyon açısından geçersiz olduğunda kullanılır.
+Bir veya daha fazla parametre değeri ilgili EGL fonksiyonu açısından geçersiz olduğunda oluşabilir.
 
 ```c
 EGLint err = eglGetError();
 
 if (err == EGL_BAD_PARAMETER) {
-    /* İlgili EGL fonksiyonunda parametre değeri geçersiz */
+    printf("EGL_BAD_PARAMETER\n");
 }
 ```
 
-Hangi fonksiyonun hangi durumda bu hatayı ürettiği o fonksiyonun EGL 1.0 tanımına göre değerlendirilmelidir.
+Kavramsal anlamı:
 
-## `EGL_BAD_NATIVE_PIXMAP`
+```text
+Parametre değeri uygun değil
+        |
+        v
+EGL fonksiyonu başarısız
+        |
+        v
+EGL_BAD_PARAMETER
+```
 
-Geçerli olmayan bir native pixmap handle'ı kullanıldığında oluşur.
+---
 
-Bu direct-to-display GBM projesinde native pixmap kullanılmadığından normal akışta beklenen bir hata değildir.
+# 19. `EGL_BAD_NATIVE_PIXMAP`
+
+Geçerli olmayan native pixmap handle'ı kullanıldığında oluşur.
+
+Bu direct-to-display GBM projesinde native pixmap normal akışta kullanılmamaktadır.
 
 ```text
 Bu proje:
@@ -360,19 +694,23 @@ GBM native window -> kullanılıyor
 Native pixmap     -> kullanılmıyor
 ```
 
-## `EGL_BAD_NATIVE_WINDOW`
+Bu nedenle normal proje akışında beklenen hata kodlarından biri değildir.
 
-`NativeWindowType` geçerli native window'u temsil etmiyorsa oluşur.
+---
 
-Bu projede `eglCreateWindowSurface` çağrısında native window:
+# 20. `EGL_BAD_NATIVE_WINDOW`
+
+Native window geçerli değilse oluşabilir.
+
+Bu projede `eglCreateWindowSurface()` içindeki native window rolünü:
 
 ```c
 (EGLNativeWindowType)gbm_surface
 ```
 
-olduğu için GBM surface native window rolündedir.
+üstlenir.
 
-Örneğin:
+Örnek:
 
 ```c
 EGLSurface surface =
@@ -387,80 +725,34 @@ if (surface == EGL_NO_SURFACE) {
     EGLint err = eglGetError();
 
     if (err == EGL_BAD_NATIVE_WINDOW) {
-        /* Native window geçerli değil */
+        printf("EGL_BAD_NATIVE_WINDOW\n");
     }
 }
 ```
 
-## Projedeki Kullanım Modeli
+Flow:
 
-En faydalı kullanım, her EGL fonksiyonunun dönüş değerini önce kontrol edip sadece başarısız durumda `eglGetError()` çağırmaktır.
-
-Örneğin initialize:
-
-```c
-if (!eglInitialize(egl_display, &major, &minor)) {
-    EGLint err = eglGetError();
-}
+```text
+Geçersiz native window
+        |
+        v
+eglCreateWindowSurface()
+        |
+        v
+EGL_NO_SURFACE
+        |
+        v
+eglGetError()
+        |
+        v
+EGL_BAD_NATIVE_WINDOW
 ```
 
-Surface oluşturma:
+---
 
-```c
-EGLSurface egl_surface =
-    eglCreateWindowSurface(
-        egl_display,
-        egl_config,
-        (EGLNativeWindowType)gbm_surface,
-        NULL
-    );
+# 21. Hata Adlarını Yazdıran Yardımcı Fonksiyon
 
-if (egl_surface == EGL_NO_SURFACE) {
-    EGLint err = eglGetError();
-}
-```
-
-Context oluşturma:
-
-```c
-EGLContext egl_context =
-    eglCreateContext(
-        egl_display,
-        egl_config,
-        EGL_NO_CONTEXT,
-        NULL
-    );
-
-if (egl_context == EGL_NO_CONTEXT) {
-    EGLint err = eglGetError();
-}
-```
-
-Make current:
-
-```c
-if (!eglMakeCurrent(
-        egl_display,
-        egl_surface,
-        egl_surface,
-        egl_context)) {
-    EGLint err = eglGetError();
-}
-```
-
-Swap:
-
-```c
-if (!eglSwapBuffers(
-        egl_display,
-        egl_surface)) {
-    EGLint err = eglGetError();
-}
-```
-
-## Hata Yazdırma Yardımcı Fonksiyonu
-
-Projede okunabilirlik için küçük bir yardımcı fonksiyon yazılabilir:
+Terminalde doğrudan hata adlarını görmek için yardımcı fonksiyon kullanılabilir:
 
 ```c
 const char *egl_error_string(EGLint error)
@@ -526,70 +818,52 @@ printf(
 );
 ```
 
-## GBM ve DRM Hatalarıyla Ayrımı
-
-Bu proje üç ayrı API ailesi içerir:
+Örnek beklenen terminal çıktıları:
 
 ```text
-OpenGL ES / EGL
-GBM
-DRM/KMS
+EGL error: EGL_SUCCESS (...)
 ```
 
-`eglGetError()` sadece:
+veya:
 
 ```text
-EGL hata state
+EGL error: EGL_BAD_SURFACE (...)
 ```
 
-bilgisini verir.
-
-Şunların hata sistemini okumaz:
+veya:
 
 ```text
-gbm_surface_create()
-drmModeGetResources()
-drmModeAddFB()
-drmModeSetCrtc()
-drmModePageFlip()
-open("/dev/dri/card*")
+EGL error: EGL_BAD_CONTEXT (...)
 ```
 
-DRM/Linux hatalarında genellikle fonksiyon dönüş değeri ve gerektiğinde `errno` kullanılır.
+Bu çıktılar gerçek test yapılmadıysa **örnek/beklenen çıktı** olarak sunulmalıdır.
 
-Yani:
+---
+
+# 22. Genel Flow Chart
 
 ```text
-EGL fonksiyonu başarısız -> eglGetError()
-DRM/Linux çağrısı        -> return value / errno
-GBM çağrısı              -> GBM fonksiyonunun dönüş kontrolü
+                 EGL FUNCTION
+                      |
+                      v
+               Return value kontrol
+                      |
+             +--------+--------+
+             |                 |
+             v                 v
+          Başarılı          Başarısız
+             |                 |
+             v                 v
+          Devam et         eglGetError()
+                               |
+                               v
+                         EGLint hata kodu
+                               |
+             +-----------------+-----------------+
+             |                 |                 |
+             v                 v                 v
+      EGL_BAD_SURFACE   EGL_BAD_CONTEXT   EGL_BAD_DISPLAY
+             ...               ...               ...
 ```
 
-## Temel Kullanım
-
-```c
-if (!eglMakeCurrent(
-        egl_display,
-        egl_surface,
-        egl_surface,
-        egl_context)) {
-
-    EGLint err = eglGetError();
-
-    printf(
-        "eglMakeCurrent failed: 0x%x\n",
-        err
-    );
-}
-```
-
-## Bölüm Özeti
-
-- `eglGetError()` parametre almaz.
-- Dönüş tipi `EGLint`'tir.
-- Thread'in EGL hata durumunu okumak için kullanılır.
-- `EGL_SUCCESS`, EGL hata durumu olmadığını belirtir.
-- EGL 1.0 tüm temel EGL hata kodlarını bu fonksiyon üzerinden raporlar.
-- En doğru kullanım, önce ilgili EGL fonksiyonunun başarısız olup olmadığını kontrol etmek ve ardından `eglGetError()` çağırmaktır.
-- GBM veya DRM/KMS hataları `eglGetError()` ile alınmaz.
-- Direct-to-display projede EGL, GBM ve DRM/KMS hata kontrolleri birbirinden ayrı tutulmalıdır.
+---
