@@ -39,7 +39,7 @@ EGLDisplay
 
 `eglGetConfigAttrib` sadece bir `EGLConfig` ve bir `attribute` için değer döndürür.
 
-Bu fonksiyon bir ayar yapmaz ve config'i değiştirmez. Örneğin
+Bu fonksiyon bir **ayar yapmaz** ve **config'i değiştirmez**. Örneğin
 `EGL_SAMPLES` değerini sorgulamak multisampling'i açmaz; yalnızca config'in
 kaç sample sağlayacağını bildirir. Kullanılacak özellikler surface ve context
 oluşturulmadan önce config seçimiyle belirlenir.
@@ -75,7 +75,7 @@ EGLConfig handle'ları, ait oldukları EGLDisplay terminate edilene kadar geçer
 
 `attribute`, EGL 1.0 Table 3.1 içinde tanımlı bir `EGLConfig` attribute'u olmalıdır. Geçersizse:
 
-```text
+```C
 eglGetConfigAttrib(...) == EGL_FALSE
 eglGetError() == EGL_BAD_ATTRIBUTE
 ```
@@ -89,7 +89,7 @@ eglGetError() == EGL_BAD_ATTRIBUTE
 
 Doğru kullanım:
 
-```c
+```C
 EGLint red_bits = 0;
 if (!eglGetConfigAttrib(dpy, config, EGL_RED_SIZE, &red_bits)) {
     EGLint err = eglGetError();
@@ -98,37 +98,37 @@ if (!eglGetConfigAttrib(dpy, config, EGL_RED_SIZE, &red_bits)) {
 
 ## EGL 1.0 Geçerli Attribute Listesi
 
-| Attribute                       |     Tip | Anlam                                                             |
-| ------------------------------- | ------: | ----------------------------------------------------------------- |
-| `EGL_BUFFER_SIZE`             | integer | Color buffer toplam bit derinliği.                               |
-| `EGL_RED_SIZE`                | integer | Red component bit sayısı.                                       |
-| `EGL_GREEN_SIZE`              | integer | Green component bit sayısı.                                     |
-| `EGL_BLUE_SIZE`               | integer | Blue component bit sayısı.                                      |
-| `EGL_ALPHA_SIZE`              | integer | Alpha component bit sayısı.                                     |
-| `EGL_CONFIG_CAVEAT`           |    enum | `EGL_NONE`, `EGL_SLOW_CONFIG`, `EGL_NON_CONFORMANT_CONFIG`. |
-| `EGL_CONFIG_ID`               | integer | Unique config id.                                                 |
-| `EGL_DEPTH_SIZE`              | integer | Depth buffer bit sayısı.                                        |
-| `EGL_LEVEL`                   | integer | Framebuffer level.                                                |
-| `EGL_MAX_PBUFFER_WIDTH`       | integer | Maksimum pbuffer genişliği.                                     |
-| `EGL_MAX_PBUFFER_HEIGHT`      | integer | Maksimum pbuffer yüksekliği.                                    |
-| `EGL_MAX_PBUFFER_PIXELS`      | integer | Maksimum pbuffer pixel sayısı.                                  |
-| `EGL_NATIVE_RENDERABLE`       | boolean | Native rendering API surface'e render edebilir mi?                |
-| `EGL_NATIVE_VISUAL_ID`        | integer | Platform-dependent native visual id.                              |
-| `EGL_NATIVE_VISUAL_TYPE`      | integer | Platform-dependent native visual type.                            |
-| `EGL_SAMPLE_BUFFERS`          | integer | Multisample buffer sayısı;`0` veya `1`.                     |
-| `EGL_SAMPLES`                 | integer | Pixel başına sample sayısı.                                   |
-| `EGL_STENCIL_SIZE`            | integer | Stencil buffer bit sayısı.                                      |
-| `EGL_SURFACE_TYPE`            | bitmask | Desteklenen surface tipleri.                                      |
-| `EGL_TRANSPARENT_TYPE`        |    enum | `EGL_NONE` veya `EGL_TRANSPARENT_RGB`.                        |
-| `EGL_TRANSPARENT_RED_VALUE`   | integer | Transparent red key.                                              |
-| `EGL_TRANSPARENT_GREEN_VALUE` | integer | Transparent green key.                                            |
-| `EGL_TRANSPARENT_BLUE_VALUE`  | integer | Transparent blue key.                                             |
+| Attribute                       |     Tip | Anlam                                                                  |
+| ------------------------------- | ------: | ---------------------------------------------------------------------- |
+| `EGL_BUFFER_SIZE`             | integer | Color buffer toplam bit derinliği.                                    |
+| `EGL_RED_SIZE`                | integer | Red component bit sayısı.                                            |
+| `EGL_GREEN_SIZE`              | integer | Green component bit sayısı.                                          |
+| `EGL_BLUE_SIZE`               | integer | Blue component bit sayısı.                                           |
+| `EGL_ALPHA_SIZE`              | integer | Alpha component bit sayısı.                                          |
+| `EGL_CONFIG_CAVEAT`           |    enum | `EGL_NONE`, `EGL_SLOW_CONFIG`,<br />`EGL_NON_CONFORMANT_CONFIG`. |
+| `EGL_CONFIG_ID`               | integer | Unique config id.                                                      |
+| `EGL_DEPTH_SIZE`              | integer | Depth buffer bit sayısı.                                             |
+| `EGL_LEVEL`                   | integer | Framebuffer level.                                                     |
+| `EGL_MAX_PBUFFER_WIDTH`       | integer | Maksimum pbuffer genişliği.                                          |
+| `EGL_MAX_PBUFFER_HEIGHT`      | integer | Maksimum pbuffer yüksekliği.                                         |
+| `EGL_MAX_PBUFFER_PIXELS`      | integer | Maksimum pbuffer pixel sayısı.                                       |
+| `EGL_NATIVE_RENDERABLE`       | boolean | Native rendering API surface'e render edebilir mi?                     |
+| `EGL_NATIVE_VISUAL_ID`        | integer | Platform-dependent native visual id.                                   |
+| `EGL_NATIVE_VISUAL_TYPE`      | integer | Platform-dependent native visual type.                                 |
+| `EGL_SAMPLE_BUFFERS`          | integer | Multisample buffer sayısı;`0` veya `1`.                          |
+| `EGL_SAMPLES`                 | integer | Pixel başına sample sayısı.                                        |
+| `EGL_STENCIL_SIZE`            | integer | Stencil buffer bit sayısı.                                           |
+| `EGL_SURFACE_TYPE`            | bitmask | Desteklenen surface tipleri.                                           |
+| `EGL_TRANSPARENT_TYPE`        |    enum | `EGL_NONE` veya `EGL_TRANSPARENT_RGB`.                             |
+| `EGL_TRANSPARENT_RED_VALUE`   | integer | Transparent red key.                                                   |
+| `EGL_TRANSPARENT_GREEN_VALUE` | integer | Transparent green key.                                                 |
+| `EGL_TRANSPARENT_BLUE_VALUE`  | integer | Transparent blue key.                                                  |
 
 ## Attribute Ayrıntıları
 
 ### Color Buffer: bit sayısı gerçekte neyi değiştirir?
 
-```text
+```
 EGL_BUFFER_SIZE = EGL_RED_SIZE
                 + EGL_GREEN_SIZE
                 + EGL_BLUE_SIZE
@@ -137,7 +137,7 @@ EGL_BUFFER_SIZE = EGL_RED_SIZE
 
 Örnek:
 
-```text
+```
 R=8, G=8, B=8, A=8 -> EGL_BUFFER_SIZE = 32
 R=5, G=6, B=5, A=0 -> EGL_BUFFER_SIZE = 16
 ```
@@ -209,6 +209,10 @@ karşı saydam yapmaz ve `EGL_TRANSPARENT_RGB` anlamına gelmez. OpenGL ES
 blending ayrı bir render state'idir; native pencere kompozisyonu da platformun
 pencere sistemi/compositor kurallarına bağlıdır. EGL 1.0'ın aşağıda anlatılan
 transparent RGB özelliği ise alpha değil, exact RGB color key kullanır.
+
+![1788182807715](image/eglGetConfigAttrib/1788182807715.png)
+
+Example of an RGBA image composited over a checkerboard background. alpha is 0% at the top and 100% at the bottom.
 
 ### Ancillary buffer'lar: depth ve stencil
 
