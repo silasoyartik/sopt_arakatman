@@ -1,191 +1,185 @@
 # EGL 1.0: `eglDestroyContext`
 
 ```c
-EGLBoolean eglDestroyContext(
-    EGLDisplay dpy,
-    EGLContext ctx
-);
+EGLBoolean eglDestroyContext(EGLDisplay dpy,
+                             EGLContext ctx);
 ```
 
-## 1. Bu Fonksiyon Ne Yapar?
+`eglDestroyContext`, bir EGL rendering context ile ilişkili kaynakları
+silinmek üzere işaretler. Fonksiyonun başarılı olması, context belleğinin
+aynı anda fiziksel olarak serbest bırakıldığı anlamına gelmez.
 
-`eglDestroyContext`, bir `EGLContext` nesnesini silinmek üzere işaretler.
-Context herhangi bir thread'de current değilse kaynakları mümkün olan en
-kısa sürede serbest bırakılabilir. Context current ise gerçek silme işlemi
-ertelenir.
+EGL 1.0, current context için deferred destruction uygular: context herhangi
+bir thread'de current ise gerçek silme, o thread başka bir geçerli
+`eglMakeCurrent` çağrısı yapana kadar ertelenir.
+
+![EGLContext sahiplik ve current binding modeli](image/eglDestroyContext/ownership.svg)
+
+## EGLContext Neyi Temsil Eder?
+
+`EGLContext`, OpenGL ES rendering state'ini taşıyan opaque bir handle'dır.
+Program, texture ve buffer binding'leri, etkin render state'leri ve paylaşılan
+nesne namespace'leri context yaşam döngüsüyle ilişkilidir.
 
 ```text
-Current değil -> eglDestroyContext() -> silinebilir
-Current       -> eglDestroyContext() -> silme için işaretlenir
-                                      -> current kaldığı sürece geçerlidir
+EGLDisplay
+  |
+  +-- EGLConfig
+  |
+  +-- EGLContext
+        |
+        +-- OpenGL ES state
+        +-- object bindings
+        +-- shared object relationship
 ```
 
-Fonksiyon iki parametre alır:
+Context oluşturmak onu otomatik olarak current yapmaz. `eglMakeCurrent`,
+context'i calling thread ile draw/read surface'lere bağlar.
+
+## Parametreler
+
+### `dpy`
+
+`dpy`, context'in oluşturulduğu initialize edilmiş `EGLDisplay` olmalıdır.
+EGL nesne handle'ları display namespace'leri arasında taşınamaz.
+
+| Durum | Sonuç |
+| --- | --- |
+| Geçerli, initialize edilmiş ve context'in sahibi display | `ctx` geçerliyse işlem yürütülür. |
+| `EGL_NO_DISPLAY` veya geçersiz handle | `EGL_FALSE`, `EGL_BAD_DISPLAY`. |
+| Initialize edilmemiş display | `EGL_FALSE`, `EGL_NOT_INITIALIZED`. |
+
+### `ctx`
+
+`ctx`, `dpy` üzerinde `eglCreateContext` ile oluşturulmuş geçerli bir
+context handle'ı olmalıdır.
+
+| Durum | `eglDestroyContext` davranışı |
+| --- | --- |
+| Context current değil | Kaynaklar silinmek üzere işaretlenir ve en kısa sürede serbest bırakılabilir. |
+| Context herhangi bir thread'de current | İşlem `EGL_TRUE`; gerçek silme ertelenir. |
+| Geçersiz context handle | `EGL_FALSE`, `EGL_BAD_CONTEXT`. |
+
+## Current Context ve Thread Bağı
+
+Bir context aynı anda en fazla bir thread'de current olabilir. Calling thread
+üzerindeki current state kavramsal olarak şu üçlüyü tutar:
 
 ```text
-dpy -> Context'in ait olduğu, initialize edilmiş EGLDisplay
-ctx -> Silinecek EGLContext
+current context
+current draw surface
+current read surface
 ```
-
----
-
-# 2. Birinci Parametre: `dpy`
-
-## 2.1 Senaryo A - Geçerli `EGLDisplay`
-
-`dpy`, `ctx` nesnesinin oluşturulduğu initialize edilmiş display olmalıdır.
 
 ```c
-EGLBoolean result = eglDestroyContext(
-    egl_display,
-    egl_context
-);
+eglMakeCurrent(dpy, draw_surface, read_surface, context);
 ```
 
-`ctx` de geçerliyse beklenen sonuç:
+Context current iken `eglDestroyContext` çağrılırsa:
 
-```text
-result = EGL_TRUE
-```
+1. Context silinmek üzere işaretlenir.
+2. Fonksiyon `EGL_TRUE` döndürür.
+3. Mevcut thread binding'i geçerliliğini korur.
+4. Context yalnızca current kaldığı sürece kullanılabilir.
+5. Thread'in sonraki geçerli `eglMakeCurrent` çağrısı eski binding'i kaldırır ve silme tamamlanabilir.
 
-## 2.2 Senaryo B - `EGL_NO_DISPLAY`
+![Current context için ertelenmiş silme yaşam döngüsü](image/eglDestroyContext/deferred-destruction.svg)
+
+## Context'i Release Etmek ve Destroy Etmek
+
+Bu iki işlem farklıdır:
 
 ```c
-EGLBoolean result = eglDestroyContext(
-    EGL_NO_DISPLAY,
-    egl_context
-);
-
-EGLint error = eglGetError();
+eglMakeCurrent(dpy,
+               EGL_NO_SURFACE,
+               EGL_NO_SURFACE,
+               EGL_NO_CONTEXT);
 ```
 
-Beklenen sonuç:
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_DISPLAY
-```
-
-## 2.3 Initialize Edilmemiş Display
-
-Handle geçerli olsa bile EGL ilgili display üzerinde initialize edilmemişse
-işlem başarısız olur:
-
-```text
-result = EGL_FALSE
-error  = EGL_NOT_INITIALIZED
-```
-
-![eglDestroyContext dpy senaryoları](image/eglDestroyContext/dpy-flow.svg)
-
----
-
-# 3. İkinci Parametre: `ctx`
-
-## 3.1 Senaryo A - Geçerli ve Current Olmayan Context
-
-Context herhangi bir thread'de current değilse silme isteği başarılı olur ve
-kaynakları mümkün olan en kısa sürede serbest bırakılabilir.
+Calling thread'in current binding'ini bırakır; context'i silmez.
 
 ```c
-EGLBoolean result = eglDestroyContext(
-    egl_display,
-    egl_context
-);
+eglDestroyContext(dpy, context);
 ```
 
-Beklenen sonuç:
+Context'i silinmek üzere işaretler; current ise binding'i o anda kaldırmaz.
 
-```text
-result = EGL_TRUE
-```
-
-Bu çağrıdan sonra uygulama `egl_context` handle'ını tekrar kullanmamalıdır.
-
-## 3.2 Senaryo B - Geçerli ve Current Context
-
-Current context için `eglDestroyContext` yine başarılı olur; fakat context
-hemen serbest bırakılmaz.
-
-```c
-eglMakeCurrent(
-    egl_display,
-    egl_surface,
-    egl_surface,
-    egl_context
-);
-
-EGLBoolean result = eglDestroyContext(
-    egl_display,
-    egl_context
-);
-```
-
-Beklenen davranış:
-
-```text
-result = EGL_TRUE
-context = silme için işaretli, ancak hala current
-```
-
-Thread sonraki geçerli `eglMakeCurrent` çağrısıyla context'i bıraktığında
-gerçek silme tamamlanabilir:
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-```
-
-## 3.3 Senaryo C - Geçersiz `EGLContext`
-
-```c
-EGLContext invalid_context = (EGLContext)0;
-
-EGLBoolean result = eglDestroyContext(
-    egl_display,
-    invalid_context
-);
-
-EGLint error = eglGetError();
-```
-
-Beklenen sonuç:
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_CONTEXT
-```
-
-> `(EGLContext)0` yalnızca geçersiz handle senaryosunu göstermek içindir.
-
-![eglDestroyContext ctx senaryoları](image/eglDestroyContext/context-flow.svg)
-
----
-
-# 4. Current ve Current Olmayan Context Karşılaştırması
-
-| Context durumu | `eglDestroyContext` sonucu | Gerçek silme |
+| İşlem | Thread binding | Context yaşam döngüsü |
 | --- | --- | --- |
-| Current değil | `EGL_TRUE` | Mümkün olan en kısa sürede |
-| Current | `EGL_TRUE` | Sonraki geçerli `eglMakeCurrent` sonrası |
-| Geçersiz handle | `EGL_FALSE` | Silinecek geçerli nesne yok |
+| Release | Current binding kaldırılır | Context destroy edilmediyse yaşar. |
+| Destroy, current değil | Değişmez | Silme başlatılır. |
+| Destroy, current | Binding korunur | Silme release/rebind sonrasına ertelenir. |
 
-`eglMakeCurrent(..., EGL_NO_CONTEXT)` context'i thread'den ayırır;
-`eglDestroyContext()` ise context'i silinmek üzere işaretler. Bunlar aynı
-işlem değildir.
+## Shared Context İlişkisi
 
----
-
-# 5. Dönüş Değeri
+`eglCreateContext` sırasında `share_context` kullanılması iki context'in
+belirli OpenGL ES nesnelerini paylaşmasını sağlayabilir. Bir context'i destroy
+etmek, paylaşım grubundaki diğer context handle'larını otomatik olarak destroy
+etmez. Paylaşılan nesnelerin gerçek yaşam süresi GL nesne referanslarına ve
+paylaşım grubundaki kalan context'lere bağlıdır.
 
 ```text
-EGL_TRUE  -> Silme isteği kabul edildi
-EGL_FALSE -> İşlem başarısız; eglGetError() ile hata okunmalı
+Share group
+  +-- Context A (destroyed)
+  +-- Context B (still alive)
+  +-- Shared textures/buffers may remain reachable through B
 ```
 
-`EGL_TRUE`, current context kaynaklarının o anda fiziksel olarak serbest
-bırakıldığı anlamına gelmez.
+## Doğru Cleanup Sırası
+
+Tek thread'li yaygın kapanış sırası:
+
+```c
+eglMakeCurrent(dpy,
+               EGL_NO_SURFACE,
+               EGL_NO_SURFACE,
+               EGL_NO_CONTEXT);
+
+eglDestroyContext(dpy, context);
+```
+
+Bu sıra zorunlu tek sıra değildir; current context destroy edilebilir.
+Ancak önce release etmek kaynak yaşam döngüsünü daha açık hale getirir.
+
+Birden fazla thread kullanılıyorsa her thread kendi current binding'ini uygun
+şekilde bırakmalı ve uygulama destroy sırasını senkronize etmelidir.
+
+## Dönüş Değeri ve Hatalar
+
+| Sonuç | Anlam |
+| --- | --- |
+| `EGL_TRUE` | Silme isteği kabul edildi. Fiziksel release ertelenmiş olabilir. |
+| `EGL_FALSE` | İşlem başarısız; hata `eglGetError` ile okunur. |
+
+| Koşul | Hata |
+| --- | --- |
+| EGL `dpy` için initialize edilmemiş | `EGL_NOT_INITIALIZED` |
+| `dpy` geçerli display değil | `EGL_BAD_DISPLAY` |
+| `ctx` geçerli context değil | `EGL_BAD_CONTEXT` |
+
+## Temel Kullanım
+
+```c
+if (eglDestroyContext(dpy, context) == EGL_FALSE) {
+    EGLint error = eglGetError();
+    /* Handle the error. */
+}
+
+context = EGL_NO_CONTEXT;
+```
+
+Uygulama, başarılı destroy çağrısından sonra kendi değişkenini
+`EGL_NO_CONTEXT` yaparak eski opaque handle'ın yanlışlıkla yeniden
+kullanılmasını önleyebilir.
+
+## Bölüm Özeti
+
+- `eglDestroyContext`, context'i silinmek üzere işaretler.
+- Current olmayan context en kısa sürede serbest bırakılabilir.
+- Current context'in gerçek silinmesi sonraki geçerli `eglMakeCurrent` çağrısına ertelenir.
+- Release ve destroy farklı işlemlerdir.
+- Context, oluşturulduğu EGLDisplay ile birlikte kullanılmalıdır.
+
+## Kaynak
+
+- EGL 1.0 Specification, Section 3.6.2, Destroying Rendering Contexts.
