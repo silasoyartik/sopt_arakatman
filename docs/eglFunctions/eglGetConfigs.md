@@ -7,163 +7,246 @@ EGLBoolean eglGetConfigs(EGLDisplay dpy,
                          EGLint *num_config);
 ```
 
-`eglGetConfigs`, daha önceden başlatılmış (initialized) bir EGL görüntüleme bağlantısı (`EGLDisplay`) üzerinden, sistemin donanımsal olarak desteklediği tüm geçerli framebuffer yapılandırmalarının (`EGLConfig`) listesini veya yalnızca mevcut konfigürasyonların toplam sayısını elde etmek için kullanılan temel bir EGL fonksiyonudur.
+`eglGetConfigs`, başlatılmış bir `EGLDisplay` üzerinde desteklenen bütün `EGLConfig` yapılandırmalarını okumak veya yalnızca kaç yapılandırma bulunduğunu öğrenmek için kullanılan EGL 1.0 fonksiyonudur. Kısaca, ekran/sürücü tarafındaki framebuffer seçeneklerinin ham envanterini verir.
 
-## Kavramsal Akış
+Bu fonksiyon seçim yapmaz, filtre uygulamaz ve sıralama garantisi vermez. “Şu özelliklerde bir config istiyorum” denecekse doğru araç genellikle `eglChooseConfig` fonksiyonudur. `eglGetConfigs` ise sistemde ne olduğunu görmek, saymak ve tüm havuzu elle incelemek için kullanılır.
 
-EGL mimarisinde `eglGetConfigs` fonksiyonu, işletim sisteminin native pencereleme sistemi (X11, Wayland, DRM/GBM veya gömülü pencerelendirme sistemleri) ile EGL arasındaki uyumlu framebuffer formatlarının bir envanterini sunar.
+![eglGetConfigs genel akış şeması](gorseller/eglGetConfigs_akis.svg)
+
+## Kısa Mantık
+
+EGL tarafında her `EGLConfig`, yüzeyin nasıl bir framebuffer kullanacağını anlatır: renk tamponu kaç bit olacak, depth buffer var mı, pencere yüzeyi destekleniyor mu, OpenGL ES ile kullanılabilir mi gibi bilgiler bu yapılandırmalarda tutulur.
 
 ```text
-[İşletim Sistemi / Windowing System]        [EGL State Machine]
-      Native Display (ör. X11 Display)  --->  EGLDisplay
-                                                  |
-                                                  +---> [EGLConfig Havuzu] (eglGetConfigs buradan okur)
-                                                          |
-                                                          +-- EGLConfig #1 (RGB565, Z16, Single Buffer)
-                                                          |    +-- EGL_BUFFER_SIZE: 16
-                                                          |    +-- EGL_DEPTH_SIZE: 16
-                                                          |
-                                                          +-- EGLConfig #2 (RGBA8888, Z24, Back Buffer)
-                                                          |    +-- EGL_BUFFER_SIZE: 32
-                                                          |    +-- EGL_DEPTH_SIZE: 24
-                                                          |
-                                                          +-- EGLConfig #N ...
+Native Display -> EGLDisplay -> EGLConfig havuzu
+                                |
+                                +-- Config #1: RGB565, depth 16, window destekli
+                                +-- Config #2: RGBA8888, depth 24, pbuffer destekli
+                                +-- Config #N: ...
 ```
 
-Bu fonksiyon havuz üzerinde herhangi bir filtreleme veya sıralama yapmaz (bu görev `eglChooseConfig`'e aittir); yalnızca sistemin native konfigürasyonlarına karşılık gelen tüm EGLConfig handle'larını olduğu gibi kullanıcıya sunar.
+Uygulama bu havuzu aldıktan sonra her config'i `eglGetConfigAttrib` ile inceleyebilir.
 
 ## Parametreler
 
-### `dpy` (EGLDisplay)
+| Parametre | Görevi | Kritik nokta |
+| --- | --- | --- |
+| `dpy` | Sorgunun yapılacağı `EGLDisplay` handle'ı | `eglInitialize` ile başlatılmış olmalıdır. |
+| `configs` | Config handle'larının yazılacağı dizi | `NULL` verilirse sadece toplam sayı öğrenilir. |
+| `config_size` | `configs` dizisinin kapasitesi | `configs == NULL` iken dikkate alınmaz; dizi varsa en fazla bu kadar config kopyalanır. |
+| `num_config` | Yazılan veya bulunan config sayısının döneceği adres | Geçerli bir `EGLint*` olmalıdır. |
 
-EGL ortamını temsil eden opaque (kapalı) bir handle'dır. İşletim sisteminin native display'i (örneğin X11 `Display*` veya DRM dosya tanımlayıcısı) kullanılarak `eglGetDisplay` ile elde edilir ve `eglInitialize` ile başlatılmış olmalıdır.
+## Davranış Özeti
 
-| Değer                                    | Sonuç                                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------------------------ |
-| Geçerli ve Başlatılmış`EGLDisplay` | İşlem devam eder, diğer argümanlar da doğruysa sorgu başarılıdır.           |
-| `EGL_NO_DISPLAY`                        | Fonksiyon`EGL_FALSE` döner. `eglGetError()` -> `EGL_BAD_DISPLAY` üretir.     |
-| Geçersiz Handle                          | Fonksiyon`EGL_FALSE` döner. `eglGetError()` -> `EGL_BAD_DISPLAY` üretir.     |
-| Başlatılmamış (Uninitialized) Display | Fonksiyon`EGL_FALSE` döner. `eglGetError()` -> `EGL_NOT_INITIALIZED` üretir. |
+| Çağrı biçimi | Ne olur? |
+| --- | --- |
+| `eglGetConfigs(dpy, NULL, 0, &n)` | Config listesi kopyalanmaz; sistemdeki toplam config sayısı `n` içine yazılır. |
+| `eglGetConfigs(dpy, configs, size, &n)` | En fazla `size` adet config `configs` dizisine yazılır; kopyalanan adet `n` olur. |
+| `config_size` toplam config sayısından küçükse | Hata değildir. Yalnızca dizinin alabileceği kadar config döner. |
+| `dpy` geçersizse | `EGL_FALSE` döner; tipik hata `EGL_BAD_DISPLAY` olur. |
+| `dpy` başlatılmamışsa | `EGL_FALSE` döner; hata `EGL_NOT_INITIALIZED` olur. |
 
-### `configs` (EGLConfig*)
+## Neden Önemli?
 
-EGL konfigürasyonlarının handle'larının (tanımlayıcılarının) yazılacağı bellek bölgesini (diziyi) işaret eder.
+Bir EGL uygulamasında context ve surface oluşturmak için uygun bir `EGLConfig` gerekir. Yanlış veya eksik config listesiyle çalışmak şu sorunlara yol açabilir:
 
-| Değer                 | Sonuç                                                                                                                                |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| Geçerli Bellek Adresi | Sistemdeki mevcut konfigürasyonlar (en fazla`config_size` kadar) bu diziye kopyalanır.                                            |
-| `NULL`               | Konfigürasyonlar kopyalanmaz. Sadece toplam config sayısı hesaplanıp`num_config` adresine yazılır (2 adımlı sorgu paterni). |
+* Pencere yüzeyi (`EGL_WINDOW_BIT`) desteklenmediği için surface oluşturulamayabilir.
+* OpenGL ES 2.0 desteği (`EGL_OPENGL_ES2_BIT`) olmayan config seçilebilir.
+* Depth buffer olmayan config ile 3B çizimde derinlik testi beklenen sonucu vermez.
+* Küçük `config_size` yüzünden uygun config havuzun dışında kalabilir.
 
-### `config_size` (EGLint)
+Bu yüzden pratikte en güvenli yöntem iki adımlı sorgudur: önce toplam sayıyı öğren, sonra o sayı kadar bellek ayırıp tüm listeyi oku.
 
-`configs` dizisine kopyalanabilecek maksimum `EGLConfig` sayısını belirten tam sayıdır.
+![Profesyonel iki adımlı sorgu şeması](gorseller/profesyonel_2_adimli.svg)
 
-| Değer                         | Sonuç                                                                                                                                                                               |
-| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `0`                          | Eğer`configs` geçerli bir dizi ise hiçbir veri kopyalanmaz, `num_config` değeri `0` olur. (Fakat `configs` `NULL` ise EGL standardınca dikkate alınmaz).             |
-| Toplam Config <`config_size` | Sistemdeki tüm config'ler diziye yazılır.`num_config` içine kopyalanan miktar yazılır. Kalan dizi kapasitesi değiştirilmez.                                                |
-| Toplam Config >`config_size` | EGL yalnızca`config_size` kadar config'i diziye kopyalar. Taşanlar göz ardı edilir, herhangi bir hata üretilmez. `num_config` değeri `config_size` değerine eşit olur. |
+## Parametre Senaryoları
 
-### `num_config` (EGLint*)
+Aşağıdaki senaryolar repodaki C dosyalarıyla bire bir ilişkilidir. Çizim üreten örneklerde görsel sonuç, seçilen config ile surface/context kurulabildiğini gösterir. Çizim üretmeyen örneklerde ise doğru kanıt terminal çıktısıdır; çünkü amaç, hatalı veya bilinçli eksik parametre durumunda çizime geçilmemesi gerektiğini göstermektir.
 
-EGL'nin "Bu diziye kaç konfigürasyon yazdım?" (eğer `configs != NULL` ise) veya "Sistemde toplam kaç konfigürasyon var?" (eğer `configs == NULL` ise) sorusuna cevabını ilettiği çıkış (output) parametresidir.
+### 1. `dpy` Parametresi
 
-| Değer                     | Sonuç                                                               |
-| -------------------------- | -------------------------------------------------------------------- |
-| Geçerli`EGLint*` adresi | Elde edilen sayı bu bellek adresine başarıyla yazılır.          |
-| `NULL`                   | Geçerli değildir ve`EGL_BAD_PARAMETER` hata durumuna neden olur. |
+#### Senaryo A: Geçerli `EGLDisplay`
 
-## Geçerli Attribute Listesi ve Tampon (Buffer) Tipleri
+Kaynak dosya: `pDpyID_farki/senaryo_A_gecerli_display.c`
 
-`eglGetConfigs` fonksiyonu herhangi bir nitelik (attribute) listesi argümanı almaz. Sistemin desteklediği tüm EGL konfigürasyonlarını filtresiz döndürür. Elde edilen her bir `EGLConfig`, `eglGetConfigAttrib` kullanılarak tek tek incelenebilir.
+Native display açılır, bunun üzerinden `EGLDisplay` alınır ve `eglInitialize` başarılı olduktan sonra `eglGetConfigs` çağrılır. `dpy` geçerli olduğu için fonksiyon `EGL_TRUE` döner ve bulunan config sayısını `num_config` içine yazar. Kod daha sonra uygun bir config seçip yeşil zemin üzerinde beyaz üçgen çizer.
 
-Elde edilecek konfigürasyonlar donanımın desteklediği aşağıdaki tampon tiplerine sahip olabilir:
+![Geçerli display ile başarılı akış](gorseller/dpy_gecerli_display.svg)
 
-* **Back Buffered (Çift Tamponlu):** Pencere yüzeyleri (Window Surfaces) için uygundur. Ekranda yırtılma (tearing) olmaması için `eglSwapBuffers` işlemi gerektirir.
-* **Single Buffered (Tek Tamponlu):** Pixmap yüzeyleri (Pixmap Surfaces) için uygundur. Çizilen her şey anında native belleğe yansır.
+```text
+BASARILI: Gecerli EGLDisplay ile eglGetConfigs <N> config dondurdu.
+GORSEL SONUC: Secilen uygun config ile yesil zemin uzerine beyaz ucgen cizildi.
+```
 
-Hangisinin hangi tampon tipini desteklediğini anlamak için dönen config'lerin `EGL_SURFACE_TYPE` niteliği (`EGL_WINDOW_BIT`, `EGL_PIXMAP_BIT`, `EGL_PBUFFER_BIT`) kontrol edilmelidir.
+#### Senaryo B: Geçersiz `EGLDisplay`
 
-## Ayrıntılar ve Yaşam Döngüsü
+Kaynak dosya: `pDpyID_farki/senaryo_B_gecersiz_display.c`
 
-**Thread Güvenliği (Thread Safety):**
-EGL'de konfigürasyon elde etme işlemleri (örneğin `eglGetConfigs`) thread-safe'tir. Birden fazla thread aynı `EGLDisplay` üzerinden eşzamanlı (concurrent) olarak bu fonksiyonu çağırabilir. Veri EGL state machine'ini modifiye etmeyip sadece okunup döndürüldüğü için bir yarış koşulu yaratmaz.
+Bu senaryoda `dpy` olarak `EGL_NO_DISPLAY` verilir. Geçerli display olmadığı için `eglGetConfigs` başarısız olur ve beklenen hata `EGL_BAD_DISPLAY` değeridir. Surface veya context kurulmadığı için çizim yapılmaz.
 
-**Eşzamanlama (Synchronization):**
-Bu fonksiyon donanıma veya Native render motoruna komut (command buffer) göndermez, sürücünün (driver) önceden oluşturduğu statik konfigürasyon listesini okur. Bu yüzden `glFinish()`, `eglWaitGL()` veya `eglWaitNative()` gibi komutların çağrılmasına gerek yoktur.
+![Terminal kanıtı akışı](gorseller/terminal_kanit_akisi.svg)
 
-**Yaşam Döngüsü:**
-Döndürülen `EGLConfig` handle'ları, o handle'ları barındıran `EGLDisplay` var olduğu sürece geçerlidir. Display `eglTerminate` ile sonlandırıldığında bu config'ler geçersizleşir ve bir daha kullanılamazlar.
+```text
+BEKLENEN HATA: EGL_NO_DISPLAY ile eglGetConfigs basarisiz oldu.
+EGL hata kodu: EGL_BAD_DISPLAY (0x3008)
+GORSEL SONUC: Config alinmadigi icin context/surface olusturulmaz ve cizim yapilmaz.
+```
 
-## Hata Matrisi
+### 2. `configs` Parametresi
 
-EGL spesifikasyonunun katı kuralları gereği `eglGetConfigs` başarısız olduğunda **hiçbir yan etki (side effect) bırakmamalıdır.** Argümanlardaki bellek alanları değiştirilmez ve state machine mevcut durumunu aynen korur.
+#### Senaryo A: `configs = NULL` ile Sadece Sayım
 
-| Durum                                                       | Sonuç (Fonksiyon Dönüşü) | EGL Hata Kodu (`eglGetError()`) |
-| ----------------------------------------------------------- | ----------------------------- | --------------------------------- |
-| Her şey geçerli ve başarılı                            | `EGL_TRUE`                  | `EGL_SUCCESS`                   |
-| `dpy` geçerli bir display değil veya `EGL_NO_DISPLAY` | `EGL_FALSE`                 | `EGL_BAD_DISPLAY`               |
-| `dpy` henüz `eglInitialize` ile başlatılmamış      | `EGL_FALSE`                 | `EGL_NOT_INITIALIZED`           |
-| `num_config` parametresinin `NULL` olması              | `EGL_FALSE`                 | `EGL_BAD_PARAMETER`             |
+Kaynak dosya: `pConfigs_farki/senaryo_A_sadece_sayim.c`
+
+Bu kullanım iki adımlı sorgunun ilk adımıdır. `configs` parametresi `NULL`, `config_size` ise `0` verilir. EGL config listesini kopyalamaz; yalnızca toplam config sayısını `num_config` adresine yazar. Bu senaryoda çizim yapılmaması doğrudur, çünkü elde henüz kullanılacak config handle'ı yoktur.
+
+```text
+BASARILI: pConfigs=NULL ve config_size=0 ile sadece config sayisi sorgulandi.
+Sistemde <N> adet EGLConfig var.
+GORSEL SONUC: Bu senaryo bilerek cizim yapmaz; elde config handle olmadigi icin surface/context kurulmaz.
+```
+
+#### Senaryo B: Geçerli `configs` Dizisine Veri Okuma
+
+Kaynak dosya: `pConfigs_farki/senaryo_B_veri_okuma.c`
+
+Bu senaryoda `configs` geçerli bir dizi olarak verilir ve `config_size` dizinin kapasitesini belirtir. Başarılı çağrıdan sonra EGL, en fazla `config_size` kadar `EGLConfig` handle'ını diziye yazar. Kod bu config'ler arasından pencere yüzeyi ve OpenGL ES 2.0 destekleyen bir seçim yaparak lacivert zemin üzerinde sarı üçgen çizer.
+
+![Geçerli configs dizisine veri okuma](gorseller/pconfigs_veri_okuma.svg)
+
+```text
+BASARILI: pConfigs gecerli dizi oldugu icin <N> config bellege kopyalandi.
+GORSEL SONUC: Okunan configlerden uygun olanla lacivert zemin uzerine sari ucgen cizildi.
+```
+
+### 3. `config_size` Parametresi
+
+#### Senaryo A: Yetersiz Kapasite
+
+Kaynak dosya: `ConfigSize_farki/senaryo_A_yetersiz_kapasite.c`
+
+Önce sistemdeki gerçek config sayısı öğrenilir, ardından özellikle küçük bir kapasiteyle (`config_size = 2`) okuma yapılır. EGL bunu hata saymaz; yalnızca ilk iki config'i kopyalar. Risk şudur: ihtiyaç duyulan özelliklere sahip config, okunmayan kısımda kalabilir.
+
+![Yetersiz config_size etkisi](gorseller/configsize_yetersiz.svg)
+
+```text
+Sistemde toplam <T> config var, fakat ConfigSize=2 oldugu icin sadece <N> tanesi okundu.
+UYARI: Ilk 2 config icinde derinlik tamponu bulunamadi; 3B derinlik testi guvenilir degil.
+GORSEL SONUC: Sadece sinirli havuz kullanildigi icin dogru config secimi garanti edilmez.
+```
+
+#### Senaryo B: Yeterli Kapasite
+
+Kaynak dosya: `ConfigSize_farki/senaryo_B_yeterli_kapasite.c`
+
+Bu senaryoda önce toplam config sayısı alınır, sonra tam bu sayı kadar bellek ayrılır. Böylece tüm config havuzu okunur ve depth buffer destekleyen uygun config güvenli şekilde seçilebilir. 3B çizimde yeşil üçgenin kırmızı üçgenin önünde görünmesi depth buffer kullanımını somutlaştırır.
+
+![Yeterli config_size ile tam okuma](gorseller/configsize_yeterli.svg)
+
+```text
+BASARILI: Yeterli kapasite ile <N>/<T> config okundu ve derinlikli uygun config secildi.
+GORSEL SONUC: Depth buffer aktif; yesil ucgen onde, kirmizi ucgen arkada kalir.
+```
+
+### 4. `num_config` Parametresi
+
+#### Senaryo A: Geçerli `num_config` İşaretçisi
+
+Kaynak dosya: `pNumConfig_farki/senaryo_A_gecerli_isaretci.c`
+
+`num_config` geçerli bir `EGLint*` adresidir. `eglGetConfigs`, kaç config kopyaladığını bu adrese yazar. Kod daha sonra uygun config ile surface/context oluşturup mor zemin üzerinde camgöbeği üçgen çizer.
+
+![Geçerli num_config işaretçisi](gorseller/pnumconfig_gecerli.svg)
+
+```text
+BASARILI: pNumConfig gecerli isaretci oldugu icin EGL yazdigi config sayisini bildirdi: <N>
+GORSEL SONUC: Uygun config ile mor zemin uzerine camgobegi ucgen cizildi.
+```
+
+#### Senaryo B: `num_config = NULL`
+
+Kaynak dosya: `pNumConfig_farki/senaryo_B_null_verilmesi.c`
+
+EGL 1.0 sözleşmesinde `num_config` çıkış parametresi zorunlu kabul edilmelidir. Bu parametre `NULL` verilirse bazı sürücüler temiz bir hata döndürmek yerine geçersiz adrese yazmaya çalışıp uygulamayı çökertebilir. Bu nedenle örnek kod gerçek EGL çağrısını bilerek yapmaz; üretim kodunun bu parametreyi çağrıdan önce reddetmesi gerektiğini gösterir.
+
+```text
+BEKLENEN HATA: pNumConfig=NULL EGL 1.0 icin gecersiz parametredir.
+GUVENLI TEST: Bu ornek kasitli olarak eglGetConfigs(..., NULL) cagirmiyor.
+NEDEN: Bazi EGL suruculeri gecersiz output pointer'i icin EGL_FALSE yerine process crash uretebilir.
+DOGRU DAVRANIS: Uretim kodu pNumConfig NULL ise EGL cagrisindan once reddetmelidir.
+GORSEL SONUC: Config sayisi guvenli sekilde alinamadigi icin cizim kurulmaz.
+```
+
+### 5. Profesyonel İki Adımlı Sorgu
+
+Kaynak dosya: `harici_standart_senaryo/profesyonel_2_adimli_sorgu.c`
+
+Bu senaryo gerçek uygulamalarda önerilen akışı gösterir:
+
+1. `configs = NULL` ile toplam config sayısı öğrenilir.
+2. Bu sayı kadar bellek ayrılır.
+3. İkinci çağrıda tüm config listesi alınır.
+4. Tüm havuz içinden ihtiyaçlara uygun config seçilir.
+
+Bu yöntem hem bellek taşmasını önler hem de eksik havuz üzerinden yanlış config seçme riskini azaltır.
+
+```text
+Adim 1: Sistemde <T> adet EGLConfig oldugu tespit edildi.
+Adim 2: <N> adet EGLConfig bellege alindi.
+BASARILI: 2 adimli eglGetConfigs akisi ile tam config havuzu okunup uygun config secildi.
+GORSEL SONUC: Depth buffer aktif; yesil ucgen kirmizi ucgenin onunde gorunur.
+```
 
 ## Güvenli Kullanım Örneği
-
-Aşağıdaki C kodu, config sayısının ve config listesinin iki ayrı çağrıyla alındığı iki adımlı sorgu yaklaşımını gösterir.
 
 ```c
 #include <EGL/egl.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-/*
- * Sistemdeki tüm konfigürasyonları elde edip ekrana sayısını yazdıran güvenli fonksiyon.
- * Başarılı olursa EGL_TRUE, aksi halde EGL_FALSE döner.
- */
 EGLBoolean SafeGetEGLConfigs(EGLDisplay dpy) {
     EGLint total_configs = 0;
-    EGLConfig *configs = NULL;
 
-    // 1. ADIM: Sadece toplam config sayısını sor (configs = NULL geçirerek)
+    if (dpy == EGL_NO_DISPLAY) {
+        fprintf(stderr, "[Hata] Geçersiz EGLDisplay.\n");
+        return EGL_FALSE;
+    }
+
     if (eglGetConfigs(dpy, NULL, 0, &total_configs) != EGL_TRUE) {
-        fprintf(stderr, "[Hata] EGL config sayısı okunamadı. Hata: 0x%04X\n", eglGetError());
+        fprintf(stderr, "[Hata] Config sayısı okunamadı. Hata: 0x%04X\n", eglGetError());
         return EGL_FALSE;
     }
 
-    if (total_configs == 0) {
-        printf("[Bilgi] EGL başlatılmış ancak desteklenen konfigürasyon yok.\n");
-        return EGL_TRUE; // Bu bir donanım limitidir, API hatası değil.
+    if (total_configs <= 0) {
+        printf("[Bilgi] Bu display için EGLConfig bulunamadı.\n");
+        return EGL_TRUE;
     }
 
-    // 2. ADIM: Dönen sayı kadar heap'ten dinamik bellek tahsis et
-    configs = (EGLConfig*) malloc(total_configs * sizeof(EGLConfig));
+    EGLConfig *configs = (EGLConfig*)malloc((size_t)total_configs * sizeof(EGLConfig));
     if (configs == NULL) {
-        fprintf(stderr, "[Hata] Bellek yetersizliği (Out of memory).\n");
+        fprintf(stderr, "[Hata] Config listesi için bellek ayrılamadı.\n");
         return EGL_FALSE;
     }
 
-    // 3. ADIM: Ayrılan belleği gerçek konfigürasyonlarla doldur
-    if (eglGetConfigs(dpy, configs, total_configs, &total_configs) != EGL_TRUE) {
-        fprintf(stderr, "[Hata] EGL config verileri okunamadı. Hata: 0x%04X\n", eglGetError());
+    EGLint copied_configs = 0;
+    if (eglGetConfigs(dpy, configs, total_configs, &copied_configs) != EGL_TRUE) {
+        fprintf(stderr, "[Hata] Config listesi okunamadı. Hata: 0x%04X\n", eglGetError());
         free(configs);
         return EGL_FALSE;
     }
 
-    printf("Başarılı: Sistemden %d adet EGLConfig çekildi.\n", total_configs);
+    printf("Başarılı: %d/%d EGLConfig okundu.\n", copied_configs, total_configs);
 
-    // TODO: Burada 'configs' dizisi eglGetConfigAttrib ile filtrelenip
-    // projenin ihtiyaç duyduğu Back Buffered veya pBuffer özellikli config seçilebilir.
+    /*
+     * Burada configs dizisi eglGetConfigAttrib ile incelenip
+     * projenin istediği surface, renderable type, color ve depth özellikleri seçilir.
+     */
 
-    // İşlem bittikten sonra ayrılan belleği serbest bırak
     free(configs);
-  
     return EGL_TRUE;
 }
 ```
 
-## Bölüm Özeti
+## Sunumda Vurgulanacak Sonuç
 
-- **Amaç ve Sınırlar:** `eglGetConfigs`, tüm konfigürasyonları filtre uygulamadan listeler. Belirli niteliklere göre seçim yapmak için `eglChooseConfig` kullanılır.
-- **İki Adımlı Sorgu:** Önce `configs = NULL` ile config sayısı öğrenilebilir, ardından gerekli büyüklükte bir dizi ayrılarak config handle'ları alınabilir.
-- **Output Parametresi:** `num_config`, yalnızca config sayısı sorgulanırken de geçerli bir adres göstermelidir; `NULL` kullanımı geçerli değildir.
-- **Yan Etkisizlik:** Fonksiyon config listesini okur; başarılı bir çağrı EGL state'ini değiştirmez.
-
+`eglGetConfigs` bir seçim fonksiyonu değil, config envanteri alma fonksiyonudur. En güvenli kullanım, önce toplam sayıyı öğrenmek ve sonra tüm listeyi okuyup gereken özellikleri `eglGetConfigAttrib` ile doğrulamaktır. `dpy` başlatılmış olmalı, `num_config` geçerli bir adres olmalı ve `config_size` küçük tutulursa fonksiyon hata vermese bile eksik config listesiyle çalışıldığı unutulmamalıdır.
