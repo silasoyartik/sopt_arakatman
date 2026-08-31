@@ -15,7 +15,7 @@ Bu çalışmada fonksiyonun `void` parametreli yapısı iki pratik durum üzerin
 
 ## Fonksiyonun Temel Mantığı
 
-![eglGetCurrentContext thread-local context modeli](assets/egl_get_current_context_tls_model.svg)
+![eglGetCurrentContext thread-local context modeli](image/eglGetCurrentContext/egl_get_current_context_tls_model.svg)
 
 `eglGetCurrentContext` global bir context listesinde arama yapmaz. Sadece çağrıldığı thread'in EGL state bilgisini kontrol eder. Aynı programda başka bir thread üzerinde aktif context bulunması, bu thread için sonucu değiştirmez.
 
@@ -45,7 +45,7 @@ Kaynak dosya: `void_param/scenario_a.c`
 
 Bu senaryoda EGL/DRM/GBM ortamı hazırlanır. Ardından `eglMakeCurrent` ile oluşturulan context current yapılır. Sonrasında `eglGetCurrentContext()` çağrılır ve dönen handle, programın oluşturduğu `state.egl_context` ile karşılaştırılır.
 
-![Senaryo A aktif context akışı](assets/scenario_a_active_context.svg)
+![Senaryo A aktif context akışı](image/eglGetCurrentContext/scenario_a_active_context.svg)
 
 ### Kod Akışı
 
@@ -79,7 +79,7 @@ SENARYO A: Aktif bir context varken eglGetCurrentContext cagirimi
 
 ### Görsel Çıktı
 
-![Senaryo A beklenen ekran çıktısı](assets/expected_output_scenario_a.svg)
+![Senaryo A beklenen ekran çıktısı](image/eglGetCurrentContext/expected_output_scenario_a.svg)
 
 Context aktif olduğu için OpenGL ES komutları geçerli context üzerinde çalışır. Program önce arka planı koyu yeşilimsi renge temizler, sonra kırmızı, yeşil ve mavi köşelere sahip bir üçgen çizer. Son adımda `eglSwapBuffers` çağrısı ile çizilen görüntü ekrana taşınır.
 
@@ -95,7 +95,7 @@ eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 
 Bu detach işleminden sonra `eglGetCurrentContext()` çağrıldığında artık current context olmadığı için fonksiyonun `EGL_NO_CONTEXT` döndürmesi beklenir.
 
-![Senaryo B context yok akışı](assets/scenario_b_no_context.svg)
+![Senaryo B context yok akışı](image/eglGetCurrentContext/scenario_b_no_context.svg)
 
 ### Kod Akışı
 
@@ -130,7 +130,7 @@ SENARYO B: Aktif bir context YOKKEN eglGetCurrentContext cagirimi
 
 ### Görsel Çıktı
 
-![Senaryo B beklenen ekran çıktısı](assets/expected_output_scenario_b.svg)
+![Senaryo B beklenen ekran çıktısı](image/eglGetCurrentContext/expected_output_scenario_b.svg)
 
 Bu senaryoda `eglGetCurrentContext()` sonucu `EGL_NO_CONTEXT` olduğu için üçgen çizilmez. Program, görsel ayrımı kolaylaştırmak için detach öncesinde ekranı kırmızıya temizler. Daha sonra sadece mevcut buffer'ı göstermek amacıyla context geçici olarak tekrar bağlanır ve `eglSwapBuffers` yapılır; bu aşamada yeni çizim komutu verilmez. Bu yüzden beklenen görüntü sadece kırmızı arka plandır.
 

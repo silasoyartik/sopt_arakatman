@@ -16,7 +16,7 @@ Bu incelemede fonksiyonun tek parametresi olan `dpy` / `pDpyID` uc farkli durum 
 
 ## Kisa Ozet
 
-![eglTerminate yasam dongusu](assets/eglterminate-state-flow.svg)
+![eglTerminate yasam dongusu](image/eglTerminate/eglterminate-state-flow.svg)
 
 `eglTerminate(dpy)` yalnizca EGL tarafindaki oturumu kapatir. DRM fd, GBM device, GBM surface veya native pencere sistemi kaynaklari ayrica temizlenmelidir. Bu nedenle orneklerde `eglTerminate` cagrisindan sonra veya hata yollarinda `destroy_drm_window(&nw)` ile native kaynak temizligi yapilir.
 
@@ -28,7 +28,7 @@ Fonksiyonun anlasilmasi icin en onemli ayrim sudur:
 
 ## Senaryo A: Gecerli ve Initialize Edilmis Display
 
-![Senaryo A gecerli display akisi](assets/scenario-a-valid-display.svg)
+![Senaryo A gecerli display akisi](image/eglTerminate/scenario-a-valid-display.svg)
 
 Bu senaryoda program once DRM/KMS ve GBM altyapisini kurar. Ardindan GBM device uzerinden gecerli bir `EGLDisplay` alir ve `eglInitialize` ile EGL oturumunu baslatir. Config secimi, window surface olusturma ve GLES2 context olusturma adimlari basarili olursa context current yapilir. Son olarak renkli ucgen cizilir, goruntu `drm_swap_buffers` ile ekrana sunulur ve `eglTerminate(display)` cagrilir.
 
@@ -52,7 +52,7 @@ Simdi eglTerminate(display) cagriliyor...
 
 ## Senaryo B: `EGL_NO_DISPLAY` / Gecersiz Display
 
-![Senaryo B gecersiz display akisi](assets/scenario-b-invalid-display.svg)
+![Senaryo B gecersiz display akisi](image/eglTerminate/scenario-b-invalid-display.svg)
 
 Bu negatif senaryoda `pDpyID` olarak `EGL_NO_DISPLAY` veya NULL benzeri gecersiz bir display degeri ele alinir. Kod guvenlik ve sistem kararliligi icin gercek `eglTerminate(EGL_NO_DISPLAY)` cagrisi yapmaz; bunun yerine bu parametre sinifinin neden hatali oldugunu acikca gosterir.
 
@@ -72,7 +72,7 @@ SONUC: Gecerli display olmadigi icin context/surface olusturulmaz, cizim ve DRM 
 
 ## Senaryo C: Gecerli Fakat Initialize Edilmemis Display
 
-![Senaryo C initialize edilmemis display akisi](assets/scenario-c-uninitialized-display.svg)
+![Senaryo C initialize edilmemis display akisi](image/eglTerminate/scenario-c-uninitialized-display.svg)
 
 Bu senaryoda DRM/KMS ve GBM altyapisi kurulur, ardindan gecerli bir `EGLDisplay` alinir. Ancak senaryo geregi `eglInitialize` cagrisi yapilmaz. Program dogrudan `eglTerminate(display)` cagirir.
 

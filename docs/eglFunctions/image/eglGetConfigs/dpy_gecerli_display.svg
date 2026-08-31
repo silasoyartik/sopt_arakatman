@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="420" viewBox="0 0 780 420" role="img" aria-labelledby="title desc">
+  <title id="title">Geçerli EGLDisplay ile başarılı sonuç</title>
+  <desc id="desc">Geçerli display, başarılı config okuma ve yeşil zemin üzerinde beyaz üçgen çizimi.</desc>
+  <style>
+    .bg{fill:#f7fafc}.panel{fill:#ffffff;stroke:#263238;stroke-width:2;rx:10}.screen{fill:#0d2e20;stroke:#111827;stroke-width:3;rx:10}
+    .title{font-family:Arial,Helvetica,sans-serif;font-size:23px;font-weight:700;fill:#111827}.text{font-family:Arial,Helvetica,sans-serif;font-size:17px;fill:#1f2937}.mono{font-family:Consolas,Menlo,monospace;font-size:15px;fill:#111827}.ok{fill:#e8f7ef;stroke:#177245;stroke-width:2;rx:8}
+  </style>
+  <rect class="bg" width="780" height="420"/>
+  <text class="title" x="34" y="44">dpy geçerli: eglGetConfigs başarılı</text>
+  <rect class="panel" x="36" y="82" width="290" height="260"/>
+  <rect class="ok" x="62" y="112" width="238" height="56"/>
+  <text class="mono" x="78" y="146">eglInitialize(dpy) OK</text>
+  <text class="text" x="62" y="205">Config listesi okunur.</text>
+  <text class="text" x="62" y="235">Uygun config seçilir.</text>
+  <text class="text" x="62" y="265">Surface + context kurulur.</text>
+  <text class="mono" x="62" y="306">EGL_TRUE, num_config = N</text>
+  <rect class="screen" x="390" y="82" width="330" height="260"/>
+  <polygon points="555,136 454,294 656,294" fill="#ffffff"/>
+  <text class="mono" x="458" y="374">Görsel çıktı: yeşil zemin + beyaz üçgen</text>
+</svg>
