@@ -4,329 +4,247 @@
 EGLint eglGetError(void);
 ```
 
-## 1. Bu Fonksiyon Ne Yapar?
+`eglGetError`, calling thread için kaydedilmiş EGL hata durumunu döndürür.
+Parametre almaz. Dönen değer ya `EGL_SUCCESS` ya da EGL tarafından tanımlanan
+bir hata kodudur.
 
-`eglGetError`, çağrı yapan thread için kaydedilmiş son EGL hata kodunu
-döndürür. Parametre almadığı için senaryolar parametre değişikliğine göre
-değil, daha önce çağrılan EGL fonksiyonunun oluşturduğu duruma göre kurulur.
+Fonksiyon bir hata oluşturmaz ve başarısız işlemi düzeltmez. Daha önceki EGL
+çağrılarının calling thread üzerinde bıraktığı error state'i okur.
+
+![EGL çağrısı ile thread-local error state ilişkisi](image/eglGetError/thread-error-state.svg)
+
+## Error State Modeli
+
+EGL error state thread'e özeldir:
 
 ```text
-EGL fonksiyonu çağrılır
-        |
-        v
-Dönüş değeri kontrol edilir
-        |
-        v
-Başarısızsa hemen eglGetError() çağrılır
-        |
-        v
-EGLint hata kodu alınır
+Thread A -> EGL error state A
+Thread B -> EGL error state B
+Thread C -> EGL error state C
 ```
 
-`eglGetError()` hata kodunu döndürdükten sonra o thread'in hata durumu
-`EGL_SUCCESS` olacak biçimde sıfırlanır. Bu nedenle hata, başarısız EGL
-çağrısından hemen sonra ve yalnızca bir kez okunmalıdır.
+Thread A'da oluşan hata Thread B'nin `eglGetError()` çağrısıyla okunmaz.
+Her thread kendi EGL çağrılarının hata durumunu kendi içinde okumalıdır.
 
-![eglGetError genel akışı](image/eglGetError/error-flow.svg)
-
----
-
-# 2. EGL 1.0 Dönüş Değerleri
-
-EGL 1.0 kapsamında `eglGetError()` aşağıdaki 14 temel değerden birini
-döndürebilir. `EGL_SUCCESS` teknik olarak hata değildir.
-
-| Değer | Görülebileceği durum |
-| --- | --- |
-| `EGL_SUCCESS` | Kayıtlı hata yoktur. |
-| `EGL_NOT_INITIALIZED` | EGL ilgili display için initialize edilmemiştir veya edilememiştir. |
-| `EGL_BAD_ACCESS` | İstenen kaynağa erişim kuralı ihlal edilmiştir. |
-| `EGL_BAD_ALLOC` | İşlem için kaynak ayrılamamıştır. |
-| `EGL_BAD_ATTRIBUTE` | Attribute listesinde tanınmayan attribute/değer vardır. |
-| `EGL_BAD_CONTEXT` | Bir context argümanı geçerli `EGLContext` değildir. |
-| `EGL_BAD_CONFIG` | Bir config argümanı geçerli `EGLConfig` değildir. |
-| `EGL_BAD_CURRENT_SURFACE` | Thread'in current surface'i artık geçerli değildir. |
-| `EGL_BAD_DISPLAY` | Bir display argümanı geçerli `EGLDisplay` değildir. |
-| `EGL_BAD_SURFACE` | Bir surface argümanı geçerli `EGLSurface` değildir. |
-| `EGL_BAD_MATCH` | Argümanlar tek tek geçerli olsa da birbirleriyle uyumsuzdur. |
-| `EGL_BAD_PARAMETER` | Bir veya daha fazla parametre değeri geçersizdir. |
-| `EGL_BAD_NATIVE_PIXMAP` | Native pixmap geçersizdir ve implementation bunu algılayabilmiştir. |
-| `EGL_BAD_NATIVE_WINDOW` | Native window geçersizdir ve implementation bunu algılayabilmiştir. |
-
----
-
-# 3. Hata Senaryoları
-
-## 3.1 Senaryo A - `EGL_SUCCESS`
-
-Kayıtlı bir hata yokken:
+Bir EGL fonksiyonu hata oluşturduğunda error state hata koduna ayarlanır.
+`eglGetError()` bu kodu döndürdükten sonra state `EGL_SUCCESS` değerine
+resetlenir.
 
 ```c
-EGLint error = eglGetError();
-```
+EGLBoolean result = eglDestroySurface(dpy, invalid_surface);
 
-beklenen sonuç:
-
-```text
-error = EGL_SUCCESS
-```
-
-## 3.2 Senaryo B - `EGL_NOT_INITIALIZED`
-
-Geçerli fakat initialize edilmemiş bir display üzerinde initialize gerektiren
-bir EGL işlemi yapıldığında görülebilir.
-
-```c
-EGLBoolean result = eglDestroyContext(dpy, context);
-EGLint error = eglGetError();
+if (result == EGL_FALSE) {
+    EGLint first = eglGetError();
+    EGLint second = eglGetError();
+}
 ```
 
 ```text
-result = EGL_FALSE
-error  = EGL_NOT_INITIALIZED
+first  -> ilgili hata kodu
+second -> arada yeni hata yoksa EGL_SUCCESS
 ```
 
-## 3.3 Senaryo C - `EGL_BAD_ACCESS`
+![Hata durumunun okunması ve resetlenmesi](image/eglGetError/read-reset.svg)
 
-Bir context başka bir thread'de current iken ikinci thread aynı context'i
-current yapmaya çalışırsa kaynak erişim kuralı ihlal edilebilir.
+## Doğru Kullanım Sırası
 
-```text
-Thread A: context current
-Thread B: aynı context ile eglMakeCurrent()
-          -> EGL_FALSE
-          -> EGL_BAD_ACCESS
-```
-
-Bu senaryo iki thread ve senkronizasyon gerektirir.
-
-## 3.4 Senaryo D - `EGL_BAD_ALLOC`
-
-`eglCreateContext`, `eglCreateWindowSurface` veya benzeri bir oluşturma işlemi
-için gerekli kaynak ayrılamadığında görülebilir.
-
-```text
-Oluşturma fonksiyonu başarısız
--> EGL_NO_CONTEXT veya EGL_NO_SURFACE
--> eglGetError() = EGL_BAD_ALLOC
-```
-
-Kaynak tüketimini güvenli ve deterministik biçimde oluşturmak her ortamda
-mümkün olmadığından bu senaryo implementation ve test ortamına bağlıdır.
-
-## 3.5 Senaryo E - `EGL_BAD_ATTRIBUTE`
-
-```c
-const EGLint attributes[] = {
-    0x7FFFFFFF, 1,
-    EGL_NONE
-};
-
-EGLint num_config = 0;
-EGLBoolean result = eglChooseConfig(
-    dpy,
-    attributes,
-    NULL,
-    0,
-    &num_config
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_ATTRIBUTE
-```
-
-## 3.6 Senaryo F - `EGL_BAD_CONTEXT`
-
-```c
-EGLBoolean result = eglDestroyContext(
-    dpy,
-    (EGLContext)0
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_CONTEXT
-```
-
-## 3.7 Senaryo G - `EGL_BAD_CONFIG`
-
-```c
-EGLContext context = eglCreateContext(
-    dpy,
-    (EGLConfig)0,
-    EGL_NO_CONTEXT,
-    NULL
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-context = EGL_NO_CONTEXT
-error   = EGL_BAD_CONFIG
-```
-
-## 3.8 Senaryo H - `EGL_BAD_CURRENT_SURFACE`
-
-Calling thread'in current draw veya read surface'i artık geçerli değilse
-sonraki EGL işlemi `EGL_BAD_CURRENT_SURFACE` üretebilir. Bu durum native
-window yaşam döngüsüne ve implementation'a bağlı bir test düzeneği gerektirir.
-
-## 3.9 Senaryo I - `EGL_BAD_DISPLAY`
-
-```c
-EGLBoolean result = eglInitialize(
-    EGL_NO_DISPLAY,
-    NULL,
-    NULL
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_DISPLAY
-```
-
-## 3.10 Senaryo J - `EGL_BAD_SURFACE`
-
-```c
-EGLBoolean result = eglDestroySurface(
-    dpy,
-    (EGLSurface)0
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_SURFACE
-```
-
-## 3.11 Senaryo K - `EGL_BAD_MATCH`
-
-Geçerli context ve surface nesneleri birbirleriyle uyumlu değilse:
-
-```c
-EGLBoolean result = eglMakeCurrent(
-    dpy,
-    incompatible_surface,
-    incompatible_surface,
-    context
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_MATCH
-```
-
-## 3.12 Senaryo L - `EGL_BAD_PARAMETER`
-
-Bir EGL fonksiyonuna kendi sözleşmesine uymayan parametre değeri verildiğinde
-görülebilir. Örneğin zorunlu output pointer'ını `NULL` vermek:
-
-```c
-EGLBoolean result = eglChooseConfig(
-    dpy,
-    NULL,
-    NULL,
-    0,
-    NULL
-);
-
-EGLint error = eglGetError();
-```
-
-Beklenen hata `EGL_BAD_PARAMETER`'dır.
-
-## 3.13 Senaryo M - `EGL_BAD_NATIVE_PIXMAP`
-
-`eglCreatePixmapSurface` için verilen native pixmap geçersizse ve
-implementation bunu algılayabiliyorsa görülür. Bu GBM window-surface
-projesinin normal akışında native pixmap kullanılmadığı için platforma bağlı
-bir senaryodur.
-
-## 3.14 Senaryo N - `EGL_BAD_NATIVE_WINDOW`
+EGL fonksiyonları genellikle başarı/başarısızlığı kendi dönüş değerleriyle
+bildirir. `eglGetError` yalnızca başarısız sonucunun nedenini okumak için
+kullanılmalıdır.
 
 ```c
 EGLSurface surface = eglCreateWindowSurface(
     dpy,
     config,
-    (EGLNativeWindowType)0,
+    native_window,
     NULL
 );
 
+if (surface == EGL_NO_SURFACE) {
+    EGLint error = eglGetError();
+    /* Decode and handle error here. */
+}
+```
+
+Hata oluşturan çağrı ile `eglGetError` arasına başka EGL çağrıları
+yerleştirilmemelidir. Aradaki çağrı yeni bir error state oluşturabilir ve
+hangi işlemin hangi hataya ait olduğunu belirsizleştirir.
+
+```c
+/* Fragile ordering */
+EGLBoolean result = eglMakeCurrent(dpy, draw, read, context);
+eglSwapInterval(dpy, 1);
 EGLint error = eglGetError();
 ```
 
-Implementation geçersiz native handle'ı algılayabiliyorsa:
+Bu kodda okunan hata `eglMakeCurrent` veya `eglSwapInterval` ile ilişkili
+olabilir. Her başarısız sonuç hemen işlenmelidir.
+
+## EGL 1.0 Hata Kodları
+
+EGL 1.0'da `EGL_SUCCESS` dahil 14 temel sonuç vardır.
+
+| Kod | Hex | Anlam |
+| --- | ---: | --- |
+| `EGL_SUCCESS` | `0x3000` | Kayıtlı hata yoktur. |
+| `EGL_NOT_INITIALIZED` | `0x3001` | EGL ilgili display için initialize edilmemiş veya initialize edilememiştir. |
+| `EGL_BAD_ACCESS` | `0x3002` | EGL istenen kaynağa erişememiş veya erişim kuralı ihlal edilmiştir. |
+| `EGL_BAD_ALLOC` | `0x3003` | İşlem için gerekli kaynak ayrılamamıştır. |
+| `EGL_BAD_ATTRIBUTE` | `0x3004` | Attribute listesinde tanınmayan attribute/değer vardır. |
+| `EGL_BAD_CONFIG` | `0x3005` | Bir `EGLConfig` argümanı geçerli config değildir. |
+| `EGL_BAD_CONTEXT` | `0x3006` | Bir `EGLContext` argümanı geçerli context değildir. |
+| `EGL_BAD_CURRENT_SURFACE` | `0x3007` | Calling thread'in current surface'i artık geçerli değildir. |
+| `EGL_BAD_DISPLAY` | `0x3008` | Bir `EGLDisplay` argümanı geçerli display değildir. |
+| `EGL_BAD_MATCH` | `0x3009` | Argümanlar tek tek geçerli olsa da birbirleriyle uyumsuzdur. |
+| `EGL_BAD_NATIVE_PIXMAP` | `0x300A` | Native pixmap geçerli değildir ve durum algılanabilmiştir. |
+| `EGL_BAD_NATIVE_WINDOW` | `0x300B` | Native window geçerli değildir ve durum algılanabilmiştir. |
+| `EGL_BAD_PARAMETER` | `0x300C` | Bir veya daha fazla parametre değeri geçersizdir. |
+| `EGL_BAD_SURFACE` | `0x300D` | Bir `EGLSurface` argümanı geçerli surface değildir. |
+
+![EGL 1.0 hata kodlarının anlam grupları](image/eglGetError/error-taxonomy.svg)
+
+## Hata Kodlarını Yorumlama
+
+### `EGL_SUCCESS`
+
+Kayıtlı hata olmadığını bildirir. Önceki bir EGL fonksiyonunun başarılı
+olduğunu kanıtlamak için tek başına kullanılmamalıdır; önce o fonksiyonun
+kendi dönüş değeri kontrol edilmelidir.
+
+### `EGL_NOT_INITIALIZED`
+
+EGL'nin belirtilen display için kullanıma hazır olmadığını gösterir.
+Display handle'ı geçerli olabilir; sorun initialization state'idir.
 
 ```text
-surface = EGL_NO_SURFACE
-error   = EGL_BAD_NATIVE_WINDOW
+valid display handle != initialized display
 ```
 
-![eglGetError hata senaryoları](image/eglGetError/error-codes.svg)
+### `EGL_BAD_ACCESS`
 
----
+Kaynak geçerli olsa bile erişim kuralları nedeniyle kullanılamadığını
+gösterir. Başka bir thread'de current olan context'i aynı anda kullanmaya
+çalışmak tipik örnektir. Bu hata geçersiz handle hatası değildir.
 
-# 4. Hata Durumunun Okununca Sıfırlanması
+### `EGL_BAD_ALLOC`
 
-```c
-eglDestroySurface(dpy, (EGLSurface)0);
+Display, config ve diğer argümanlar geçerli olsa bile driver veya platform
+gerekli kaynakları ayıramamıştır. GPU belleği, native pencere ilişkisi veya
+implementation içi nesne allocation'ları buna neden olabilir.
 
-EGLint first_error = eglGetError();
-EGLint second_error = eglGetError();
-```
+### `EGL_BAD_ATTRIBUTE`
 
-Beklenen mantık:
+Attribute listesinde ilgili fonksiyonun tanımadığı bir isim/değer vardır.
+Bir token'ın EGL header'larında tanımlı olması, her fonksiyonun attribute
+listesinde geçerli olduğu anlamına gelmez.
+
+### `EGL_BAD_CONFIG`, `EGL_BAD_CONTEXT`, `EGL_BAD_DISPLAY`, `EGL_BAD_SURFACE`
+
+Bu kodlar opaque EGL handle kategorisini kesin olarak belirtir:
+
+| Kod | Kontrol edilmesi gereken nesne |
+| --- | --- |
+| `EGL_BAD_CONFIG` | Config hangi display'den alındı, hala geçerli mi? |
+| `EGL_BAD_CONTEXT` | Context oluşturuldu mu, destroy edilmiş mi? |
+| `EGL_BAD_DISPLAY` | Display handle geçerli mi? |
+| `EGL_BAD_SURFACE` | Surface oluşturuldu mu, destroy edilmiş mi? |
+
+`EGL_NOT_INITIALIZED` ile `EGL_BAD_DISPLAY` aynı değildir: ilki geçerli bir
+display'in state sorununu, ikincisi display handle sorununu ifade eder.
+
+### `EGL_BAD_CURRENT_SURFACE`
+
+Calling thread'e current olarak bağlanmış draw/read surface'in native veya
+EGL tarafında artık geçerli olmadığını ifade eder. Bu kod, fonksiyona doğrudan
+verilen rastgele bir surface argümanı için kullanılan `EGL_BAD_SURFACE` ile
+karıştırılmamalıdır.
+
+### `EGL_BAD_MATCH`
+
+Argümanların her biri kendi başına geçerli olabilir; fakat birlikte geçerli
+bir işlem oluşturmazlar.
 
 ```text
-first_error  = EGL_BAD_SURFACE
-second_error = EGL_SUCCESS
+valid context + valid surface + incompatible configs -> EGL_BAD_MATCH
+window config without EGL_WINDOW_BIT                  -> EGL_BAD_MATCH
 ```
 
-Araya başka bir EGL fonksiyonu sokmak hata durumunu değiştirebileceğinden
-`eglGetError()` başarısız çağrıdan hemen sonra kullanılmalıdır.
+### `EGL_BAD_PARAMETER`
 
-Hata durumu thread'e özeldir. Bir thread'de oluşan hata, başka bir thread'in
-`eglGetError()` sonucuyla okunmaz.
+Opaque nesne handle'larından bağımsız genel değer/pointer kısıtı ihlalini
+ifade eder. Zorunlu output pointer'ının `NULL` olması veya enum aralığı
+dışındaki bir değer buna örnek olabilir.
 
----
+### `EGL_BAD_NATIVE_PIXMAP` ve `EGL_BAD_NATIVE_WINDOW`
 
-# 5. Hata Adı Yardımcısı
+Bu hatalar EGL handle'ı değil platform nesnesini hedefler. EGL 1.0,
+implementation'ların geçersiz native handle'ları her durumda algılayabilmesini
+garanti etmez.
+
+## Return Değeri ile Hata Kodunu Birlikte Kullanma
+
+| Fonksiyon tipi | Başarısız return örneği | Sonraki adım |
+| --- | --- | --- |
+| `EGLBoolean` döndüren | `EGL_FALSE` | Hemen `eglGetError()`. |
+| `EGLSurface` döndüren | `EGL_NO_SURFACE` | Hemen `eglGetError()`. |
+| `EGLContext` döndüren | `EGL_NO_CONTEXT` | Hemen `eglGetError()`. |
+| `EGLDisplay` döndüren | `EGL_NO_DISPLAY` | Fonksiyon sözleşmesine göre değerlendir; gerekirse `eglGetError()`. |
+
+Getter fonksiyonlarında sentinel değer her zaman hata anlamına gelmeyebilir.
+Örneğin current context yokken `eglGetCurrentContext()` normal olarak
+`EGL_NO_CONTEXT` döndürebilir. Her fonksiyonun kendi sözleşmesi dikkate
+alınmalıdır.
+
+## Hata Adını Yazdırma
 
 ```c
-const char *egl_error_string(EGLint error)
+static const char *egl_error_name(EGLint error)
 {
     switch (error) {
-        case EGL_SUCCESS:             return "EGL_SUCCESS";
-        case EGL_NOT_INITIALIZED:     return "EGL_NOT_INITIALIZED";
-        case EGL_BAD_ACCESS:          return "EGL_BAD_ACCESS";
-        case EGL_BAD_ALLOC:           return "EGL_BAD_ALLOC";
-        case EGL_BAD_ATTRIBUTE:       return "EGL_BAD_ATTRIBUTE";
-        case EGL_BAD_CONTEXT:         return "EGL_BAD_CONTEXT";
-        case EGL_BAD_CONFIG:          return "EGL_BAD_CONFIG";
-        case EGL_BAD_CURRENT_SURFACE: return "EGL_BAD_CURRENT_SURFACE";
-        case EGL_BAD_DISPLAY:         return "EGL_BAD_DISPLAY";
-        case EGL_BAD_SURFACE:         return "EGL_BAD_SURFACE";
-        case EGL_BAD_MATCH:           return "EGL_BAD_MATCH";
-        case EGL_BAD_PARAMETER:       return "EGL_BAD_PARAMETER";
-        case EGL_BAD_NATIVE_PIXMAP:   return "EGL_BAD_NATIVE_PIXMAP";
-        case EGL_BAD_NATIVE_WINDOW:   return "EGL_BAD_NATIVE_WINDOW";
-        default:                      return "UNKNOWN_EGL_ERROR";
+    case EGL_SUCCESS:             return "EGL_SUCCESS";
+    case EGL_NOT_INITIALIZED:     return "EGL_NOT_INITIALIZED";
+    case EGL_BAD_ACCESS:          return "EGL_BAD_ACCESS";
+    case EGL_BAD_ALLOC:           return "EGL_BAD_ALLOC";
+    case EGL_BAD_ATTRIBUTE:       return "EGL_BAD_ATTRIBUTE";
+    case EGL_BAD_CONFIG:          return "EGL_BAD_CONFIG";
+    case EGL_BAD_CONTEXT:         return "EGL_BAD_CONTEXT";
+    case EGL_BAD_CURRENT_SURFACE: return "EGL_BAD_CURRENT_SURFACE";
+    case EGL_BAD_DISPLAY:         return "EGL_BAD_DISPLAY";
+    case EGL_BAD_MATCH:           return "EGL_BAD_MATCH";
+    case EGL_BAD_NATIVE_PIXMAP:   return "EGL_BAD_NATIVE_PIXMAP";
+    case EGL_BAD_NATIVE_WINDOW:   return "EGL_BAD_NATIVE_WINDOW";
+    case EGL_BAD_PARAMETER:       return "EGL_BAD_PARAMETER";
+    case EGL_BAD_SURFACE:         return "EGL_BAD_SURFACE";
+    default:                      return "UNKNOWN_EGL_ERROR";
     }
 }
 ```
+
+```c
+if (eglMakeCurrent(dpy, draw, read, context) == EGL_FALSE) {
+    EGLint error = eglGetError();
+    fprintf(stderr, "eglMakeCurrent failed: %s (0x%04x)\n",
+            egl_error_name(error), error);
+}
+```
+
+## Sık Hatalar
+
+- Her EGL çağrısından sonra koşulsuz `eglGetError` çağırmak.
+- Başarısız return değerini kontrol etmeden yalnızca error state'e bakmak.
+- Hata oluşturan çağrı ile `eglGetError` arasına başka EGL çağrısı koymak.
+- Aynı hatayı iki kez okuyabileceğini varsaymak.
+- Bir thread'in hatasını başka thread'den okumaya çalışmak.
+- `EGL_BAD_MATCH` ile geçersiz handle hatalarını aynı kabul etmek.
+
+## Bölüm Özeti
+
+- `eglGetError` calling thread'in EGL error state'ini okur.
+- Okuma sonrası state `EGL_SUCCESS` değerine resetlenir.
+- Önce EGL fonksiyonunun kendi return değeri kontrol edilmelidir.
+- Hata, başarısız çağrıdan hemen sonra okunmalıdır.
+- Handle, state, allocation, compatibility ve native platform hataları ayrı anlam taşır.
+
+## Kaynak
+
+- EGL 1.0 Specification, Section 3.1, Errors.
