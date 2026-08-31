@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="530" viewBox="0 0 1000 530" role="img" aria-labelledby="title desc">
+  <title id="title">eglCreateWindowSurface config parametresi akışı</title>
+  <desc id="desc">Geçerli ve EGL_WINDOW_BIT destekli config başarıya, geçersiz config EGL_BAD_CONFIG hatasına gider.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker>
+    <style>
+      text { font-family: Inter, Arial, sans-serif; fill: #172033; letter-spacing: 0; }
+      .label { font-size: 20px; font-weight: 700; }
+      .small { font-size: 17px; }
+      .line { fill: none; stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+      .node { fill: #fff; stroke: #64748b; stroke-width: 2; rx: 6; }
+      .good { fill: #ecfdf5; stroke: #15803d; }
+      .bad { fill: #fff1f2; stroke: #be123c; }
+      .call { fill: #eff6ff; stroke: #2563eb; }
+    </style>
+  </defs>
+  <rect width="1000" height="530" fill="#f8fafc"/>
+  <rect class="node" x="400" y="25" width="200" height="58"/>
+  <text class="label" x="500" y="61" text-anchor="middle">config</text>
+  <path class="line" d="M500 83 V112 H250 V145"/><path class="line" d="M500 112 H750 V145"/>
+  <rect class="node good" x="90" y="145" width="320" height="82"/>
+  <text class="label" x="250" y="178" text-anchor="middle">Geçerli EGLConfig</text>
+  <text class="small" x="250" y="207" text-anchor="middle">EGL_WINDOW_BIT destekli</text>
+  <rect class="node bad" x="590" y="145" width="320" height="82"/>
+  <text class="label" x="750" y="178" text-anchor="middle">Geçersiz EGLConfig</text>
+  <text class="small" x="750" y="207" text-anchor="middle">uydurma veya tanımsız</text>
+  <path class="line" d="M250 227 V268"/><path class="line" d="M750 227 V268"/>
+  <rect class="node call" x="85" y="268" width="330" height="64"/>
+  <text class="small" x="250" y="307" text-anchor="middle">eglCreateWindowSurface()</text>
+  <rect class="node call" x="585" y="268" width="330" height="64"/>
+  <text class="small" x="750" y="307" text-anchor="middle">eglCreateWindowSurface()</text>
+  <path class="line" d="M250 332 V375"/><path class="line" d="M750 332 V375"/>
+  <rect class="node good" x="105" y="375" width="290" height="64"/>
+  <text class="label" x="250" y="414" text-anchor="middle">EGLSurface</text>
+  <rect class="node bad" x="605" y="375" width="290" height="64"/>
+  <text class="label" x="750" y="414" text-anchor="middle">EGL_NO_SURFACE</text>
+  <path class="line" d="M750 439 V468"/>
+  <rect class="node bad" x="640" y="468" width="220" height="48"/>
+  <text class="small" x="750" y="499" text-anchor="middle">EGL_BAD_CONFIG</text>
+</svg>
