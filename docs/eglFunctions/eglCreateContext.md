@@ -20,7 +20,7 @@ Bu çalışmanın amacı, `eglCreateContext` fonksiyonundaki dört parametrenin 
 
 ## Genel Çalışma Modeli
 
-![eglCreateContext genel modeli](assets/eglCreateContext_genel_model.svg)
+![eglCreateContext genel modeli](image/eglCreateContext/eglCreateContext_genel_model.svg)
 
 Temel fikir şudur: `eglCreateContext`, display bağlantısı (`dpy`), framebuffer özellikleri (`config`), isteğe bağlı ortak context (`share_context`) ve context attribute listesi (`attrib_list`) bilgilerini birleştirerek yeni bir `EGLContext` üretir.
 
@@ -49,7 +49,7 @@ Bu akışta `eglCreateContext` kritik bir eşiktir. Çünkü bu çağrıdan sonr
 
 `dpy`, context'in hangi EGL display bağlantısı üzerinde oluşturulacağını belirler. Çok ekranlı sistemlerde bu parametre, çizim yolunun ana kokpit ekranına mı yoksa yedek/standby ekrana mı bağlanacağını etkiler.
 
-![dpy parametresi senaryoları](assets/dpy_senaryolari.svg)
+![dpy parametresi senaryoları](image/eglCreateContext/dpy_senaryolari.svg)
 
 ### Senaryo A: Ana ekran
 
@@ -89,7 +89,7 @@ Sonuç: `dpy` değiştiğinde context farklı native display yoluna bağlanır. 
 
 `config`, context'in birlikte kullanılacağı framebuffer özelliklerini belirler. Renk kanal boyutları, surface tipi, renderable API ve depth buffer gibi özellikler `EGLConfig` seçiminde yer alır. Bu çalışmada özellikle `EGL_DEPTH_SIZE` farkı incelenmiştir.
 
-![config parametresi depth buffer farkı](assets/config_depth_senaryolari.svg)
+![config parametresi depth buffer farkı](image/eglCreateContext/config_depth_senaryolari.svg)
 
 ### Senaryo A: Depth buffer yok
 
@@ -129,7 +129,7 @@ Sonuç: `config` parametresindeki depth buffer seçimi, aynı çizim komutların
 
 `share_context`, yeni context'in mevcut bir context ile GL nesnelerini paylaşıp paylaşmayacağını belirler. Texture, buffer object ve benzeri bazı GL kaynakları paylaşılabilir. Buna karşılık viewport, current program, enable/disable state gibi context state'leri context'e özgü kalır.
 
-![share_context parametresi senaryoları](assets/share_context_senaryolari.svg)
+![share_context parametresi senaryoları](image/eglCreateContext/share_context_senaryolari.svg)
 
 ### Senaryo A: Paylaşım yok
 
@@ -180,7 +180,7 @@ Sonuç: `share_context = EGL_NO_CONTEXT` izolasyon sağlar. Geçerli bir context
 
 `attrib_list`, context oluşturulurken istenen ek özellikleri anahtar-değer çiftleriyle belirtir. Liste mutlaka `EGL_NONE` ile bitmelidir.
 
-![attrib_list parametresi senaryoları](assets/attrib_list_senaryolari.svg)
+![attrib_list parametresi senaryoları](image/eglCreateContext/attrib_list_senaryolari.svg)
 
 ### Senaryo A: EGL 1.0 standart kullanım
 

@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="560" viewBox="0 0 1120 560" role="img" aria-labelledby="title desc">
+  <title id="title">eglGetConfigs genel akış şeması</title>
+  <desc id="desc">Geçerli EGLDisplay ile config havuzunun okunması, configs NULL olduğunda sayı dönmesi ve configs dizi olduğunda handle kopyalanması.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L0,6 L9,3 z" fill="#263238"/>
+    </marker>
+    <style>
+      .bg{fill:#f6f8fb}
+      .panel{fill:#ffffff;stroke:#263238;stroke-width:2;rx:10}
+      .ok{fill:#e8f7ef;stroke:#177245;stroke-width:2;rx:10}
+      .warn{fill:#fff6df;stroke:#b7791f;stroke-width:2;rx:10}
+      .bad{fill:#fdecec;stroke:#b42318;stroke-width:2;rx:10}
+      .chip{fill:#edf2f7;stroke:#637083;stroke-width:1.5;rx:8}
+      .title{font-family:Arial,Helvetica,sans-serif;font-size:25px;font-weight:700;fill:#111827}
+      .text{font-family:Arial,Helvetica,sans-serif;font-size:18px;fill:#1f2937}
+      .small{font-family:Arial,Helvetica,sans-serif;font-size:15px;fill:#405064}
+      .mono{font-family:Consolas,Menlo,monospace;font-size:16px;fill:#111827}
+      .line{stroke:#263238;stroke-width:2.4;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
+  <rect class="bg" width="1120" height="560"/>
+  <text class="title" x="40" y="48">eglGetConfigs: config havuzunu okuma</text>
+  <text class="small" x="40" y="76">Fonksiyon filtreleme yapmaz; EGLDisplay üzerindeki mevcut EGLConfig handle'larını listeler.</text>
+
+  <rect class="panel" x="45" y="130" width="205" height="118"/>
+  <text class="text" x="78" y="168">1. Giriş</text>
+  <text class="mono" x="74" y="200">EGLDisplay dpy</text>
+  <text class="small" x="72" y="226">Başlatılmış display gerekir</text>
+
+  <rect class="bad" x="320" y="92" width="230" height="104"/>
+  <text class="text" x="370" y="130">Hata yolu</text>
+  <text class="mono" x="354" y="162">EGL_FALSE</text>
+  <text class="small" x="344" y="184">BAD_DISPLAY / NOT_INITIALIZED</text>
+
+  <rect class="ok" x="320" y="246" width="230" height="142"/>
+  <text class="text" x="360" y="286">Config havuzu</text>
+  <rect class="chip" x="348" y="310" width="174" height="28"/>
+  <text class="small" x="367" y="330">RGB565 + depth16</text>
+  <rect class="chip" x="348" y="344" width="174" height="28"/>
+  <text class="small" x="362" y="364">RGBA8888 + depth24</text>
+
+  <rect class="panel" x="635" y="112" width="210" height="118"/>
+  <text class="text" x="674" y="150">2A. Sayım</text>
+  <text class="mono" x="674" y="182">configs = NULL</text>
+  <text class="small" x="676" y="208">Sadece toplam sayı döner</text>
+
+  <rect class="panel" x="635" y="306" width="210" height="118"/>
+  <text class="text" x="662" y="344">2B. Listeleme</text>
+  <text class="mono" x="668" y="376">configs = dizi</text>
+  <text class="small" x="658" y="402">En fazla config_size kopyalanır</text>
+
+  <rect class="warn" x="925" y="210" width="150" height="126"/>
+  <text class="text" x="956" y="250">Çıkış</text>
+  <text class="mono" x="952" y="282">EGL_TRUE</text>
+  <text class="small" x="955" y="308">num_config</text>
+
+  <path class="line" d="M250 176 C286 160,288 132,320 132"/>
+  <path class="line" d="M250 204 C286 238,290 302,320 314"/>
+  <path class="line" d="M550 304 C596 260,600 190,635 172"/>
+  <path class="line" d="M550 338 C596 350,600 370,635 374"/>
+  <path class="line" d="M845 170 C888 178,900 226,925 250"/>
+  <path class="line" d="M845 374 C888 364,900 318,925 296"/>
+
+  <text class="small" x="266" y="142">geçersiz</text>
+  <text class="small" x="268" y="294">geçerli</text>
+  <text class="small" x="690" y="482">Ana fikir: önce display doğrulanır, sonra havuzdan ya sayı alınır ya da handle listesi kopyalanır.</text>
+</svg>

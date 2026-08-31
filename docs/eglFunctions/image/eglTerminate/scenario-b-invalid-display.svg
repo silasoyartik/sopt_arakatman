@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="500" viewBox="0 0 1080 500" role="img" aria-labelledby="title desc">
+  <title id="title">Senaryo B geçersiz display akışı</title>
+  <desc id="desc">EGL_NO_DISPLAY kullanıldığında render hattının başlatılmadığını ve beklenen EGL_BAD_DISPLAY sonucunu gösteren negatif test şeması.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-12%" y="-12%" width="124%" height="124%">
+      <feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="1080" height="500" fill="#f8fafc"/>
+  <text x="540" y="42" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">Senaryo B: EGL_NO_DISPLAY / Geçersiz Display</text>
+  <text x="540" y="72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#475569">Negatif test: geçerli EGL oturumu yoksa render hattı hiç başlatılmaz.</text>
+
+  <rect x="72" y="134" width="238" height="110" rx="8" fill="#fee2e2" stroke="#dc2626" filter="url(#shadow)"/>
+  <text x="191" y="172" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#7f1d1d">Girdi</text>
+  <text x="191" y="202" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="15" fill="#991b1b">pDpyID = EGL_NO_DISPLAY</text>
+  <text x="191" y="226" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#991b1b">Geçerli display yok</text>
+
+  <line x1="310" y1="189" x2="408" y2="189" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+
+  <rect x="408" y="122" width="264" height="134" rx="8" fill="#fff7ed" stroke="#ea580c" filter="url(#shadow)"/>
+  <text x="540" y="160" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#7c2d12">Koruma Kararı</text>
+  <text x="540" y="190" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#9a3412">Kod gerçek EGL/GBM/DRM</text>
+  <text x="540" y="214" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#9a3412">çağrısını başlatmaz.</text>
+
+  <line x1="672" y1="189" x2="770" y2="189" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+
+  <rect x="770" y="134" width="238" height="110" rx="8" fill="#f1f5f9" stroke="#64748b" filter="url(#shadow)"/>
+  <text x="889" y="172" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Beklenen EGL Davranışı</text>
+  <text x="889" y="203" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="15" fill="#334155">EGL_FALSE</text>
+  <text x="889" y="226" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="15" fill="#334155">EGL_BAD_DISPLAY</text>
+
+  <rect x="156" y="330" width="768" height="78" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="540" y="360" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#0f172a">Sonuç</text>
+  <text x="540" y="386" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">Context, surface, çizim ve DRM present adımları denenmez; ekrana yeni görüntü üretilmez.</text>
+</svg>

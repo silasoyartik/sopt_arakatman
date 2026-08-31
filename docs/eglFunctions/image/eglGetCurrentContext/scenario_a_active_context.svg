@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="500" viewBox="0 0 1120 500" role="img" aria-labelledby="title desc">
+  <title id="title">Senaryo A aktif context akışı</title>
+  <desc id="desc">After eglMakeCurrent succeeds, eglGetCurrentContext returns the active context and drawing can continue.</desc>
+  <defs>
+    <style>
+      .bg { fill: #f6f7f9; }
+      .title { font: 700 25px Arial, sans-serif; fill: #17202a; }
+      .step { fill: #ffffff; stroke: #2f3a45; stroke-width: 2; }
+      .ok { fill: #e6f4ef; stroke: #16875a; stroke-width: 2; }
+      .screen { fill: #263f3f; stroke: #2f3a45; stroke-width: 2; }
+      .label { font: 700 17px Arial, sans-serif; fill: #17202a; }
+      .small { font: 15px Arial, sans-serif; fill: #475467; }
+      .code { font: 16px Consolas, monospace; fill: #101828; }
+      .arrow { stroke: #2f3a45; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
+    </style>
+    <marker id="arrowhead" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
+      <path d="M0,0 L12,4.5 L0,9 Z" fill="#2f3a45"/>
+    </marker>
+  </defs>
+
+  <rect class="bg" width="1120" height="500"/>
+  <text class="title" x="48" y="54">Senaryo A: current context vardır, çizim güvenlidir</text>
+
+  <rect class="step" x="50" y="108" width="220" height="120" rx="8"/>
+  <text class="label" x="78" y="146">1. Context bağlanır</text>
+  <text class="code" x="78" y="178">eglMakeCurrent(...)</text>
+  <text class="small" x="78" y="205">ctx + surface current olur</text>
+
+  <rect class="ok" x="325" y="108" width="250" height="120" rx="8"/>
+  <text class="label" x="353" y="146">2. Getter çağrılır</text>
+  <text class="code" x="353" y="178">eglGetCurrentContext()</text>
+  <text class="small" x="353" y="205">aktif context handle'ı döner</text>
+
+  <rect class="ok" x="630" y="108" width="220" height="120" rx="8"/>
+  <text class="label" x="658" y="146">3. Kontrol başarılı</text>
+  <text class="code" x="658" y="178">current == ctx</text>
+  <text class="small" x="658" y="205">GLES komutları geçerlidir</text>
+
+  <rect class="screen" x="905" y="94" width="165" height="150" rx="8"/>
+  <polygon points="987,126 935,216 1039,216" fill="#e5483e"/>
+  <polygon points="987,126 935,216 987,216" fill="#19a974" opacity="0.78"/>
+  <polygon points="987,126 1039,216 987,216" fill="#3478f6" opacity="0.78"/>
+  <text class="small" x="918" y="273">Beklenen sonuç:</text>
+  <text class="small" x="918" y="297">renkli üçgen görünür</text>
+
+  <path class="arrow" d="M270 168 L325 168"/>
+  <path class="arrow" d="M575 168 L630 168"/>
+  <path class="arrow" d="M850 168 L905 168"/>
+
+  <rect class="ok" x="190" y="340" width="740" height="82" rx="8"/>
+  <text class="label" x="225" y="374">Çıkarım</text>
+  <text class="code" x="225" y="404">eglGetCurrentContext() -> state.egl_context</text>
+  <text class="small" x="585" y="404">Bu sonuç, çağıran thread'de aktif context olduğunu kanıtlar.</text>
+</svg>
