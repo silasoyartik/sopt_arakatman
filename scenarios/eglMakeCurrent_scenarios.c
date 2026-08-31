@@ -338,3 +338,26 @@ void scenario_make_current_switch_binding(EGLDisplay dpy,
     run_make_current("Senaryo 25b - switch binding", dpy, new_surface,
                      new_surface, new_ctx, EGL_SUCCESS);
 }
+
+/*
+ * SENARYO 26 - Daha once yok edilmis ve artik current olmayan draw surface.
+ * destroyed_draw handle'inin eglDestroySurface sonrasi omru tamamlanmis olmali.
+ */
+void scenario_make_current_destroyed_draw(EGLDisplay dpy,
+                                          EGLSurface destroyed_draw,
+                                          EGLSurface valid_read,
+                                          EGLContext ctx)
+{
+    run_make_current("Senaryo 26 - destroyed draw", dpy, destroyed_draw,
+                     valid_read, ctx, EGL_BAD_SURFACE);
+}
+
+/* SENARYO 27 - Daha once yok edilmis ve artik current olmayan read surface. */
+void scenario_make_current_destroyed_read(EGLDisplay dpy,
+                                          EGLSurface valid_draw,
+                                          EGLSurface destroyed_read,
+                                          EGLContext ctx)
+{
+    run_make_current("Senaryo 27 - destroyed read", dpy, valid_draw,
+                     destroyed_read, ctx, EGL_BAD_SURFACE);
+}

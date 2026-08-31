@@ -311,3 +311,24 @@ void scenario_get_config_attrib_null_value_is_invalid_usage(EGLDisplay dpy,
     (void)value;
     printf("Senaryo 12 SKIP: value=NULL ile eglGetConfigAttrib cagrilmaz.\n");
 }
+
+/*
+ * SENARYO 13 - Terminate edilip yeniden initialize edilmis display'da eski
+ * config handle'ini kullanma. Reinitialize eski handle'i diriltmez; fixture
+ * stale_config'i terminate oncesinde alip dpy'yi yeniden initialize etmelidir.
+ */
+void scenario_get_config_attrib_stale_config_after_reinitialize(
+    EGLDisplay reinitialized_dpy,
+    EGLConfig stale_config)
+{
+    EGLint value = 12345;
+    EGLBoolean result;
+    EGLint error;
+
+    (void)eglGetError();
+    result = eglGetConfigAttrib(reinitialized_dpy, stale_config,
+                                EGL_RED_SIZE, &value);
+    error = eglGetError();
+    report_query("Senaryo 13 - stale config after reinitialize", result,
+                 error, EGL_BAD_CONFIG, value);
+}

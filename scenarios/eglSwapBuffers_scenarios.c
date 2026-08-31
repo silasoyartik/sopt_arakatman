@@ -256,3 +256,16 @@ void scenario_swap_after_native_window_resize(EGLDisplay dpy,
     report_swap("Senaryo 13 - resized native window",
                 eglSwapBuffers(dpy, resized_surface), EGL_SUCCESS);
 }
+
+/*
+ * SENARYO 14 - Surface baska bir display'a ait.
+ * foreign_surface dpy ile olusturulmadigi icin bu dpy bakimindan gecerli bir
+ * EGLSurface degildir ve EGL_BAD_SURFACE beklenir.
+ */
+void scenario_swap_surface_from_another_display(EGLDisplay dpy,
+                                                EGLSurface foreign_surface)
+{
+    (void)eglGetError();
+    report_swap("Senaryo 14 - surface from another display",
+                eglSwapBuffers(dpy, foreign_surface), EGL_BAD_SURFACE);
+}
