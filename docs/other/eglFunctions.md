@@ -959,11 +959,11 @@ tutulabildiğini belirler. Bir component `n` bit ise alabileceği değer sayıs�
 `2^n`, saklanan tamsayı aralığı ise `0 ... 2^n - 1` olur.
 
 | Component bit sayısı | Ayrı seviye sayısı | Tamsayı aralığı | Normalize edilmiş iki komşu seviye arası |
-| --------------------: | ------------------: | ---------------: | -----------------------------------------: |
-| 3 bit                 |                   8 |          `0..7` | `1/7 ≈ 0,1429`                           |
-| 5 bit                 |                  32 |         `0..31` | `1/31 ≈ 0,0323`                          |
-| 6 bit                 |                  64 |         `0..63` | `1/63 ≈ 0,0159`                          |
-| 8 bit                 |                 256 |        `0..255` | `1/255 ≈ 0,00392`                        |
+| ---------------------: | --------------------: | ------------------: | ------------------------------------------: |
+|                  3 bit |                     8 |            `0..7` |                           `1/7 ≈ 0,1429` |
+|                  5 bit |                    32 |           `0..31` |                          `1/31 ≈ 0,0323` |
+|                  6 bit |                    64 |           `0..63` |                          `1/63 ≈ 0,0159` |
+|                  8 bit |                   256 |          `0..255` |                        `1/255 ≈ 0,00392` |
 
 Örneğin kırmızı component 3 bit olduğunda yalnızca şu normalize edilmiş
 değerler temsil edilebilir:
@@ -978,14 +978,16 @@ bit kırmızı, yumuşak bir kırmızı gradyanda basamakların belirginleşmesi
 (`color banding`) yol açabilir. 5 bitte 32, 8 bitte 256 seviye bulunduğu için
 geçiş giderek daha pürüzsüz görünür.
 
+![1788177784345](../eglFunctions/image/eglGetConfigAttrib/1788177784345.png)
+
 #### Yaygın color format karşılaştırması
 
-| Format       | Config değerleri       | Alpha | Toplam teorik RGB renk | Tipik sonuç |
-| ------------ | ---------------------- | ----: | ----------------------: | ----------- |
-| RGB332       | R3 G3 B2 A0            |   Yok |                     256 | Çok düşük bellek, belirgin banding |
-| RGB565       | R5 G6 B5 A0            |   Yok |                  65.536 | 16 bit ekranlarda yaygın; yeşile insan gözü daha duyarlı olduğu için 6 bit ayrılır |
-| RGB888       | R8 G8 B8 A0            |   Yok |              16.777.216 | Yüksek renk doğruluğu, alpha kanalı yok |
-| RGBA8888     | R8 G8 B8 A8            | 8 bit |              16.777.216 | Renge ek olarak 256 alpha seviyesi |
+| Format   | Config değerleri | Alpha | Toplam teorik RGB renk | Tipik sonuç                                                                                |
+| -------- | ----------------- | ----: | ---------------------: | ------------------------------------------------------------------------------------------- |
+| RGB332   | R3 G3 B2 A0       |   Yok |                    256 | Çok düşük bellek, belirgin banding                                                      |
+| RGB565   | R5 G6 B5 A0       |   Yok |                 65.536 | 16 bit ekranlarda yaygın; yeşile insan gözü daha duyarlı olduğu için 6 bit ayrılır |
+| RGB888   | R8 G8 B8 A0       |   Yok |             16.777.216 | Yüksek renk doğruluğu, alpha kanalı yok                                                 |
+| RGBA8888 | R8 G8 B8 A8       | 8 bit |             16.777.216 | Renge ek olarak 256 alpha seviyesi                                                          |
 
 `EGL_BUFFER_SIZE`, yalnızca bir pixel'in color buffer kısmındaki toplam bit
 sayısıdır. Ekran çözünürlüğü, depth/stencil buffer'ları, MSAA sample'ları ve
@@ -1006,11 +1008,11 @@ değiştirebilir.
 
 Alpha component genellikle saydamlık/opaklık bilgisini taşır:
 
-| `EGL_ALPHA_SIZE` | Saklanabilen alpha seviyeleri |
-| ----------------: | ----------------------------- |
-| 0                 | Alpha component yoktur. |
-| 1                 | Yalnızca tamamen saydam veya tamamen opak gibi iki değer vardır. |
-| 8                 | `0..255`, yani 256 alpha seviyesi vardır. |
+| `EGL_ALPHA_SIZE` | Saklanabilen alpha seviyeleri                                       |
+| -----------------: | ------------------------------------------------------------------- |
+|                  0 | Alpha component yoktur.                                             |
+|                  1 | Yalnızca tamamen saydam veya tamamen opak gibi iki değer vardır. |
+|                  8 | `0..255`, yani 256 alpha seviyesi vardır.                        |
 
 Ancak alpha buffer bulunması tek başına blending'i açmaz, pencereyi masaüstüne
 karşı saydam yapmaz ve `EGL_TRANSPARENT_RGB` anlamına gelmez. OpenGL ES
@@ -1028,11 +1030,11 @@ Depth ve stencil, color buffer'ın parçaları değildir; bu yüzden bitleri
 Depth buffer her fragment'ın kameraya göre derinlik değerini saklar ve öndeki
 yüzeyin arkadakini kapatmasını sağlar.
 
-| Değer | Anlam ve pratik etki |
-| ----: | -------------------- |
-| 0     | Depth buffer yoktur; `GL_DEPTH_TEST` ile güvenilir gizli yüzey eleme yapılamaz. |
-| 16    | Daha az bellek/bant genişliği, fakat birbirine yakın yüzeylerde `z-fighting` riski daha yüksek. |
-| 24    | Daha yüksek depth hassasiyeti; 3B sahnelerde sık tercih edilir. |
+| Değer | Anlam ve pratik etki                                                                                  |
+| -----: | ----------------------------------------------------------------------------------------------------- |
+|      0 | Depth buffer yoktur;`GL_DEPTH_TEST` ile güvenilir gizli yüzey eleme yapılamaz.                   |
+|     16 | Daha az bellek/bant genişliği, fakat birbirine yakın yüzeylerde`z-fighting` riski daha yüksek. |
+|     24 | Daha yüksek depth hassasiyeti; 3B sahnelerde sık tercih edilir.                                     |
 
 `n` bit depth teorik olarak `2^n` saklama kodu verir: 16 bit 65.536, 24 bit
 16.777.216 kod. Fakat perspektif projeksiyonda bu hassasiyet dünya uzayına
@@ -1065,11 +1067,11 @@ bir kenarın pixel içindeki dört sample'dan ikisini kaplaması yaklaşık yüz
 coverage üretir. Sunum öncesindeki resolve işleminde sample sonuçları tek pixel
 rengine birleştirilir; kenar daha yumuşak görünür.
 
-| Attribute | Örnek değer | Doğru yorum |
-| --------- | -----------: | ----------- |
-| `EGL_SAMPLE_BUFFERS` | 0 | Multisample buffer yoktur ve `EGL_SAMPLES` da 0'dır. |
-| `EGL_SAMPLE_BUFFERS` | 1 | Bir multisample buffer vardır. Bu değer sample sayısı değildir. |
-| `EGL_SAMPLES` | 4 | Multisample buffer içinde pixel başına dört sample vardır: 4× MSAA. |
+| Attribute              | Örnek değer | Doğru yorum                                                              |
+| ---------------------- | ------------: | ------------------------------------------------------------------------- |
+| `EGL_SAMPLE_BUFFERS` |             0 | Multisample buffer yoktur ve`EGL_SAMPLES` da 0'dır.                    |
+| `EGL_SAMPLE_BUFFERS` |             1 | Bir multisample buffer vardır. Bu değer sample sayısı değildir.      |
+| `EGL_SAMPLES`        |             4 | Multisample buffer içinde pixel başına dört sample vardır: 4× MSAA. |
 
 Önemli ayrım:
 
@@ -1193,10 +1195,10 @@ etkisi ve desteklenip desteklenmediği native pencere sistemine bağlıdır. Bu 
 
 #### `EGL_CONFIG_CAVEAT`
 
-| Değer | Anlam |
-| ----- | ----- |
-| `EGL_NONE` | Config için bilinen caveat yoktur; genellikle ilk tercih budur. |
-| `EGL_SLOW_CONFIG` | Render düşük performanslı olabilir; örneğin format donanımda doğal olmayıp dönüşüm veya yazılım yolu gerektirebilir. |
+| Değer                        | Anlam                                                                                                                                               |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `EGL_NONE`                  | Config için bilinen caveat yoktur; genellikle ilk tercih budur.                                                                                    |
+| `EGL_SLOW_CONFIG`           | Render düşük performanslı olabilir; örneğin format donanımda doğal olmayıp dönüşüm veya yazılım yolu gerektirebilir.                 |
 | `EGL_NON_CONFORMANT_CONFIG` | Bu config'e render etmek gerekli OpenGL ES conformance testlerini geçmez. “Kesin çalışmaz” değil, standart uyumluluk garantisi yok demektir. |
 
 ### Native Visual
@@ -1224,9 +1226,9 @@ aynı buffer'ı kullanıyorsa sıralama için EGL 1.0'daki `eglWaitNative` ve
 
 ### Transparency: alpha blending değil, color key
 
-| Attribute | Anlam |
-| --------- | ----- |
-| `EGL_TRANSPARENT_TYPE == EGL_NONE` | Bu config ile oluşturulan window'larda transparent pixel yoktur. |
+| Attribute                                       | Anlam                                                                                             |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `EGL_TRANSPARENT_TYPE == EGL_NONE`            | Bu config ile oluşturulan window'larda transparent pixel yoktur.                                 |
 | `EGL_TRANSPARENT_TYPE == EGL_TRANSPARENT_RGB` | Framebuffer'daki RGB değerleri üç key değeriyle tam eşleşen pixel transparent kabul edilir. |
 
 `EGL_TRANSPARENT_TYPE == EGL_NONE` ise şu değerler tanımsızdır:
@@ -1266,13 +1268,13 @@ native ekranda görünen bir penceresi yoktur.
 Aşağıdaki iki varsayımsal config de pencere oluşturabilir, fakat kullanım
 amaçları farklıdır:
 
-| Attribute | Config A | Config B | Sonuç |
-| --------- | -------: | -------: | ----- |
-| R/G/B/A | 5/6/5/0 | 8/8/8/8 | A daha az color belleği kullanır; B daha hassas renk ve alpha saklar. |
-| Depth | 16 | 24 | B karmaşık 3B sahnelerde daha az z-fighting riski taşır. |
-| Stencil | 0 | 8 | Yalnızca B stencil tekniklerini destekler. |
-| Sample buffers / samples | 0/0 | 1/4 | B 4× MSAA ile geometri kenarlarını yumuşatabilir. |
-| Caveat | `EGL_NONE` | `EGL_NONE` | İkisinde de bildirilen performans/uyumluluk caveat'i yoktur. |
+| Attribute                |     Config A |     Config B | Sonuç                                                                  |
+| ------------------------ | -----------: | -----------: | ----------------------------------------------------------------------- |
+| R/G/B/A                  |      5/6/5/0 |      8/8/8/8 | A daha az color belleği kullanır; B daha hassas renk ve alpha saklar. |
+| Depth                    |           16 |           24 | B karmaşık 3B sahnelerde daha az z-fighting riski taşır.            |
+| Stencil                  |            0 |            8 | Yalnızca B stencil tekniklerini destekler.                             |
+| Sample buffers / samples |          0/0 |          1/4 | B 4× MSAA ile geometri kenarlarını yumuşatabilir.                   |
+| Caveat                   | `EGL_NONE` | `EGL_NONE` | İkisinde de bildirilen performans/uyumluluk caveat'i yoktur.           |
 
 Config B daha çok özellik sağladığı için otomatik olarak her uygulamada “daha
 iyi” değildir. Basit 2B arayüzde Config A bellek ve bant genişliği tasarrufu

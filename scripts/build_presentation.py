@@ -27,7 +27,7 @@ MARKDOWN_IMAGE = re.compile(r"(!\[[^\]\n]*\]\()([^\s)]+)([^)\n]*\))")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build docs/eglFunctions.md from ordered Markdown sources."
+        description="Build docs/other/eglFunctions.md from ordered Markdown sources."
     )
     parser.add_argument(
         "--order",

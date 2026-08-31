@@ -153,6 +153,8 @@ tutulabildiğini belirler. Bir component `n` bit ise alabileceği değer sayıs�
 |                  6 bit |                    64 |           `0..63` |                          `1/63 ≈ 0,0159` |
 |                  8 bit |                   256 |          `0..255` |                        `1/255 ≈ 0,00392` |
 
+![1788181993384](image/eglGetConfigAttrib/1788181993384.png)![1788181996090](image/eglGetConfigAttrib/1788181996090.png)
+
 Örneğin kırmızı component 3 bit olduğunda yalnızca şu normalize edilmiş
 değerler temsil edilebilir:
 
@@ -166,7 +168,7 @@ bit kırmızı, yumuşak bir kırmızı gradyanda basamakların belirginleşmesi
 (`color banding`) yol açabilir. 5 bitte 32, 8 bitte 256 seviye bulunduğu için
 geçiş giderek daha pürüzsüz görünür.
 
-![1788177784345](image/eglGetConfigAttrib/1788177784345.png)
+![1788181276849](image/eglGetConfigAttrib/1788181276849.png)![1788181317179](image/eglGetConfigAttrib/1788181317179.png)![1788181319721](image/eglGetConfigAttrib/1788181319721.png)![1788181604515](image/eglGetConfigAttrib/1788181604515.png)![1788181607763](image/eglGetConfigAttrib/1788181607763.png)
 
 #### Yaygın color format karşılaştırması
 
