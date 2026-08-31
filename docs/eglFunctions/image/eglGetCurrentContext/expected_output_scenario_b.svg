@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" role="img" aria-labelledby="title desc">
+  <title id="title">Senaryo B beklenen ekran çıktısı</title>
+  <desc id="desc">A plain red screen, representing that no triangle is drawn after eglGetCurrentContext returns EGL_NO_CONTEXT.</desc>
+  <defs>
+    <style>
+      .page { fill: #f6f7f9; }
+      .frame { fill: #de3028; stroke: #17202a; stroke-width: 3; }
+      .label { font: 700 24px Arial, sans-serif; fill: #17202a; }
+      .small { font: 16px Arial, sans-serif; fill: #475467; }
+      .badge { fill: #fff1f0; stroke: #c0362c; stroke-width: 2; }
+      .code { font: 16px Consolas, monospace; fill: #101828; }
+      .caption { font: 17px Arial, sans-serif; fill: #344054; }
+    </style>
+  </defs>
+
+  <rect class="page" width="900" height="560"/>
+  <text class="label" x="60" y="58">Senaryo B beklenen görüntü</text>
+  <text class="small" x="60" y="86">Context detach edildi: üçgen çizimi yapılmaz.</text>
+
+  <rect class="frame" x="100" y="125" width="700" height="350" rx="10"/>
+  <text class="caption" x="333" y="306">Sadece kırmızı arka plan</text>
+  <text class="caption" x="367" y="334">üçgen yok</text>
+
+  <rect class="badge" x="265" y="500" width="370" height="42" rx="8"/>
+  <text class="code" x="291" y="527">eglGetCurrentContext() == EGL_NO_CONTEXT</text>
+</svg>

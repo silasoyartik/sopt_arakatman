@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="500" viewBox="0 0 1100 500" role="img" aria-label="attrib_list standart ve GLES2 pipeline senaryoları">
+  <rect width="1100" height="500" fill="#f6f8fb"/>
+  <style>
+    .title{font:700 27px Arial,sans-serif;fill:#111827}
+    .label{font:700 20px Arial,sans-serif;fill:#111827}
+    .small{font:16px Arial,sans-serif;fill:#374151}
+    .code{font:15px Consolas,monospace;fill:#111827}
+    .screen{stroke:#111827;stroke-width:3;rx:8}
+    .chip{fill:#fff;stroke:#cbd5e1;stroke-width:1.5;rx:6}
+  </style>
+
+  <text x="550" y="42" text-anchor="middle" class="title">attrib_list değişimi: varsayılan context ya da GLES2 shader pipeline isteği</text>
+
+  <rect x="90" y="95" width="365" height="235" class="screen" fill="#303030"/>
+  <rect x="128" y="122" width="160" height="36" class="chip"/>
+  <text x="208" y="146" text-anchor="middle" class="code">{ EGL_NONE }</text>
+  <text x="272" y="214" text-anchor="middle" fill="#e5e7eb" class="code">ek client-version isteği yok</text>
+  <text x="272" y="370" text-anchor="middle" class="label">Senaryo A: EGL 1.0 standart</text>
+  <text x="272" y="397" text-anchor="middle" class="small">düz gri ekran ile temsil edilir</text>
+  <text x="272" y="424" text-anchor="middle" class="small">modern shader pipeline özellikle talep edilmez</text>
+
+  <rect x="645" y="95" width="365" height="235" class="screen" fill="#08091f"/>
+  <rect x="645" y="260" width="365" height="70" fill="#2563eb"/>
+  <polygon points="827,130 742,265 912,265" fill="#d946ef"/>
+  <rect x="680" y="112" width="270" height="36" class="chip"/>
+  <text x="815" y="136" text-anchor="middle" class="code">EGL_CONTEXT_CLIENT_VERSION, 2</text>
+  <text x="827" y="370" text-anchor="middle" class="label">Senaryo B: GLES2 talebi</text>
+  <text x="827" y="397" text-anchor="middle" class="small">mavi bant ve shader ile çizilen mor üçgen</text>
+  <text x="827" y="424" text-anchor="middle" class="small">programmable pipeline beklentisi açıkça verilir</text>
+</svg>

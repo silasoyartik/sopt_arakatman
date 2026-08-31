@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="570" viewBox="0 0 1000 570" role="img" aria-labelledby="title desc">
+  <title id="title">eglCreateWindowSurface attrib_list parametresi akışı</title>
+  <desc id="desc">NULL ve EGL_NONE listesi EGL 1.0 core kapsamında ek window surface attribute bulunmamasıyla aynı sonuca gider.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#475569"/></marker>
+    <style>
+      text { font-family: Inter, Arial, sans-serif; fill: #172033; letter-spacing: 0; }
+      .label { font-size: 20px; font-weight: 700; }
+      .small { font-size: 17px; }
+      .line { fill: none; stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+      .node { fill: #fff; stroke: #64748b; stroke-width: 2; rx: 6; }
+      .option { fill: #f5f3ff; stroke: #7c3aed; }
+      .merge { fill: #fff7ed; stroke: #c2410c; }
+      .call { fill: #eff6ff; stroke: #2563eb; }
+      .good { fill: #ecfdf5; stroke: #15803d; }
+    </style>
+  </defs>
+  <rect width="1000" height="570" fill="#f8fafc"/>
+  <rect class="node" x="390" y="22" width="220" height="58"/>
+  <text class="label" x="500" y="58" text-anchor="middle">attrib_list</text>
+  <path class="line" d="M500 80 V112 H250 V146"/><path class="line" d="M500 112 H750 V146"/>
+  <rect class="node option" x="105" y="146" width="290" height="76"/>
+  <text class="label" x="250" y="178" text-anchor="middle">NULL</text><text class="small" x="250" y="205" text-anchor="middle">Ek attribute yok</text>
+  <rect class="node option" x="605" y="146" width="290" height="76"/>
+  <text class="label" x="750" y="178" text-anchor="middle">{ EGL_NONE }</text><text class="small" x="750" y="205" text-anchor="middle">Liste hemen biter</text>
+  <path class="line" d="M250 222 V267 H500 V302"/><path class="line" d="M750 222 V267 H500 V302"/>
+  <rect class="node merge" x="300" y="302" width="400" height="82"/>
+  <text class="label" x="500" y="335" text-anchor="middle">EGL 1.0 core</text>
+  <text class="small" x="500" y="364" text-anchor="middle">Ek window surface attribute'u yok</text>
+  <path class="line" d="M500 384 V425"/>
+  <rect class="node call" x="330" y="425" width="340" height="64"/>
+  <text class="small" x="500" y="464" text-anchor="middle">eglCreateWindowSurface()</text>
+  <path class="line" d="M500 489 V520"/>
+  <rect class="node good" x="365" y="520" width="270" height="44"/>
+  <text class="label" x="500" y="549" text-anchor="middle">EGLSurface</text>
+</svg>

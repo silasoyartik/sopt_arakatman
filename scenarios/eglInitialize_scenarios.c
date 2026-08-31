@@ -56,10 +56,8 @@ void scenario_normal_initialize(EGLDisplay dpy)
  * ============================================================
  *
  * Amaç:
- * Major sürüm bilgisi istenmediğinde major parametresinin NULL
- * olarak verilebildiğini göstermek.
- *
- * Bu durumda yalnızca minor sürüm bilgisi alınır.
+ * Sürüm bilgisi hakkında sadece major parametresinin NULL
+ * olarak verildiğinde initialization davranışının yine de başarılı olabildiğini göstermek.
  *
  * Çağrı:
  *
@@ -74,10 +72,15 @@ void scenario_normal_initialize(EGLDisplay dpy)
  * Bizim test ortamımızda olası örnek sonuç:
  *
  *     result: EGL_TRUE
- *     minor: 5
+ *     minor: -1
  *
- * major parametresi NULL olduğu için major sürüm bilgisi
- * uygulamaya yazılmaz.
+ * Test edilen Mesa implementation'ında major parametresi NULL
+ * olduğunda çağrı başarılı olmasına rağmen minor değişkeni
+ * güncellenmemiştir.
+ *
+ * Buradaki -1 değeri bir EGL sürüm numarası değildir.
+ * Değişkenin başlangıç değeridir ve bu çağrıda minor output
+ * parametresine sürüm bilgisinin yazılmadığını gösterir.
  */
 void scenario_major_null(EGLDisplay dpy)
 {
@@ -98,10 +101,8 @@ void scenario_major_null(EGLDisplay dpy)
  * ============================================================
  *
  * Amaç:
- * Minor sürüm bilgisi istenmediğinde minor parametresinin NULL
- * olarak verilebildiğini göstermek.
- *
- * Bu durumda yalnızca major sürüm bilgisi alınır.
+ * Sürüm bilgisi hakkında sadece minor parametresinin NULL
+ * olarak verildiğinde initialization davranışının yine de başarılı olabildiğini göstermek.
  *
  * Çağrı:
  *
@@ -116,10 +117,15 @@ void scenario_major_null(EGLDisplay dpy)
  * Bizim test ortamımızda olası örnek sonuç:
  *
  *     result: EGL_TRUE
- *     major: 1
+ *     major: -1
  *
- * minor parametresi NULL olduğu için minor sürüm bilgisi
- * uygulamaya yazılmaz.
+ * Test edilen Mesa implementation'ında minor parametresi NULL
+ * olduğunda çağrı başarılı olmasına rağmen major değişkeni
+ * güncellenmemiştir.
+ *
+ * Buradaki -1 değeri bir EGL sürüm numarası değildir.
+ * Değişkenin başlangıç değeridir ve bu çağrıda major output
+ * parametresine sürüm bilgisinin yazılmadığını gösterir.
  */
 void scenario_minor_null(EGLDisplay dpy)
 {

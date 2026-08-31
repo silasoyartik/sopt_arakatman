@@ -11,7 +11,7 @@ EGLBoolean eglGetConfigs(EGLDisplay dpy,
 
 Bu fonksiyon seçim yapmaz, filtre uygulamaz ve sıralama garantisi vermez. “Şu özelliklerde bir config istiyorum” denecekse doğru araç genellikle `eglChooseConfig` fonksiyonudur. `eglGetConfigs` ise sistemde ne olduğunu görmek, saymak ve tüm havuzu elle incelemek için kullanılır.
 
-![eglGetConfigs genel akış şeması](gorseller/eglGetConfigs_akis.svg)
+![eglGetConfigs genel akış şeması](image/eglGetConfigs/eglGetConfigs_akis.svg)
 
 ## Kısa Mantık
 
@@ -57,7 +57,7 @@ Bir EGL uygulamasında context ve surface oluşturmak için uygun bir `EGLConfig
 
 Bu yüzden pratikte en güvenli yöntem iki adımlı sorgudur: önce toplam sayıyı öğren, sonra o sayı kadar bellek ayırıp tüm listeyi oku.
 
-![Profesyonel iki adımlı sorgu şeması](gorseller/profesyonel_2_adimli.svg)
+![Profesyonel iki adımlı sorgu şeması](image/eglGetConfigs/profesyonel_2_adimli.svg)
 
 ## Parametre Senaryoları
 
@@ -71,7 +71,7 @@ Kaynak dosya: `pDpyID_farki/senaryo_A_gecerli_display.c`
 
 Native display açılır, bunun üzerinden `EGLDisplay` alınır ve `eglInitialize` başarılı olduktan sonra `eglGetConfigs` çağrılır. `dpy` geçerli olduğu için fonksiyon `EGL_TRUE` döner ve bulunan config sayısını `num_config` içine yazar. Kod daha sonra uygun bir config seçip yeşil zemin üzerinde beyaz üçgen çizer.
 
-![Geçerli display ile başarılı akış](gorseller/dpy_gecerli_display.svg)
+![Geçerli display ile başarılı akış](image/eglGetConfigs/dpy_gecerli_display.svg)
 
 ```text
 BASARILI: Gecerli EGLDisplay ile eglGetConfigs <N> config dondurdu.
@@ -84,7 +84,7 @@ Kaynak dosya: `pDpyID_farki/senaryo_B_gecersiz_display.c`
 
 Bu senaryoda `dpy` olarak `EGL_NO_DISPLAY` verilir. Geçerli display olmadığı için `eglGetConfigs` başarısız olur ve beklenen hata `EGL_BAD_DISPLAY` değeridir. Surface veya context kurulmadığı için çizim yapılmaz.
 
-![Terminal kanıtı akışı](gorseller/terminal_kanit_akisi.svg)
+![Terminal kanıtı akışı](image/eglGetConfigs/terminal_kanit_akisi.svg)
 
 ```text
 BEKLENEN HATA: EGL_NO_DISPLAY ile eglGetConfigs basarisiz oldu.
@@ -112,7 +112,7 @@ Kaynak dosya: `pConfigs_farki/senaryo_B_veri_okuma.c`
 
 Bu senaryoda `configs` geçerli bir dizi olarak verilir ve `config_size` dizinin kapasitesini belirtir. Başarılı çağrıdan sonra EGL, en fazla `config_size` kadar `EGLConfig` handle'ını diziye yazar. Kod bu config'ler arasından pencere yüzeyi ve OpenGL ES 2.0 destekleyen bir seçim yaparak lacivert zemin üzerinde sarı üçgen çizer.
 
-![Geçerli configs dizisine veri okuma](gorseller/pconfigs_veri_okuma.svg)
+![Geçerli configs dizisine veri okuma](image/eglGetConfigs/pconfigs_veri_okuma.svg)
 
 ```text
 BASARILI: pConfigs gecerli dizi oldugu icin <N> config bellege kopyalandi.
@@ -127,7 +127,7 @@ Kaynak dosya: `ConfigSize_farki/senaryo_A_yetersiz_kapasite.c`
 
 Önce sistemdeki gerçek config sayısı öğrenilir, ardından özellikle küçük bir kapasiteyle (`config_size = 2`) okuma yapılır. EGL bunu hata saymaz; yalnızca ilk iki config'i kopyalar. Risk şudur: ihtiyaç duyulan özelliklere sahip config, okunmayan kısımda kalabilir.
 
-![Yetersiz config_size etkisi](gorseller/configsize_yetersiz.svg)
+![Yetersiz config_size etkisi](image/eglGetConfigs/configsize_yetersiz.svg)
 
 ```text
 Sistemde toplam <T> config var, fakat ConfigSize=2 oldugu icin sadece <N> tanesi okundu.
@@ -141,7 +141,7 @@ Kaynak dosya: `ConfigSize_farki/senaryo_B_yeterli_kapasite.c`
 
 Bu senaryoda önce toplam config sayısı alınır, sonra tam bu sayı kadar bellek ayrılır. Böylece tüm config havuzu okunur ve depth buffer destekleyen uygun config güvenli şekilde seçilebilir. 3B çizimde yeşil üçgenin kırmızı üçgenin önünde görünmesi depth buffer kullanımını somutlaştırır.
 
-![Yeterli config_size ile tam okuma](gorseller/configsize_yeterli.svg)
+![Yeterli config_size ile tam okuma](image/eglGetConfigs/configsize_yeterli.svg)
 
 ```text
 BASARILI: Yeterli kapasite ile <N>/<T> config okundu ve derinlikli uygun config secildi.
@@ -156,7 +156,7 @@ Kaynak dosya: `pNumConfig_farki/senaryo_A_gecerli_isaretci.c`
 
 `num_config` geçerli bir `EGLint*` adresidir. `eglGetConfigs`, kaç config kopyaladığını bu adrese yazar. Kod daha sonra uygun config ile surface/context oluşturup mor zemin üzerinde camgöbeği üçgen çizer.
 
-![Geçerli num_config işaretçisi](gorseller/pnumconfig_gecerli.svg)
+![Geçerli num_config işaretçisi](image/eglGetConfigs/pnumconfig_gecerli.svg)
 
 ```text
 BASARILI: pNumConfig gecerli isaretci oldugu icin EGL yazdigi config sayisini bildirdi: <N>
