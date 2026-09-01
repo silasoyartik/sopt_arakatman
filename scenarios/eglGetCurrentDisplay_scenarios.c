@@ -2,8 +2,8 @@
 #include <stdio.h>
 
 /*
- * eglGetCurrentDisplay() icin all-in-one senaryo dosyasi.
- * Fonksiyon parametre almadigi icin current EGL state degistirilir.
+ * All-in-one scenario file for eglGetCurrentDisplay().
+ * Because the function takes no parameters, the current EGL state is changed.
  */
 
 static const char *egl_error_name(EGLint error)
@@ -26,25 +26,25 @@ static const char *egl_error_name(EGLint error)
 
 
 /*
- * SENARYO A - Current context yok.
- * Beklenen: EGL_NO_DISPLAY.
+ * SCENARIO A - No current context.
+ * Expected: EGL_NO_DISPLAY.
  */
 void scenario_a_no_current_context(void)
 {
     EGLDisplay current = eglGetCurrentDisplay();
 
     if (current == EGL_NO_DISPLAY) {
-        printf("Senaryo A basarili: EGL_NO_DISPLAY dondu.\n");
+        printf("Scenario A passed: returned EGL_NO_DISPLAY.\n");
     } else {
-        printf("Senaryo A farkli sonuc: current=%p\n",
+        printf("Scenario A returned a different result: current=%p\n",
                (void *)current);
     }
 }
 
 
 /*
- * SENARYO B - Display initialize edilmis ancak current context yok.
- * Beklenen: eglInitialize basarili olsa da EGL_NO_DISPLAY.
+ * SCENARIO B - The display is initialized, but there is no current context.
+ * Expected: EGL_NO_DISPLAY even though eglInitialize succeeds.
  */
 void scenario_b_initialized_only(EGLDisplay dpy)
 {
@@ -52,7 +52,7 @@ void scenario_b_initialized_only(EGLDisplay dpy)
     EGLint minor = -1;
 
     if (eglInitialize(dpy, &major, &minor) == EGL_FALSE) {
-        printf("Senaryo B baslatilamadi: %s\n",
+        printf("Scenario B setup failed: %s\n",
                egl_error_name(eglGetError()));
         return;
     }
@@ -60,17 +60,17 @@ void scenario_b_initialized_only(EGLDisplay dpy)
     EGLDisplay current = eglGetCurrentDisplay();
 
     if (current == EGL_NO_DISPLAY) {
-        printf("Senaryo B basarili: EGL_NO_DISPLAY dondu.\n");
+        printf("Scenario B passed: returned EGL_NO_DISPLAY.\n");
     } else {
-        printf("Senaryo B farkli sonuc: current=%p\n",
+        printf("Scenario B returned a different result: current=%p\n",
                (void *)current);
     }
 }
 
 
 /*
- * SENARYO C - eglMakeCurrent sonrasi.
- * Beklenen: eglGetCurrentDisplay() == dpy.
+ * SCENARIO C - After eglMakeCurrent.
+ * Expected: eglGetCurrentDisplay() == dpy.
  */
 void scenario_c_after_make_current(
     EGLDisplay dpy,
@@ -78,7 +78,7 @@ void scenario_c_after_make_current(
     EGLContext context)
 {
     if (eglMakeCurrent(dpy, surface, surface, context) == EGL_FALSE) {
-        printf("Senaryo C baslatilamadi: %s\n",
+        printf("Scenario C setup failed: %s\n",
                egl_error_name(eglGetError()));
         return;
     }
@@ -86,17 +86,17 @@ void scenario_c_after_make_current(
     EGLDisplay current = eglGetCurrentDisplay();
 
     if (current == dpy) {
-        printf("Senaryo C basarili: current display dpy ile ayni.\n");
+        printf("Scenario C passed: the current display matches dpy.\n");
     } else {
-        printf("Senaryo C hatali: current=%p dpy=%p\n",
+        printf("Scenario C failed: current=%p dpy=%p\n",
                (void *)current, (void *)dpy);
     }
 }
 
 
 /*
- * SENARYO D - Current context release edilir.
- * Beklenen: release sonrasi EGL_NO_DISPLAY.
+ * SCENARIO D - Release the current context.
+ * Expected: EGL_NO_DISPLAY after release.
  */
 void scenario_d_after_release(EGLDisplay dpy)
 {
@@ -106,7 +106,7 @@ void scenario_d_after_release(EGLDisplay dpy)
             EGL_NO_SURFACE,
             EGL_NO_CONTEXT) == EGL_FALSE) {
 
-        printf("Senaryo D baslatilamadi: %s\n",
+        printf("Scenario D setup failed: %s\n",
                egl_error_name(eglGetError()));
         return;
     }
@@ -114,9 +114,9 @@ void scenario_d_after_release(EGLDisplay dpy)
     EGLDisplay current = eglGetCurrentDisplay();
 
     if (current == EGL_NO_DISPLAY) {
-        printf("Senaryo D basarili: EGL_NO_DISPLAY dondu.\n");
+        printf("Scenario D passed: returned EGL_NO_DISPLAY.\n");
     } else {
-        printf("Senaryo D hatali: current=%p\n",
+        printf("Scenario D failed: current=%p\n",
                (void *)current);
     }
 }

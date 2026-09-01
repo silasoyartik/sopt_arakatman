@@ -2,27 +2,27 @@
 #include <stdlib.h>
 
 /*
- * eglGetConfigs - Tum senaryolar tek dosya
+ * eglGetConfigs - All scenarios in one file
  *
- * Bu dosya, eglGetConfigs fonksiyonunun farkli parametre senaryolarini
- * tek yerde incelemek icin hazirlanmistir.
+ * This file is intended to examine different eglGetConfigs parameter
+ * scenarios in one place.
  *
  *   EGLBoolean eglGetConfigs(EGLDisplay dpy,
  *                            EGLConfig *configs,
  *                            EGLint config_size,
  *                            EGLint *num_config);
  *
- * Ortak varsayim:
- *   Gecerli display senaryolarinda "egl_dpy" daha once eglInitialize ile
- *   baslatilmis gecerli bir EGLDisplay olarak kabul edilir.
+ * Common assumption:
+ *   In valid-display scenarios, "egl_dpy" is assumed to be a valid EGLDisplay
+ *   that was previously initialized with eglInitialize.
  */
 
 /* ------------------------------------------------------------------------- */
-/* SENARYO 1: pDpyID - Gecerli Display                                       */
+/* SCENARIO 1: pDpyID - Valid Display                                        */
 /* ------------------------------------------------------------------------- */
 /*
- * Initialize edilmis gecerli bir EGLDisplay ile config listesinin
- * okunabildigi durum gosterilir.
+ * Demonstrates that the config list can be read using a valid, initialized
+ * EGLDisplay.
  */
 void senaryo_pDpyID_gecerli_display(EGLDisplay egl_dpy)
 {
@@ -41,11 +41,11 @@ void senaryo_pDpyID_gecerli_display(EGLDisplay egl_dpy)
 }
 
 /* ------------------------------------------------------------------------- */
-/* SENARYO 2: pDpyID - Gecersiz Display                                      */
+/* SCENARIO 2: pDpyID - Invalid Display                                      */
 /* ------------------------------------------------------------------------- */
 /*
- * EGL_NO_DISPLAY verilerek gecersiz display durumunda cagrinin
- * basarisiz olmasi beklenir.
+ * Passing EGL_NO_DISPLAY represents an invalid display, and the call is
+ * expected to fail.
  */
 void senaryo_pDpyID_gecersiz_display(void)
 {
@@ -65,11 +65,11 @@ void senaryo_pDpyID_gecersiz_display(void)
 }
 
 /* ------------------------------------------------------------------------- */
-/* SENARYO 3: pConfigs - Sadece Sayim Yapma                                  */
+/* SCENARIO 3: pConfigs - Count Only                                         */
 /* ------------------------------------------------------------------------- */
 /*
- * configs NULL ve config_size 0 verilerek sadece toplam config sayisi
- * sorgulanir; config handle'i okunmaz.
+ * Passing NULL for configs and 0 for config_size queries only the total number
+ * of configs; no config handle is read.
  */
 void senaryo_pConfigs_sadece_sayim(EGLDisplay egl_dpy)
 {
@@ -87,11 +87,10 @@ void senaryo_pConfigs_sadece_sayim(EGLDisplay egl_dpy)
 }
 
 /* ------------------------------------------------------------------------- */
-/* SENARYO 4: pConfigs - Veri Okuma                                          */
+/* SCENARIO 4: pConfigs - Read Data                                          */
 /* ------------------------------------------------------------------------- */
 /*
- * Gecerli bir EGLConfig dizisi verilerek config handle'larinin diziye
- * yazilmasi saglanir.
+ * A valid EGLConfig array is provided so that config handles are written to it.
  */
 void senaryo_pConfigs_veri_okuma(EGLDisplay egl_dpy)
 {
@@ -110,11 +109,11 @@ void senaryo_pConfigs_veri_okuma(EGLDisplay egl_dpy)
 }
 
 /* ------------------------------------------------------------------------- */
-/* SENARYO 5: pNumConfig - Gecerli Isaretci                                  */
+/* SCENARIO 5: pNumConfig - Valid Pointer                                    */
 /* ------------------------------------------------------------------------- */
 /*
- * num_config parametresine gecerli bir adres verilerek okunan config
- * sayisinin bu adrese yazilmasi gosterilir.
+ * Demonstrates that the number of configs read is written to the valid address
+ * passed in the num_config parameter.
  */
 void senaryo_pNumConfig_gecerli_isaretci(EGLDisplay egl_dpy)
 {
@@ -133,11 +132,11 @@ void senaryo_pNumConfig_gecerli_isaretci(EGLDisplay egl_dpy)
 }
 
 /* ------------------------------------------------------------------------- */
-/* SENARYO 6: pNumConfig - NULL Verilmesi                                    */
+/* SCENARIO 6: pNumConfig - Pass NULL                                        */
 /* ------------------------------------------------------------------------- */
 /*
- * num_config NULL ise eglGetConfigs cagrisi yapilmadan once durum
- * reddedilir; output pointer'in gecerli olmasi beklenir.
+ * If num_config is NULL, the request is rejected before eglGetConfigs is
+ * called; the output pointer is expected to be valid.
  */
 EGLBoolean senaryo_pNumConfig_null_kontrolu(EGLDisplay egl_dpy,
                                             EGLConfig *configs,
@@ -152,11 +151,11 @@ EGLBoolean senaryo_pNumConfig_null_kontrolu(EGLDisplay egl_dpy,
 }
 
 /* ------------------------------------------------------------------------- */
-/* SENARYO 7: ConfigSize - Yetersiz Kapasite                                 */
+/* SCENARIO 7: ConfigSize - Insufficient Capacity                            */
 /* ------------------------------------------------------------------------- */
 /*
- * Toplam config sayisindan kucuk kapasite verilirse sadece dizinin
- * alabildigi kadar config okunur.
+ * If the supplied capacity is smaller than the total config count, only as
+ * many configs as the array can hold are read.
  */
 void senaryo_ConfigSize_yetersiz_kapasite(EGLDisplay egl_dpy)
 {
@@ -185,11 +184,11 @@ void senaryo_ConfigSize_yetersiz_kapasite(EGLDisplay egl_dpy)
 }
 
 /* ------------------------------------------------------------------------- */
-/* SENARYO 8: ConfigSize - Yeterli Kapasite                                  */
+/* SCENARIO 8: ConfigSize - Sufficient Capacity                              */
 /* ------------------------------------------------------------------------- */
 /*
- * Once toplam config sayisi sorgulanir, sonra yeterli kapasitede dizi
- * ayrilarak tum config listesinin okunmasi hedeflenir.
+ * First the total config count is queried, then an array with sufficient
+ * capacity is allocated to read the complete config list.
  */
 void senaryo_ConfigSize_yeterli_kapasite(EGLDisplay egl_dpy)
 {
@@ -226,11 +225,11 @@ void senaryo_ConfigSize_yeterli_kapasite(EGLDisplay egl_dpy)
 }
 
 /* ------------------------------------------------------------------------- */
-/* SENARYO 9: Profesyonel 2 Adimli Sorgu                                     */
+/* SCENARIO 9: Standard Two-Step Query                                       */
 /* ------------------------------------------------------------------------- */
 /*
- * Iki adimli genel kullanim gosterilir: once toplam config sayisi
- * ogrenilir, sonra o sayi kadar dizi ayrilip configler okunur.
+ * Demonstrates the standard two-step pattern: first obtain the total config
+ * count, then allocate an array of that size and read the configs.
  */
 void senaryo_profesyonel_iki_adimli_sorgu(EGLDisplay egl_dpy)
 {

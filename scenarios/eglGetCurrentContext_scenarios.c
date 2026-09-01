@@ -3,16 +3,16 @@
 /*
  * eglGetCurrentContext(void)
  *
- * Bu dosya eglGetCurrentContext icin temel senaryolari tek yerde toplar.
- * EGLDisplay, EGLSurface ve EGLContext'in daha once basarili sekilde
- * olusturuldugu varsayilir.
+ * This file collects the basic eglGetCurrentContext scenarios in one place.
+ * EGLDisplay, EGLSurface, and EGLContext are assumed to have been created
+ * successfully beforehand.
  */
 
 /*
- * SENARYO A - Aktif context varken eglGetCurrentContext cagrisi
+ * SCENARIO A - Call eglGetCurrentContext with an active context
  *
- * Context current hale getirildikten sonra eglGetCurrentContext()
- * cagrisinin ayni context handle degerini dondurmesi beklenir.
+ * After the context is made current, eglGetCurrentContext() is expected to
+ * return the same context handle.
  */
 void scenario_a_current_context_is_returned(EGLDisplay display,
                                             EGLSurface surface,
@@ -35,10 +35,10 @@ void scenario_a_current_context_is_returned(EGLDisplay display,
 }
 
 /*
- * SENARYO B - Aktif context yokken eglGetCurrentContext cagrisi
+ * SCENARIO B - Call eglGetCurrentContext with no active context
  *
- * Current context thread'den ayrildiktan sonra eglGetCurrentContext()
- * cagrisinin EGL_NO_CONTEXT dondurmesi beklenir.
+ * After the current context is detached from the thread,
+ * eglGetCurrentContext() is expected to return EGL_NO_CONTEXT.
  */
 void scenario_b_no_current_context_returns_no_context(EGLDisplay display,
                                                       EGLSurface surface,

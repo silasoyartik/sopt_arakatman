@@ -3,8 +3,8 @@
 #include <stdio.h>
 
 /*
- * eglInitialize(dpy, major, minor) icin all-in-one senaryo dosyasi.
- * A-D senaryolari icin tercihen fresh EGLDisplay kullanilmalidir.
+ * All-in-one scenario file for eglInitialize(dpy, major, minor).
+ * A fresh EGLDisplay should preferably be used for scenarios A-D.
  */
 
 static const char *egl_error_name(EGLint error)
@@ -27,8 +27,8 @@ static const char *egl_error_name(EGLint error)
 
 
 /*
- * SENARYO A - major ve minor birlikte verilir.
- * Beklenen: EGL_TRUE ve test ortamimizda version=1.5.
+ * SCENARIO A - Both major and minor are provided.
+ * Expected: EGL_TRUE and version=1.5 in our test environment.
  */
 void scenario_a_major_and_minor(EGLDisplay dpy)
 {
@@ -36,79 +36,79 @@ void scenario_a_major_and_minor(EGLDisplay dpy)
     EGLint minor = -1;
 
     if (eglInitialize(dpy, &major, &minor) == EGL_TRUE) {
-        printf("Senaryo A basarili: version=%d.%d\n",
+        printf("Scenario A passed: version=%d.%d\n",
                major, minor);
     } else {
-        printf("Senaryo A hatali: %s\n",
+        printf("Scenario A failed: %s\n",
                egl_error_name(eglGetError()));
     }
 }
 
 
 /*
- * SENARYO B - major=NULL, minor pointer.
- * Test edilen Mesa ortaminda EGL_TRUE, minor=-1 beklenir.
+ * SCENARIO B - major=NULL, minor pointer.
+ * EGL_TRUE with minor remaining -1 is expected in the tested Mesa environment.
  */
 void scenario_b_major_null(EGLDisplay dpy)
 {
     EGLint minor = -1;
 
     if (eglInitialize(dpy, NULL, &minor) == EGL_FALSE) {
-        printf("Senaryo B hatali: %s\n",
+        printf("Scenario B failed: %s\n",
                egl_error_name(eglGetError()));
         return;
     }
 
     if (minor == -1) {
-        printf("Senaryo B basarili: EGL_TRUE, minor=-1 kaldı.\n");
+        printf("Scenario B passed: EGL_TRUE, minor remained -1.\n");
     } else {
-        printf("Senaryo B farkli implementation davranisi: minor=%d\n",
+        printf("Scenario B observed different implementation behavior: minor=%d\n",
                minor);
     }
 }
 
 
 /*
- * SENARYO C - major pointer, minor=NULL.
- * Test edilen Mesa ortaminda EGL_TRUE, major=-1 beklenir.
+ * SCENARIO C - major pointer, minor=NULL.
+ * EGL_TRUE with major remaining -1 is expected in the tested Mesa environment.
  */
 void scenario_c_minor_null(EGLDisplay dpy)
 {
     EGLint major = -1;
 
     if (eglInitialize(dpy, &major, NULL) == EGL_FALSE) {
-        printf("Senaryo C hatali: %s\n",
+        printf("Scenario C failed: %s\n",
                egl_error_name(eglGetError()));
         return;
     }
 
     if (major == -1) {
-        printf("Senaryo C basarili: EGL_TRUE, major=-1 kaldı.\n");
+        printf("Scenario C passed: EGL_TRUE, major remained -1.\n");
     } else {
-        printf("Senaryo C farkli implementation davranisi: major=%d\n",
+        printf("Scenario C observed different implementation behavior: major=%d\n",
                major);
     }
 }
 
 
 /*
- * SENARYO D - major=NULL ve minor=NULL.
- * Beklenen: surum output'u alinmadan EGL_TRUE.
+ * SCENARIO D - major=NULL and minor=NULL.
+ * Expected: EGL_TRUE without retrieving version output.
  */
 void scenario_d_both_null(EGLDisplay dpy)
 {
     if (eglInitialize(dpy, NULL, NULL) == EGL_TRUE) {
-        printf("Senaryo D basarili: EGL_TRUE dondu.\n");
+        printf("Scenario D passed: returned EGL_TRUE.\n");
     } else {
-        printf("Senaryo D hatali: %s\n",
+        printf("Scenario D failed: %s\n",
                egl_error_name(eglGetError()));
     }
 }
 
 
 /*
- * SENARYO E - dpy=EGL_NO_DISPLAY.
- * Beklenen: EGL_FALSE ve EGL_BAD_DISPLAY.
+ * SCENARIO E - dpy=EGL_NO_DISPLAY.
+ * Expected: EGL_FALSE and EGL_BAD_DISPLAY.
  */
 void scenario_e_invalid_display(void)
 {
@@ -119,12 +119,12 @@ void scenario_e_invalid_display(void)
         EGLint error = eglGetError();
 
         if (error == EGL_BAD_DISPLAY) {
-            printf("Senaryo E basarili: EGL_BAD_DISPLAY alindi.\n");
+            printf("Scenario E passed: received EGL_BAD_DISPLAY.\n");
         } else {
-            printf("Senaryo E farkli hata: %s\n",
+            printf("Scenario E returned a different error: %s\n",
                    egl_error_name(error));
         }
     } else {
-        printf("Senaryo E beklenmeyen sonuc: EGL_TRUE dondu.\n");
+        printf("Scenario E returned an unexpected result: EGL_TRUE.\n");
     }
 }
