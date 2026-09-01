@@ -1,5 +1,6 @@
 #include <EGL/egl.h>
 #include <stddef.h>
+#include <stdio.h>
 
 /*
  * eglChooseConfig(...) icin all-in-one senaryo dosyasi.

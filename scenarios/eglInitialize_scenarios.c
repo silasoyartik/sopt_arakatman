@@ -1,5 +1,6 @@
 #include <EGL/egl.h>
 #include <stddef.h>
+#include <stdio.h>
 
 /*
  * eglInitialize(dpy, major, minor) icin all-in-one senaryo dosyasi.
