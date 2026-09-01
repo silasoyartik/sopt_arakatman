@@ -1,7 +1,5 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include "../../../../test_utility.h"
-
+#include <EGL/egl.h>
+#include "../../macros.h"
 /*
 EGL10 - Errors - eglGetError
 
