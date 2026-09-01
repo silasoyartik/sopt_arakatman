@@ -7,7 +7,7 @@ EGLBoolean eglSwapBuffers(EGLDisplay dpy,
 
 `eglSwapBuffers`, EGL 1.0'da rendering sonrası color buffer'ı native window'a post etmek için kullanılır.
 
-Kısa özet:
+İşlev özeti:
 
 - Window surface için: color buffer native window'a post edilir.
 - Pbuffer surface için: etkisi yoktur.
@@ -31,7 +31,7 @@ eglSwapBuffers
 native window'a post/copy
 ```
 
-Somut olarak bir frame boyunca ön ve arka buffer'ı şöyle düşünebiliriz:
+Bir frame boyunca ön ve arka buffer'ın durumu aşağıdaki akışla gösterilebilir:
 
 ```text
 Frame N çizilirken:
@@ -109,15 +109,15 @@ surface hemen yok olmaz; current kaldığı sürece geçerlidir. İlgili thread'
 sonraki geçerli `eglMakeCurrent` ile bağlantı değiştiğinde gerçek silme
 tamamlanır ve bundan sonraki swap girişimi `EGL_BAD_SURFACE` olur.
 
-## EGL 1.0 Current Surface Şartı
+## EGL 1.0 Current Surface Gereksinimi
 
-EGL 1.0 spec'i için önemli kural:
+EGL 1.0 specification'ın gerektirdiği koşul:
 
 ```text
 surface, çağıran thread'in current context'ine bağlı olmalıdır.
 ```
 
-Doğru sıra:
+Geçerli çağrı sırası:
 
 ```C
 eglMakeCurrent(dpy, surface, surface, ctx);
@@ -127,7 +127,7 @@ eglMakeCurrent(dpy, surface, surface, ctx);
 eglSwapBuffers(dpy, surface);
 ```
 
-Yanlış sıra:
+Geçersiz çağrı sırası:
 
 ```c
 /* surface current yapılmadı */
@@ -149,14 +149,14 @@ EGL_BAD_SURFACE
 eglSwapBuffers(dpy, window_surface);
 ```
 
-Başarı için:
+Başarı koşulları:
 
 - `dpy` initialized olmalı.
 - `window_surface` geçerli olmalı.
 - `window_surface` current context'e bağlı olmalı.
 - Native window hala geçerli olmalı.
 
-Başarı sonucu:
+Başarılı çağrının sonucu:
 
 - `EGL_TRUE` döner.
 - Color buffer native window'a post edilir.
@@ -179,7 +179,7 @@ Pbuffer offscreen surface'tir:
 pbuffer -> native visible window yok
 ```
 
-Bu yüzden `eglSwapBuffers` fiziksel görüntü üretmez. Pbuffer içeriğini kullanmak istiyorsan tipik yollar:
+Bu nedenle `eglSwapBuffers` fiziksel bir görüntü üretmez. Pbuffer içeriğinin kullanımında başvurulabilecek yöntemler:
 
 - aynı context içinde texture/copy/readback akışı
 - `glReadPixels`
@@ -221,7 +221,7 @@ eglCopyBuffers(dpy, surface, native_pixmap);
 
 EGL 1.0 spec'i başarılı `eglSwapBuffers` sonrası surface color buffer içeriğinin tanımsız olduğunu söyler.
 
-Yani şu varsayım yanlıştır:
+Aşağıdaki varsayım geçersizdir:
 
 ```c
 eglSwapBuffers(dpy, surface);
@@ -229,7 +229,7 @@ eglSwapBuffers(dpy, surface);
 /* Yanlış varsayım: eski color buffer içeriği hala korunuyor */
 ```
 
-Doğru pratik:
+Önerilen kullanım:
 
 ```c
 /* Her frame'de gerekli içeriği yeniden çiz */
@@ -259,12 +259,9 @@ Bu `glFinish` değildir.
 
 EGL 1.0 metni, sonraki OpenGL ES komutlarının hemen verilebileceğini ama posting bitene kadar yürütülmeyebileceğini belirtir. Window surface için bu zamanlama tipik olarak vertical retrace ile ilişkilidir.
 
-Buradaki “typically” önemlidir: EGL 1.0 tek başına her swap'ın VSync beklediğini,
-tearing'in kesin engellendiğini veya swap'ın monitör yenileme hızında sabit FPS
-üreteceğini garanti etmez. Sunum yöntemi ve bloklama davranışı implementation ve
-native platforma bağlıdır.
+Specification'daki “typically” ifadesi kesin bir garanti oluşturmaz. EGL 1.0 tek başına her swap'ın VSync beklediğini, tearing'in engellendiğini veya swap'ın monitör yenileme hızında sabit FPS üreteceğini garanti etmez. Sunum yöntemi ve bloklama davranışı implementation ile native platforma bağlıdır.
 
-## Swap ne yapmaz?
+## `eglSwapBuffers` Kapsamına Girmeyen İşlemler
 
 - Yeni bir frame çizmez; o ana kadar üretilmiş color buffer'ı post eder.
 - `glFinish` gibi bütün GPU işlerinin tamamlanmasını zorunlu olarak beklemez.
@@ -293,7 +290,7 @@ draw_scene();
 eglSwapBuffers(dpy, surface);
 ```
 
-EGL surface resize edebilir, ama GL viewport'u senin uygulamanın sorumluluğundadır.
+EGL surface'i yeniden boyutlandırabilir; ancak GL viewport'unun güncellenmesi uygulamanın sorumluluğundadır.
 
 ## `eglSwapBuffers` ve DRM/KMS
 
@@ -305,7 +302,7 @@ EGL tek başına fiziksel monitörü yönetmez. Bu özellikle GBM + DRM/KMS tara
 GBM surface içinde render edilmiş front buffer hazır olur.
 ```
 
-Ama fiziksel monitör için hala şu gerekir:
+Fiziksel monitöre sunum için ek olarak aşağıdaki işlem gerekir:
 
 ```c
 struct gbm_bo *bo = gbm_surface_lock_front_buffer(gbm_surface);
@@ -323,7 +320,7 @@ Animasyonda sonraki buffer'a geçmek için:
 drmModePageFlip(fd, crtc_id, next_fb_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);
 ```
 
-Özet:
+Katman sorumlulukları:
 
 | Katman    | Sorumluluk                                                       |
 | --------- | ---------------------------------------------------------------- |
@@ -332,7 +329,7 @@ drmModePageFlip(fd, crtc_id, next_fb_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);
 | GBM       | GPU/display paylaşılabilir buffer nesneleri sağlar.           |
 | DRM/KMS   | Framebuffer'ı CRTC/connector üzerinden monitöre scanout eder. |
 
-## Temel Window Surface Kullanımı
+## Window Surface Kullanım Örneği
 
 ```c
 eglMakeCurrent(dpy, window_surface, window_surface, ctx);
@@ -346,7 +343,7 @@ if (!eglSwapBuffers(dpy, window_surface)) {
 }
 ```
 
-## Temel Pbuffer Kullanımı
+## Pbuffer Surface Kullanım Örneği
 
 ```c
 eglMakeCurrent(dpy, pbuffer_surface, pbuffer_surface, ctx);
@@ -357,15 +354,15 @@ glClear(GL_COLOR_BUFFER_BIT);
 eglSwapBuffers(dpy, pbuffer_surface); /* EGL 1.0: no effect */
 ```
 
-Pbuffer için `eglSwapBuffers` çağrısı öğretici olabilir ama görünür output beklenmemelidir.
+Pbuffer için `eglSwapBuffers` çağrısı semantik olarak geçerli olsa da görünür bir output üretmez.
 
 ## Bölüm Özeti
 
 - `eglSwapBuffers` window surface için anlamlıdır.
 - Pbuffer ve pixmap surface için etkisi yoktur.
 - EGL 1.0'da surface current context'e bağlı olmalıdır.
-- Başarılı swap sonrası color buffer içeriğini korunmuş sayma.
+- Başarılı swap sonrasında color buffer içeriğinin korunduğu varsayılamaz.
 - `eglSwapBuffers` implicit `glFlush` yapar ama `glFinish` değildir.
 - “Swap” fiziksel olarak mutlaka pointer değişimi demek değildir; gözlemlenebilir işlem window'a post edilmesidir.
 - EGL 1.0 VSync, tearing engelleme veya sabit FPS garantisi vermez.
-- GBM/DRM kullanıyorsan swap sonrası ayrıca BO alma ve KMS scanout gerekir.
+- GBM/DRM kullanımında swap sonrasında ayrıca BO alma ve KMS scanout işlemleri gerekir.

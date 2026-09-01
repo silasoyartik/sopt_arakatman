@@ -280,16 +280,20 @@ EGLBoolean eglInitialize(EGLDisplay dpy,
                          EGLint *minor);
 ```
 
-`eglInitialize`, bir `EGLDisplay` bağlantısını EGL kullanımı için initialize eder ve istenirse EGL implementation sürümünü `major` ve `minor` output parametreleri üzerinden döndürür.
+`eglInitialize`, daha önce `eglGetDisplay` ile elde edilmiş geçerli bir `EGLDisplay`'i EGL kullanımı için **initialize eder**, yani kullanılabilir duruma getirir. İstenirse EGL implementation sürümünü `major` ve `minor` output parametreleri üzerinden döndürür.
+
+Buradaki **initialize etmek**, fiziksel ekranı, GPU'yu, Wayland'ı veya işletim sistemini başlatmak anlamına gelmez. Daha doğru anlamıyla, ilgili `EGLDisplay` için EGL tarafındaki gerekli çalışma durumunun hazırlanması ve display'in sonraki EGL işlemlerinde kullanılabilir hale getirilmesidir.
 
 Kısa özet:
 
-- `dpy`: initialize edilecek EGL display.
-- `major`: major sürüm output pointer'ı.
-- `minor`: minor sürüm output pointer'ı.
-- Başarılı çağrı: `EGL_TRUE`
-- Başarısız çağrı: `EGL_FALSE`
-- Geçersiz display için hata kodu: `EGL_BAD_DISPLAY`
+* `dpy`: initialize edilecek EGL display.
+* `major`: major EGL sürümünün yazılacağı output pointer.
+* `minor`: minor EGL sürümünün yazılacağı output pointer.
+* Başarılı çağrı: `EGL_TRUE`
+* Başarısız çağrı: `EGL_FALSE`
+* Geçersiz display için hata kodu: `EGL_BAD_DISPLAY`
+
+![1788247727258](../eglFunctions/image/eglInitialize/1788247727258.jpg)
 
 ## Kavramsal Akış
 
@@ -305,10 +309,43 @@ EGLDisplay
     v
 eglInitialize
     |
-    +-- EGL bağlantısı initialize edilir
+    +-- EGL display kullanıma hazırlanır
+    |
+    +-- Gerekli internal EGL durumu oluşturulur/hazırlanır
     |
     +-- major/minor istenirse sürüm bilgisi alınır
 ```
+
+`eglGetDisplay`, bir native display ile ilişkili `EGLDisplay` handle'ını elde eder. Ancak bu handle'ın elde edilmiş olması, display'in EGL işlemleri için tamamen hazır olduğu anlamına gelmez.
+
+`eglInitialize`, bu display'i EGL tarafında kullanılabilir duruma getirir.
+
+Bu işlem sırasında EGL implementation'ı, kendi iç yapısında ilgili display için gerekli olan **internal state**'i hazırlar. Bu internal durum uygulamaya doğrudan gösterilmez ve implementation detayına bağlıdır.
+
+Kavramsal olarak initialization sırasında EGL implementation'ı örneğin:
+
+* platform ve driver tarafıyla ilgili EGL durumunu kurabilir,
+* bu display üzerinde kullanılabilecek EGL özelliklerini hazırlayabilir,
+* display'e ait gerekli internal kaynakları ve bilgileri düzenleyebilir,
+* kullanılacak EGL implementation sürümünü belirleyebilir.
+
+Bu işlemlerin tam olarak nasıl gerçekleştirildiği EGL implementation'ına bağlıdır. Uygulama bu iç işlemleri doğrudan görmez; yalnızca `eglInitialize` çağrısının başarılı veya başarısız olduğunu gözlemler.
+
+Initialization işlemini kavramsal olarak bir otel örneğiyle düşünmek mümkündür:
+
+```text
+eglGetDisplay
+→ Otelin belirli bir odasına ait anahtarı almak
+
+eglInitialize
+→ Anahtarın temsil ettiği odanın kullanım için hazırlanması
+```
+
+Bu benzetmede `EGLDisplay` anahtar gibi düşünülebilir. Anahtarın elde edilmiş olması odanın kullanıma hazır olduğu anlamına gelmez. `eglInitialize`, ilgili display'in EGL işlemleri için hazırlanmasına karşılık gelir.
+
+Bu yalnızca kavramsal bir benzetmedir; EGL içinde gerçek anlamda bir “oda” veya “anahtar” yapısı bulunmaz.
+
+![1788247984937](../eglFunctions/image/eglInitialize/1788247984937.jpg)
 
 ## Parametreler
 
@@ -316,10 +353,10 @@ eglInitialize
 
 `dpy`, initialize edilecek geçerli bir `EGLDisplay` olmalıdır.
 
-| `dpy`                                   | Sonuç                                                           |
-| ----------------------------------------- | ---------------------------------------------------------------- |
-| Geçerli, başlatılmamış`EGLDisplay` | Başlatma işlemi yapılabilir.                                  |
-| `EGL_NO_DISPLAY`                        | `EGL_FALSE` döner ve `EGL_BAD_DISPLAY` hata durumu oluşur. |
+| `dpy`                                       | Sonuç                                                           |
+| --------------------------------------------- | ---------------------------------------------------------------- |
+| Geçerli, initialize edilmemiş`EGLDisplay` | Initialization işlemi yapılabilir.                             |
+| `EGL_NO_DISPLAY`                            | `EGL_FALSE` döner ve `EGL_BAD_DISPLAY` hata durumu oluşur. |
 
 Normal akış:
 
@@ -327,6 +364,26 @@ Normal akış:
 EGLDisplay dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 eglInitialize(dpy, &major, &minor);
 ```
+
+Burada iki işlem birbirinden ayrıdır:
+
+```text
+eglGetDisplay
+    |
+    v
+EGLDisplay handle elde edilir
+    |
+    v
+eglInitialize
+    |
+    v
+EGLDisplay, EGL işlemleri için kullanılabilir hale gelir
+```
+
+Başka bir ifadeyle:
+
+* `eglGetDisplay`, EGL display handle'ını elde eder.
+* `eglInitialize`, bu handle'ın temsil ettiği display için EGL tarafındaki çalışma durumunu hazırlar.
 
 `eglGetDisplay` için ilgili bölüme bakınız.
 
@@ -350,6 +407,34 @@ EGLint minor = -1;
 eglInitialize(dpy, &major, &minor);
 ```
 
+`major` ve `minor`, EGL implementation'ının sunduğu EGL sürümünü ifade eder.
+
+Örneğin:
+
+```text
+major = 1
+minor = 5
+```
+
+sonucu:
+
+```text
+EGL 1.5
+```
+
+anlamına gelir.
+
+Bu değer:
+
+* işletim sistemi sürümü değildir,
+* Wayland sürümü değildir,
+* GPU sürümü değildir,
+* OpenGL ES sürümü değildir.
+
+Burada belirtilen sürüm, kullanılan EGL implementation'ının sunduğu EGL sürümüdür.
+
+Initialization işleminin temel amacı yalnızca sürüm bilgisini öğrenmek değildir. Sürüm bilgisi, initialization sırasında istenirse uygulamaya verilen ek bir output'tur.
+
 ## `NULL` Kullanımı
 
 Sürüm numarası bilgisine ihtiyaç duyulmuyorsa output pointer'ları `NULL` olarak verilebilir:
@@ -361,13 +446,23 @@ eglInitialize(dpy, &major, NULL);
 eglInitialize(dpy, NULL, NULL);
 ```
 
+Örneğin:
+
+```c
+eglInitialize(dpy, NULL, NULL);
+```
+
+çağrısında `major` ve `minor` sürüm bilgileri alınmaz; ancak display yine EGL kullanımı için initialize edilir.
+
+Bu durum, `eglInitialize` fonksiyonunun temel görevinin sürüm bilgisini döndürmek değil, `EGLDisplay`'i EGL işlemleri için kullanılabilir hale getirmek olduğunu gösterir.
+
 ## Hata Matrisi
 
-| Durum                                        | Sonuç                                                          |
-| -------------------------------------------- | --------------------------------------------------------------- |
-| Geçerli display, iki output pointer         | `EGL_TRUE`; sürüm bilgisi output parametrelerine yazılır. |
-| Geçerli display, iki output pointer`NULL` | `EGL_TRUE`; sürüm bilgisi alınmadan display başlatılır. |
-| `dpy == EGL_NO_DISPLAY`                    | `EGL_FALSE`, `EGL_BAD_DISPLAY`                              |
+| Durum                                        | Sonuç                                                              |
+| -------------------------------------------- | ------------------------------------------------------------------- |
+| Geçerli display, iki output pointer         | `EGL_TRUE`; sürüm bilgisi output parametrelerine yazılır.     |
+| Geçerli display, iki output pointer`NULL` | `EGL_TRUE`; sürüm bilgisi alınmadan display initialize edilir. |
+| `dpy == EGL_NO_DISPLAY`                    | `EGL_FALSE`, `EGL_BAD_DISPLAY`                                  |
 
 ## Temel Kullanım
 
@@ -389,14 +484,35 @@ if (!eglInitialize(dpy, &major, &minor)) {
 printf("EGL version: %d.%d\n", major, minor);
 ```
 
+Başarılı bir `eglInitialize` çağrısından sonra display, sonraki display-bağımlı EGL işlemlerinde kullanılabilecek duruma gelir.
+
+Örneğin tipik akışta daha sonra:
+
+```text
+eglChooseConfig
+EGLSurface işlemleri
+EGLContext işlemleri
+```
+
+gibi aşamalara geçilebilir.
+
+`eglInitialize` bu nesneleri doğrudan oluşturmaz. Yalnızca bunlarla ilgili sonraki EGL işlemlerinin üzerinde çalışacağı display seviyesindeki EGL durumunu hazırlar.
+
 ## Bölüm Özeti
 
-- `eglInitialize`, `EGLDisplay` bağlantısını EGL kullanımı için initialize eder.
-- `dpy`, geçerli bir `EGLDisplay` olmalıdır.
-- `major` ve `minor`, sürüm bilgisini almak için kullanılan output pointer'larıdır.
-- `major` ve `minor`, istenirse `NULL` verilerek sürüm bilgisi alınmadan başlatma yapılabilir.
-- `EGL_NO_DISPLAY` kullanımı `EGL_FALSE` ve `EGL_BAD_DISPLAY` üretti.
-- Driver warning mesajları ile EGL API hata sonucu aynı şey değildir.
+* `eglInitialize`, geçerli bir `EGLDisplay`'i EGL kullanımı için initialize eder.
+* Initialize etmek, display'i EGL işlemleri için kullanılabilir duruma getirmek anlamına gelir.
+* Bu işlem fiziksel ekranı, GPU'yu, Wayland'ı veya işletim sistemini başlatmaz.
+* EGL implementation'ı ilgili display için gerekli internal EGL durumunu hazırlar.
+* Platform/driver ile ilişkili EGL durumu, gerekli internal bilgiler ve display seviyesindeki kaynaklar implementation tarafından hazırlanabilir.
+* Bu işlemlerin tam olarak nasıl gerçekleştirildiği implementation detayına bağlıdır.
+* `dpy`, geçerli bir `EGLDisplay` olmalıdır.
+* `major` ve `minor`, EGL implementation sürümünü almak için kullanılan output pointer'larıdır.
+* `major` ve `minor`, istenirse `NULL` verilebilir.
+* Sürüm bilgisi alınmasa bile initialization işlemi gerçekleştirilebilir.
+* `eglGetDisplay` handle'ı elde eder; `eglInitialize` bu handle'ın temsil ettiği display'i EGL işlemleri için hazırlar.
+* `EGL_NO_DISPLAY` kullanımı `EGL_FALSE` ve `EGL_BAD_DISPLAY` hata durumu oluşturur.
+* Driver warning mesajları ile EGL API hata sonucu aynı şey değildir.
 
 ---
 
@@ -455,7 +571,7 @@ Bir EGL uygulamasında context ve surface oluşturmak için uygun bir `EGLConfig
 * Pencere yüzeyi (`EGL_WINDOW_BIT`) desteklenmediği için surface oluşturulamayabilir.
 * OpenGL ES 2.0 desteği (`EGL_OPENGL_ES2_BIT`) olmayan config seçilebilir.
 * Depth buffer olmayan config ile 3B çizimde derinlik testi beklenen sonucu vermez.
-* Küçük `config_size` yüzünden uygun config havuzun dışında kalabilir.
+* Küçük `config_size` yüzünden ihtiyaç duyulan özelliklere sahip config kopyalanmayan bölümde kalabilir.
 
 Bu yüzden pratikte en güvenli yöntem iki adımlı sorgudur: önce toplam sayıyı öğren, sonra o sayı kadar bellek ayırıp tüm listeyi oku.
 
@@ -463,7 +579,7 @@ Bu yüzden pratikte en güvenli yöntem iki adımlı sorgudur: önce toplam say�
 
 ## Parametre Senaryoları
 
-Aşağıdaki senaryolar repodaki C dosyalarıyla bire bir ilişkilidir. Çizim üreten örneklerde görsel sonuç, seçilen config ile surface/context kurulabildiğini gösterir. Çizim üretmeyen örneklerde ise doğru kanıt terminal çıktısıdır; çünkü amaç, hatalı veya bilinçli eksik parametre durumunda çizime geçilmemesi gerektiğini göstermektir.
+Aşağıdaki senaryolar repodaki C dosyalarıyla bire bir ilişkilidir. Görsellerin amacı üçgen veya ekran rengi göstermek değil, `eglGetConfigs` çağrısında parametrelerin ve bellekteki çıktı alanlarının nasıl değiştiğini göstermektir.
 
 ### 1. `dpy` Parametresi
 
@@ -471,27 +587,27 @@ Aşağıdaki senaryolar repodaki C dosyalarıyla bire bir ilişkilidir. Çizim �
 
 Kaynak dosya: `pDpyID_farki/senaryo_A_gecerli_display.c`
 
-Native display açılır, bunun üzerinden `EGLDisplay` alınır ve `eglInitialize` başarılı olduktan sonra `eglGetConfigs` çağrılır. `dpy` geçerli olduğu için fonksiyon `EGL_TRUE` döner ve bulunan config sayısını `num_config` içine yazar. Kod daha sonra uygun bir config seçip yeşil zemin üzerinde beyaz üçgen çizer.
+Native display açılır, bunun üzerinden `EGLDisplay` alınır ve `eglInitialize` başarılı olduktan sonra `eglGetConfigs` çağrılır. `dpy` geçerli olduğu için fonksiyon `EGL_TRUE` döner, `configs[]` dizisine config handle'ları yazar ve bulunan/kopyalanan config sayısını `num_config` içine yazar.
 
 ![Geçerli display ile başarılı akış](../eglFunctions/image/eglGetConfigs/dpy_gecerli_display.svg)
 
 ```text
 BASARILI: Gecerli EGLDisplay ile eglGetConfigs <N> config dondurdu.
-GORSEL SONUC: Secilen uygun config ile yesil zemin uzerine beyaz ucgen cizildi.
+GORSEL SONUC: configs[] dizisine EGLConfig handle'lari yazildi ve num_config = <N> oldu.
 ```
 
 #### Senaryo B: Geçersiz `EGLDisplay`
 
 Kaynak dosya: `pDpyID_farki/senaryo_B_gecersiz_display.c`
 
-Bu senaryoda `dpy` olarak `EGL_NO_DISPLAY` verilir. Geçerli display olmadığı için `eglGetConfigs` başarısız olur ve beklenen hata `EGL_BAD_DISPLAY` değeridir. Surface veya context kurulmadığı için çizim yapılmaz.
+Bu senaryoda `dpy` olarak `EGL_NO_DISPLAY` verilir. Geçerli display olmadığı için `eglGetConfigs` başarısız olur ve beklenen hata `EGL_BAD_DISPLAY` değeridir.
 
 ![Terminal kanıtı akışı](../eglFunctions/image/eglGetConfigs/terminal_kanit_akisi.svg)
 
 ```text
 BEKLENEN HATA: EGL_NO_DISPLAY ile eglGetConfigs basarisiz oldu.
 EGL hata kodu: EGL_BAD_DISPLAY (0x3008)
-GORSEL SONUC: Config alinmadigi icin context/surface olusturulmaz ve cizim yapilmaz.
+GORSEL SONUC: Gecersiz dpy nedeniyle configs[] ve num_config basarili cikti olarak kullanilmaz.
 ```
 
 ### 2. `configs` Parametresi
@@ -500,25 +616,25 @@ GORSEL SONUC: Config alinmadigi icin context/surface olusturulmaz ve cizim yapil
 
 Kaynak dosya: `pConfigs_farki/senaryo_A_sadece_sayim.c`
 
-Bu kullanım iki adımlı sorgunun ilk adımıdır. `configs` parametresi `NULL`, `config_size` ise `0` verilir. EGL config listesini kopyalamaz; yalnızca toplam config sayısını `num_config` adresine yazar. Bu senaryoda çizim yapılmaması doğrudur, çünkü elde henüz kullanılacak config handle'ı yoktur.
+Bu kullanım iki adımlı sorgunun ilk adımıdır. `configs` parametresi `NULL`, `config_size` ise `0` verilir. EGL config listesini kopyalamaz; yalnızca toplam config sayısını `num_config` adresine yazar.
 
 ```text
 BASARILI: pConfigs=NULL ve config_size=0 ile sadece config sayisi sorgulandi.
 Sistemde <N> adet EGLConfig var.
-GORSEL SONUC: Bu senaryo bilerek cizim yapmaz; elde config handle olmadigi icin surface/context kurulmaz.
+GORSEL SONUC: configs[] alanina handle yazilmaz; sadece num_config adresindeki sayi guncellenir.
 ```
 
 #### Senaryo B: Geçerli `configs` Dizisine Veri Okuma
 
 Kaynak dosya: `pConfigs_farki/senaryo_B_veri_okuma.c`
 
-Bu senaryoda `configs` geçerli bir dizi olarak verilir ve `config_size` dizinin kapasitesini belirtir. Başarılı çağrıdan sonra EGL, en fazla `config_size` kadar `EGLConfig` handle'ını diziye yazar. Kod bu config'ler arasından pencere yüzeyi ve OpenGL ES 2.0 destekleyen bir seçim yaparak lacivert zemin üzerinde sarı üçgen çizer.
+Bu senaryoda `configs` geçerli bir dizi olarak verilir ve `config_size` dizinin kapasitesini belirtir. Başarılı çağrıdan sonra EGL, en fazla `config_size` kadar `EGLConfig` handle'ını diziye yazar ve yazılan handle sayısını `num_config` içine döndürür.
 
 ![Geçerli configs dizisine veri okuma](../eglFunctions/image/eglGetConfigs/pconfigs_veri_okuma.svg)
 
 ```text
 BASARILI: pConfigs gecerli dizi oldugu icin <N> config bellege kopyalandi.
-GORSEL SONUC: Okunan configlerden uygun olanla lacivert zemin uzerine sari ucgen cizildi.
+GORSEL SONUC: EGLConfig havuzundan configs[] dizisine handle kopyalama akisi gosterildi.
 ```
 
 ### 3. `config_size` Parametresi
@@ -527,27 +643,27 @@ GORSEL SONUC: Okunan configlerden uygun olanla lacivert zemin uzerine sari ucgen
 
 Kaynak dosya: `ConfigSize_farki/senaryo_A_yetersiz_kapasite.c`
 
-Önce sistemdeki gerçek config sayısı öğrenilir, ardından özellikle küçük bir kapasiteyle (`config_size = 2`) okuma yapılır. EGL bunu hata saymaz; yalnızca ilk iki config'i kopyalar. Risk şudur: ihtiyaç duyulan özelliklere sahip config, okunmayan kısımda kalabilir.
+Önce sistemdeki gerçek config sayısı öğrenilir, ardından özellikle küçük bir kapasiteyle (`config_size = 2`) okuma yapılır. EGL bunu hata saymaz; yalnızca dizinin alabileceği kadar config'i kopyalar. Risk şudur: ihtiyaç duyacağımız özelliklere sahip config, kopyalanmayan bölümde kalabilir.
 
 ![Yetersiz config_size etkisi](../eglFunctions/image/eglGetConfigs/configsize_yetersiz.svg)
 
 ```text
 Sistemde toplam <T> config var, fakat ConfigSize=2 oldugu icin sadece <N> tanesi okundu.
-UYARI: Ilk 2 config icinde derinlik tamponu bulunamadi; 3B derinlik testi guvenilir degil.
-GORSEL SONUC: Sadece sinirli havuz kullanildigi icin dogru config secimi garanti edilmez.
+UYARI: Ihtiyac duyulan ozelliklere sahip config kopyalanmayan bolumde kalabilir.
+GORSEL SONUC: config_size siniri nedeniyle yalnizca ilk <N> handle configs[] dizisine yazildi.
 ```
 
 #### Senaryo B: Yeterli Kapasite
 
 Kaynak dosya: `ConfigSize_farki/senaryo_B_yeterli_kapasite.c`
 
-Bu senaryoda önce toplam config sayısı alınır, sonra tam bu sayı kadar bellek ayrılır. Böylece tüm config havuzu okunur ve depth buffer destekleyen uygun config güvenli şekilde seçilebilir. 3B çizimde yeşil üçgenin kırmızı üçgenin önünde görünmesi depth buffer kullanımını somutlaştırır.
+Bu senaryoda önce toplam config sayısı alınır, sonra tam bu sayı kadar bellek ayrılır. Böylece tüm config havuzu `configs[]` dizisine alınır ve `num_config` değeri toplam config sayısıyla eşleşir.
 
 ![Yeterli config_size ile tam okuma](../eglFunctions/image/eglGetConfigs/configsize_yeterli.svg)
 
 ```text
-BASARILI: Yeterli kapasite ile <N>/<T> config okundu ve derinlikli uygun config secildi.
-GORSEL SONUC: Depth buffer aktif; yesil ucgen onde, kirmizi ucgen arkada kalir.
+BASARILI: Yeterli kapasite ile <N>/<T> config okundu.
+GORSEL SONUC: Toplam config havuzunun tamami configs[] dizisine yazildi.
 ```
 
 ### 4. `num_config` Parametresi
@@ -556,13 +672,13 @@ GORSEL SONUC: Depth buffer aktif; yesil ucgen onde, kirmizi ucgen arkada kalir.
 
 Kaynak dosya: `pNumConfig_farki/senaryo_A_gecerli_isaretci.c`
 
-`num_config` geçerli bir `EGLint*` adresidir. `eglGetConfigs`, kaç config kopyaladığını bu adrese yazar. Kod daha sonra uygun config ile surface/context oluşturup mor zemin üzerinde camgöbeği üçgen çizer.
+`num_config` geçerli bir `EGLint*` adresidir. `eglGetConfigs`, kaç config bulduğunu veya kaç config kopyaladığını bu adrese yazar.
 
 ![Geçerli num_config işaretçisi](../eglFunctions/image/eglGetConfigs/pnumconfig_gecerli.svg)
 
 ```text
 BASARILI: pNumConfig gecerli isaretci oldugu icin EGL yazdigi config sayisini bildirdi: <N>
-GORSEL SONUC: Uygun config ile mor zemin uzerine camgobegi ucgen cizildi.
+GORSEL SONUC: &num_config adresindeki EGLint degeri <N> olarak guncellendi.
 ```
 
 #### Senaryo B: `num_config = NULL`
@@ -576,7 +692,7 @@ BEKLENEN HATA: pNumConfig=NULL EGL 1.0 icin gecersiz parametredir.
 GUVENLI TEST: Bu ornek kasitli olarak eglGetConfigs(..., NULL) cagirmiyor.
 NEDEN: Bazi EGL suruculeri gecersiz output pointer'i icin EGL_FALSE yerine process crash uretebilir.
 DOGRU DAVRANIS: Uretim kodu pNumConfig NULL ise EGL cagrisindan once reddetmelidir.
-GORSEL SONUC: Config sayisi guvenli sekilde alinamadigi icin cizim kurulmaz.
+GORSEL SONUC: Yazilacak num_config adresi olmadigi icin hata akisi gosterilir.
 ```
 
 ### 5. Profesyonel İki Adımlı Sorgu
@@ -590,13 +706,13 @@ Bu senaryo gerçek uygulamalarda önerilen akışı gösterir:
 3. İkinci çağrıda tüm config listesi alınır.
 4. Tüm havuz içinden ihtiyaçlara uygun config seçilir.
 
-Bu yöntem hem bellek taşmasını önler hem de eksik havuz üzerinden yanlış config seçme riskini azaltır.
+Bu yöntem hem bellek taşmasını önler hem de config havuzunun eksik okunması riskini azaltır.
 
 ```text
 Adim 1: Sistemde <T> adet EGLConfig oldugu tespit edildi.
 Adim 2: <N> adet EGLConfig bellege alindi.
-BASARILI: 2 adimli eglGetConfigs akisi ile tam config havuzu okunup uygun config secildi.
-GORSEL SONUC: Depth buffer aktif; yesil ucgen kirmizi ucgenin onunde gorunur.
+BASARILI: 2 adimli eglGetConfigs akisi ile tam config havuzu bellege alindi.
+GORSEL SONUC: Once toplam sayi, sonra tam kapasitede configs[] dizisi elde edilir.
 ```
 
 ## Güvenli Kullanım Örneği
@@ -665,17 +781,21 @@ EGLBoolean eglChooseConfig(EGLDisplay dpy,
                            EGLint *num_config);
 ```
 
-`eglChooseConfig`, bir `EGLDisplay` üzerinde bulunan EGL configuration'ları uygulamanın verdiği attribute kriterlerine göre filtreleyip sıralamak için kullanılır.
+`eglChooseConfig`, bir `EGLDisplay` üzerinde bulunan EGL configuration'larını uygulamanın verdiği **attribute kriterlerine göre filtrelemek ve uygun olanları seçmek** için kullanılır.
+
+Başka bir ifadeyle, EGL implementation'ının sunduğu farklı configuration seçenekleri arasından uygulamanın istediği özelliklere uygun olan `EGLConfig` handle'larını bulur.
 
 Kısa özet:
 
-- `dpy`: config'lerin aranacağı initialized display.
-- `attrib_list`: attribute/value çiftleri.
-- `configs`: eşleşen `EGLConfig` handle'larının yazılacağı buffer.
-- `config_size`: output buffer kapasitesi.
-- `num_config`: döndürülen config sayısının yazıldığı output pointer.
-- Uygun config bulunmaması API hatası olmak zorunda değildir.
-- `EGL_TRUE` + `num_config = 0` geçerli bir sonuçtur.
+* `dpy`: config'lerin aranacağı initialized display.
+* `attrib_list`: attribute/value çiftlerinden oluşan seçim kriterleri.
+* `configs`: eşleşen `EGLConfig` handle'larının yazılacağı output buffer.
+* `config_size`: output buffer'ın kapasitesi.
+* `num_config`: döndürülen config sayısının yazıldığı output pointer.
+* Uygun config bulunmaması API hatası olmak zorunda değildir.
+* `EGL_TRUE` + `num_config = 0` geçerli bir sonuçtur.
+
+![1788249036916](../eglFunctions/image/eglChooseConfig/1788249036916.jpg)
 
 ## Kavramsal Akış
 
@@ -685,6 +805,7 @@ EGLDisplay
     +-- Config #1
     +-- Config #2
     +-- Config #3
+    +-- Config #4
     +-- ...
             |
             v
@@ -694,8 +815,66 @@ EGLDisplay
       eglChooseConfig
             |
             v
-      Eşleşen EGLConfig'ler
+     Eşleşen EGLConfig'ler
 ```
+
+### Configuration / Config Nedir?
+
+Bir **configuration**, EGL'nin rendering için sunduğu belirli bir özellikler kümesidir.
+
+Her config; renk bileşenleri, depth buffer, stencil buffer ve benzeri özellikler açısından farklı değerlere sahip olabilir.
+
+Bir configin örnek iç yapısı:
+
+![1788249068571](../eglFunctions/image/eglChooseConfig/1788249068571.jpg)
+
+Örneğin kavramsal olarak:
+
+```text
+Config A
+-------
+Red      = 8 bit
+Green    = 8 bit
+Blue     = 8 bit
+Alpha    = 8 bit
+Depth    = 24 bit
+Stencil  = 8 bit
+```
+
+başka bir configuration:
+
+```text
+Config B
+-------
+Red      = 5 bit
+Green    = 6 bit
+Blue     = 5 bit
+Alpha    = 0 bit
+Depth    = 16 bit
+Stencil  = 0 bit
+```
+
+şeklinde olabilir.
+
+Dolayısıyla bir `EGLDisplay` üzerinde birden fazla configuration bulunabilir:
+
+```text
+EGLDisplay
+   |
+   +-- Config A → RGBA8888, Depth 24, Stencil 8
+   |
+   +-- Config B → RGB565, Depth 16, Stencil 0
+   |
+   +-- Config C → RGBA8888, Depth 16, Stencil 0
+   |
+   +-- ...
+```
+
+Uygulama bu config'lerin iç yapısına doğrudan erişmez. EGL, her configuration'ı bir `EGLConfig` handle'ı ile temsil eder.
+
+`eglChooseConfig`'in görevi de bu seçenekleri uygulamanın kriterlerine göre filtreleyerek uygun `EGLConfig` handle'larını döndürmektir.
+
+> **Not:** Burada geçen rendering surface, OpenGL ES gibi bir rendering API'nin piksellerini yazdığı hedef yüzeydir. Bu yüzey bir pencereye bağlı olabilir veya Pbuffer gibi ekranda görünmeyen off-screen bir yüzey olabilir. `EGLConfig`, surface'in kendisi değildir; surface'in hangi özelliklerle oluşturulabileceğini belirleyen configuration seçeneğidir.
 
 ## Parametreler
 
@@ -734,9 +913,43 @@ EGL_BLUE_SIZE       8
 EGL_NONE            -
 ```
 
+Burada **attribute**, bir configuration'ın tek bir özelliğini ifade eder.
+
+Örneğin:
+
+```text
+EGL_RED_SIZE
+```
+
+config'in red component'iyle ilgili özelliğini belirtir.
+
+```text
+EGL_DEPTH_SIZE
+```
+
+depth buffer boyutunu ifade eder.
+
+Attribute'ların tam anlamı, değerlerinin nasıl okunacağı ve config'in gerçek attribute değerlerinin nasıl sorgulanacağı `eglGetConfigAttrib` bölümünde daha ayrıntılı olarak açıklanmıştır.
+
+`eglChooseConfig` açısından attribute/value çiftleri birer **seçim kriteri** oluşturur.
+
+Örneğin:
+
+```c
+EGL_RED_SIZE, 8
+```
+
+şu şekilde düşünülebilir:
+
+```text
+Attribute = EGL_RED_SIZE
+Value     = 8
+Kriter    = Red component için en az 8 bit
+```
+
 #### `EGL_NONE`
 
-Listenin sonunu belirtir:
+Attribute listesinin sonunu belirtir:
 
 ```c
 const EGLint attrs[] = {
@@ -757,35 +970,135 @@ eglChooseConfig(dpy, NULL, NULL, 0, &num_config);
 
 `configs`, eşleşen `EGLConfig` handle'larının yazılacağı output buffer'dır.
 
+Örneğin:
+
 ```c
 EGLConfig configs[5];
 ```
 
-Yalnızca toplam eşleşme sayısını öğrenmek için `NULL` kullanılabilir:
+ifadesi, bellekte en fazla 5 adet `EGLConfig` handle'ı saklayabilecek bir alan oluşturur.
+
+Başlangıçta kavramsal olarak:
+
+```text
+configs[0] = ?
+configs[1] = ?
+configs[2] = ?
+configs[3] = ?
+configs[4] = ?
+```
+
+şeklindedir.
+
+Daha sonra:
+
+```c
+eglChooseConfig(
+    dpy,
+    attrs,
+    configs,
+    5,
+    &num_config
+);
+```
+
+çağrısı sonucunda uygun config handle'ları bu buffer'a yazılır.
+
+Örneğin üç config döndürülmüşse:
+
+```text
+configs[0] = EGLConfig A
+configs[1] = EGLConfig C
+configs[2] = EGLConfig F
+
+num_config = 3
+```
+
+şeklinde düşünülebilir.
+
+Buradaki `configs` dizisinin içine config'in tüm özellikleri kopyalanmaz. Diziye yazılan değerler, EGL içerisindeki configuration nesnelerini temsil eden `EGLConfig` handle'larıdır.
+
+Yalnızca toplam eşleşme sayısını öğrenmek için `configs = NULL` kullanılabilir:
 
 ```c
 eglChooseConfig(dpy, attrs, NULL, 0, &count);
 ```
 
+Bu durumda EGLConfig handle'ları uygulamaya yazılmaz; yalnızca uygun config sayısı `count` içerisine yazılır.
+
 ### `config_size`
 
 `config_size`, `configs` buffer'ının kapasitesidir.
 
+Örneğin:
+
 ```c
 EGLConfig configs[5];
-eglChooseConfig(dpy, attrs, configs, 5, &num_config);
+
+eglChooseConfig(
+    dpy,
+    attrs,
+    configs,
+    5,
+    &num_config
+);
 ```
 
-`config_size = 5`, “5 config bul” değil, “output buffer en fazla 5 config alabilir” anlamına gelir.
+Buradaki:
+
+```text
+config_size = 5
+```
+
+“5 config bul” anlamına gelmez.
+
+Anlamı:
+
+```text
+configs buffer'ı en fazla 5 EGLConfig handle'ı alabilir.
+```
+
+şeklindedir.
+
+Sistemde kriterlere uyan daha fazla config bulunabilir; ancak output buffer yalnızca verilen kapasite kadar sonuç alabilir.
 
 ### `num_config`
 
 `num_config`, döndürülen config sayısının yazıldığı `EGLint *` output parametresidir.
 
+Örneğin:
+
 ```c
 EGLint num_config = -1;
-eglChooseConfig(dpy, attrs, configs, 5, &num_config);
+
+eglChooseConfig(
+    dpy,
+    attrs,
+    configs,
+    5,
+    &num_config
+);
 ```
+
+çağrısı sonunda:
+
+```text
+num_config = 3
+```
+
+olmuşsa, `configs` buffer'ına üç adet uygun `EGLConfig` handle'ı yazılmıştır.
+
+Kavramsal olarak:
+
+```text
+configs[0] → 1. uygun config
+configs[1] → 2. uygun config
+configs[2] → 3. uygun config
+
+num_config → 3
+```
+
+şeklinde düşünülebilir.
 
 `num_config` geçerli bir output pointer olmalıdır. `NULL` verilmesi `EGL_BAD_PARAMETER` hata durumuna neden olur.
 
@@ -805,7 +1118,108 @@ Yaygın EGL 1.0 seçim attribute'ları aşağıda verilmiştir:
 | `EGL_NONE`         | Attribute listesinin sonu                         |
 | `EGL_DONT_CARE`    | Uygun attribute'larda bu kriteri önemseme        |
 
-> Seçilen config'in gerçek attribute değerlerini okumak için `eglGetConfigAttrib` kullanılır. Ayrıntılar için `eglGetConfigAttrib` bölümüne bakınız.
+![1788249087844](../eglFunctions/image/eglChooseConfig/1788249087844.jpg)
+
+### RGBA Component'leri
+
+RGBA, bir pikselin renk ve alpha bilgisini oluşturan dört temel component'i ifade eder:
+
+```text
+R = Red
+G = Green
+B = Blue
+A = Alpha
+```
+
+Örneğin:
+
+```text
+RGBA8888
+```
+
+şu anlama gelir:
+
+```text
+Red   = 8 bit
+Green = 8 bit
+Blue  = 8 bit
+Alpha = 8 bit
+```
+
+8 bitlik bir component:
+
+```text
+2^8 = 256
+```
+
+farklı değer temsil edebilir.
+
+Bu nedenle bit sayısı, ilgili component'in ne kadar hassas temsil edilebildiğini ifade eder.
+
+Örneğin:
+
+```c
+EGL_RED_SIZE, 8
+EGL_GREEN_SIZE, 8
+EGL_BLUE_SIZE, 8
+EGL_ALPHA_SIZE, 8
+```
+
+kriterleri en az RGBA8888 özelliklerini sağlayan config'leri istemek için kullanılabilir.
+
+### Depth Buffer
+
+Depth buffer, 3D sahnede hangi fragment veya nesnenin diğerinin önünde olduğunu belirlemek için kullanılan derinlik bilgisini saklar.
+
+Örneğin iki üçgen ekranda aynı piksele denk geliyorsa, depth değerleri karşılaştırılarak hangisinin kameraya daha yakın olduğu belirlenebilir.
+
+```text
+Kamera
+  |
+  |   Nesne A
+  |        |
+  |        |       Nesne B
+  |        |           |
+```
+
+`EGL_DEPTH_SIZE` depth buffer'ın bit sayısı için minimum kriter belirtir.
+
+Örneğin:
+
+```c
+EGL_DEPTH_SIZE, 24
+```
+
+en az 24 bit depth buffer desteği sağlayan config'leri istemek için kullanılabilir.
+
+16, 24 veya 32 bit gibi depth seçenekleri, depth bilgisinin temsil edilme hassasiyetini etkiler. Daha ayrıntılı değerlendirme ilgili attribute açıklamasında ele alınır.
+
+### Stencil Buffer
+
+Stencil buffer, pikseller üzerinde ek kontrol veya maskeleme işlemleri yapılmasına yardımcı olan bir buffer'dır.
+
+Örneğin uygulama yalnızca belirli bir bölgeye rendering yapılmasını istiyorsa stencil değerleri kullanılabilir.
+
+Kavramsal olarak:
+
+```text
+Stencil = 1 → çizime izin ver
+Stencil = 0 → çizimi engelle
+```
+
+şeklinde düşünülebilir.
+
+Örneğin:
+
+```c
+EGL_STENCIL_SIZE, 8
+```
+
+en az 8 bit stencil buffer desteği isteyen bir kriterdir.
+
+Depth, stencil ve diğer configuration attribute'larının gerçek değerleri ve daha ayrıntılı anlamları `eglGetConfigAttrib` bölümünde ele alınmaktadır.
+
+> Seçilen config'in gerçek attribute değerlerini okumak için `eglGetConfigAttrib` kullanılır.
 
 ## Boyut Attribute'larının Değerlendirilmesi
 
@@ -827,6 +1241,24 @@ EGL_RED_SIZE >= 8
 
 şeklinde düşünmek daha doğrudur.
 
+Örneğin iki config olsun:
+
+```text
+Config A:
+Red = 8 bit
+
+Config B:
+Red = 10 bit
+```
+
+Uygulama:
+
+```c
+EGL_RED_SIZE, 8
+```
+
+kriterini verdiğinde her iki config de bu kriteri karşılayabilir.
+
 ## Hata Matrisi
 
 | Durum                                         | Sonuç                               |
@@ -837,6 +1269,19 @@ EGL_RED_SIZE >= 8
 | Tanınmayan attribute                         | `EGL_FALSE`, `EGL_BAD_ATTRIBUTE` |
 | Geçersiz attribute/value                     | `EGL_FALSE`, `EGL_BAD_ATTRIBUTE` |
 | `num_config == NULL`                        | `EGL_FALSE`, `EGL_BAD_PARAMETER` |
+
+Uygun configuration bulunamaması her zaman EGL API hatası anlamına gelmez.
+
+Örneğin çok yüksek veya desteklenmeyen kriterler verilmişse:
+
+```text
+eglChooseConfig → EGL_TRUE
+num_config      → 0
+```
+
+sonucu alınabilir.
+
+Bu durumda fonksiyon seçim işlemini başarıyla gerçekleştirmiştir; ancak verilen kriterlere uyan configuration bulunmamıştır.
 
 ## Temel Sayı Sorgulama
 
@@ -852,6 +1297,23 @@ if (!eglChooseConfig(
     EGLint err = eglGetError();
 }
 ```
+
+Bu kullanımda:
+
+```text
+configs = NULL
+config_size = 0
+```
+
+olduğu için config handle'ları alınmaz.
+
+Yalnızca:
+
+```text
+count
+```
+
+içerisine kaç uygun config bulunduğu yazılır.
 
 ## Temel Config Alma
 
@@ -869,34 +1331,76 @@ if (!eglChooseConfig(
 }
 ```
 
+Bu kullanımda EGL:
+
+1. `attrs` içerisindeki kriterleri değerlendirir.
+2. Uygun configuration'ları bulur.
+3. En fazla 5 adet `EGLConfig` handle'ını `configs` buffer'ına yazar.
+4. Döndürülen config sayısını `count` içerisine yazar.
+
 ## `eglGetConfigAttrib` ile İlişki
 
-`eglChooseConfig`, config seçer.
+`eglChooseConfig`, verilen kriterlere göre config'leri seçer.
 
-Seçilen config'in gerçek özelliklerini okumak için:
+Ancak bu fonksiyon seçilen config'in bütün gerçek özelliklerini doğrudan uygulamaya vermez.
+
+Seçilen bir `EGLConfig`'in gerçek attribute değerlerini okumak için:
 
 ```c
-eglGetConfigAttrib(dpy, config, EGL_RED_SIZE, &value);
+eglGetConfigAttrib(
+    dpy,
+    config,
+    EGL_RED_SIZE,
+    &value
+);
 ```
 
 kullanılır.
 
-`eglGetConfigAttrib` fonksiyonunun ayrıntıları için ilgili bölüme bakınız.
+Örneğin uygulama seçim sırasında:
+
+```c
+EGL_RED_SIZE, 8
+```
+
+kriteri vermiş olabilir.
+
+Ancak seçilen config'in gerçek değeri:
+
+```text
+8
+```
+
+veya minimum kriteri karşılayan daha büyük başka bir değer olabilir.
+
+Bu gerçek değer `eglGetConfigAttrib` ile sorgulanır.
+
+Attribute kavramı, RGBA component'leri, depth buffer, stencil buffer ve configuration özelliklerinin ayrıntılı açıklamaları `eglGetConfigAttrib` bölümünde ele alınmaktadır.
 
 ## Bölüm Özeti
 
-- `eglChooseConfig` beş parametre alır.
-- `attrib_list`, attribute/value çiftlerinden oluşur ve `EGL_NONE` ile biter.
-- Size attribute'ları minimum gereksinim gibi değerlendirilir.
-- `configs = NULL`, yalnızca eşleşme sayısını sorgulamak için kullanılabilir.
-- `config_size`, output buffer kapasitesidir.
-- `num_config`, döndürülen config sayısını verir.
-- `EGL_TRUE` dönüşü, tek başına eşleşen bir config bulunduğunu göstermez.
-- `EGL_TRUE` + `num_config = 0` geçerli bir sonuçtur.
-- `num_config = NULL`, `EGL_BAD_PARAMETER` hata durumuna neden olur.
-- Geçersiz display, `EGL_BAD_DISPLAY` hata durumuna neden olur.
-- Geçersiz attribute veya attribute/value kombinasyonu, `EGL_BAD_ATTRIBUTE` hata durumuna neden olur.
-- Config sayıları ve handle değerleri implementasyona bağlıdır.
+* `eglChooseConfig`, bir `EGLDisplay` üzerindeki configuration'ları uygulamanın verdiği attribute kriterlerine göre filtreler.
+* Configuration, rendering için kullanılabilecek özellikler kümesidir.
+* Bir display üzerinde farklı RGBA, depth, stencil ve diğer özelliklere sahip birden fazla configuration bulunabilir.
+* Her configuration EGL tarafında bir `EGLConfig` handle'ı ile temsil edilir.
+* `attrib_list`, attribute/value çiftlerinden oluşur ve `EGL_NONE` ile biter.
+* Attribute, configuration'ın tek bir özelliğini ifade eder.
+* Size attribute'ları minimum gereksinim gibi değerlendirilir.
+* RGBA bit sayıları renk ve alpha component'lerinin hassasiyetini belirtir.
+* Depth buffer, 3D derinlik karşılaştırmalarında kullanılır.
+* Stencil buffer, piksel bazlı maskeleme ve kontrol işlemlerinde kullanılabilir.
+* Rendering surface, çizimin gerçekleştirildiği hedef yüzeydir; `EGLConfig` surface'in kendisi değildir.
+* `configs`, eşleşen `EGLConfig` handle'larının yazıldığı output buffer'dır.
+* `config_size`, bu buffer'ın kapasitesidir.
+* `num_config`, döndürülen config sayısını verir.
+* `configs = NULL`, yalnızca eşleşme sayısını sorgulamak için kullanılabilir.
+* `EGL_TRUE` dönüşü tek başına config bulunduğu anlamına gelmez.
+* `EGL_TRUE` + `num_config = 0` geçerli bir sonuçtur.
+* Config'in gerçek attribute değerleri `eglGetConfigAttrib` ile sorgulanır.
+* `num_config = NULL`, `EGL_BAD_PARAMETER` hata durumuna neden olur.
+* Geçersiz display, `EGL_BAD_DISPLAY` hata durumuna neden olur.
+* Geçersiz attribute veya attribute/value kombinasyonu, `EGL_BAD_ATTRIBUTE` hata durumuna neden olur.
+* Config sayıları ve handle değerleri implementation'a bağlıdır.
 
 ---
 
@@ -2370,7 +2874,11 @@ Sonuç: `share_context = EGL_NO_CONTEXT` izolasyon sağlar. Geçerli bir context
 
 `attrib_list`, context oluşturulurken istenen ek özellikleri anahtar-değer çiftleriyle belirtir. Liste mutlaka `EGL_NONE` ile bitmelidir.
 
-![attrib_list parametresi senaryoları](../eglFunctions/image/eglCreateContext/attrib_list_senaryolari.svg)
+| `attrib_list` değeri | EGL 1.0 anlamı | Beklenen sonuç |
+|---|---|---|
+| `NULL` | Ek context attribute talebi yoktur. | Context oluşturma denenir. |
+| `{ EGL_NONE }` | Boş attribute listesi verilmiştir. | Context oluşturma denenir. |
+| Desteklenmeyen attribute/value | EGL 1.0 core tarafından tanınmayan attribute verilmiştir. | `EGL_BAD_ATTRIBUTE` beklenir. |
 
 ### Senaryo A: EGL 1.0 standart kullanım
 
@@ -2506,8 +3014,7 @@ Thread
 
 `eglMakeCurrent` bu dörtlüyü değiştirir. OpenGL ES komutları doğrudan `EGLContext` handle'ına parametre olarak verilmez; komutlar çağıran thread'in current context'i üzerinden çalışır.
 
-Context'i bir “OpenGL ES makinesinin durumu”, surface'i ise bu makinenin
-okuduğu/yazdığı pixel depoları gibi düşünmek yararlıdır:
+Context ve surface sorumlulukları aşağıdaki modelle ayrıştırılabilir:
 
 ```text
 EGLContext -> renk, depth test, blending, texture binding gibi GL state
@@ -2533,14 +3040,14 @@ bu surface buffer'larını paylaşırlar; her context'in GL state'i ise kendisin
 | Geçersiz display handle              | Başarısız. Genel EGL hata modeliyle`EGL_BAD_DISPLAY` beklenir.     |
 | Initialize edilmemiş display         | Başarısız. Genel EGL hata modeliyle`EGL_NOT_INITIALIZED` beklenir. |
 
-Pratik kural:
+Initialization gereksinimi:
 
 ```c
 EGLDisplay dpy = eglGetDisplay(native_display);
 eglInitialize(dpy, &major, &minor);
 ```
 
-`eglInitialize` başarılı olmadan `eglMakeCurrent` çağırma.
+`eglMakeCurrent`, `eglInitialize` başarıyla tamamlanmadan çağrılmamalıdır.
 
 ### `draw`
 
@@ -2591,7 +3098,7 @@ eglInitialize(dpy, &major, &minor);
 
 ## Geçerli Kombinasyonlar
 
-### 1. Normal bind
+### 1. Standart Binding
 
 ```c
 eglMakeCurrent(dpy, surface, surface, ctx);
@@ -2605,7 +3112,7 @@ Thread draw surface    = surface
 Thread read surface    = surface
 ```
 
-### 2. Ayrı draw/read surface
+### 2. Ayrı Draw/Read Surface Binding
 
 ```c
 eglMakeCurrent(dpy, draw_surface, read_surface, ctx);
@@ -2618,17 +3125,17 @@ Draw commands -> draw_surface
 Read commands -> read_surface
 ```
 
-Bu kullanım daha nadirdir ama EGL 1.0 tarafından desteklenir.
+Bu kullanım EGL 1.0 tarafından desteklenmekle birlikte standart binding'e göre daha sınırlı kullanım alanına sahiptir.
 
-### 3. Current context'i bırakma
+### 3. Current Context'i Serbest Bırakma
 
 ```c
 eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 ```
 
-Bu, EGL 1.0'da current context'i release etmenin doğru biçimidir.
+Bu çağrı, EGL 1.0'da current context'i serbest bırakmak için tanımlanan yöntemdir.
 
-## “Context ile surface uyumlu” ne demektir?
+## Context ve Surface Uyumluluğu
 
 EGL 1.0'da yalnızca handle'ların geçerli olması yetmez. Context ve surface:
 
@@ -2651,7 +3158,7 @@ oluşturulan nesneler uyumlu değildir.
 | RGBA8, D24, S8 | RGB565, D16, S0 | Aynı | `EGL_BAD_MATCH` |
 | RGBA8, D24, S8 | RGBA8, D24, S8 | Farklı | `EGL_BAD_MATCH` |
 
-## Ayrı draw/read surface için somut örnek
+## Ayrı Draw/Read Surface Kullanım Örneği
 
 İki surface de context ile uyumluysa çizim ve okuma hedefleri ayrılabilir:
 
@@ -2668,11 +3175,11 @@ glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 Bu çağrı pbuffer içeriğini window'a kopyalamaz. Yalnızca aynı context için draw
 ve read yönlerinin hangi surface'i kullandığını belirler.
 
-## İki thread arasında context devretme
+## Thread'ler Arasında Context Aktarımı
 
 Bir context aynı anda yalnızca bir thread'de current olabilir. Thread A'da
 current olan `ctx` doğrudan Thread B'de bağlanırsa `EGL_BAD_ACCESS` oluşur.
-Güvenli mantıksal sıra şöyledir:
+Önerilen aktarım sırası şöyledir:
 
 ```text
 Thread A: GL işini bitir
@@ -2703,7 +3210,7 @@ almaz; aynı context'e erişimi uygulama ayrıca senkronize etmelidir.
 
 ## Hata Kodları
 
-| Hata                        | Ne zaman                                                                                                                               |
+| Hata                        | Oluşma koşulu                                                                                                                          |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `EGL_BAD_MATCH`           | Surface/context uyumsuzsa;`EGL_NO_CONTEXT`/`EGL_NO_SURFACE` kombinasyonu yanlışsa; draw/read aynı anda belleğe sığamıyorsa. |
 | `EGL_BAD_ACCESS`          | `ctx` başka thread'de current ise; `draw` veya `read` başka thread'de bir context'e bağlıysa.                                |
@@ -2753,7 +3260,7 @@ glViewport(0, 0, draw_width, draw_height)
 glScissor(0, 0, draw_width, draw_height)
 ```
 
-Bu yalnızca context'in ilk current yapılma anı için önemlidir. Sonraki bind işlemlerinde viewport/scissor'ın otomatik güncelleneceğini varsayma.
+Bu davranış yalnızca context'in ilk kez current yapıldığı an için geçerlidir. Sonraki binding işlemlerinde viewport ve scissor değerlerinin otomatik olarak güncellenmesi garanti edilmez.
 
 ## Yok Etme Sonrası Davranış
 
@@ -2763,7 +3270,7 @@ Bu yalnızca context'in ilk current yapılma anı için önemlidir. Sonraki bind
 - `read` destroy edilirse `glReadPixels` gibi okuma sonuçları tanımsız olur.
 - Native window/pixmap destroy edilirse de ilgili surface için aynı mantık geçerlidir.
 
-Bu yüzden güvenli kapanış sırası genelde şudur:
+Önerilen kapanış sırası şöyledir:
 
 ```c
 eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -2810,15 +3317,19 @@ eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 EGLDisplay eglGetCurrentDisplay(void);
 ```
 
-`eglGetCurrentDisplay`, çağıran thread üzerinde current durumda olan EGL context ile ilişkili `EGLDisplay` handle'ını döndürür.
+`eglGetCurrentDisplay`, çağıran thread üzerinde **current durumda olan EGL context ile ilişkili `EGLDisplay` handle'ını** döndürür.
+
+Bu fonksiyon yeni bir display oluşturmaz, display'i initialize etmez ve herhangi bir context'i current hale getirmez. Yalnızca mevcut EGL durumunu sorgular.
 
 Kısa özet:
 
-- Parametre almaz.
-- Current context varsa ilişkili `EGLDisplay` döner.
-- Current context yoksa `EGL_NO_DISPLAY` döner.
-- Display'in yalnızca initialize edilmiş olması yeterli değildir.
-- Davranışı parametreye değil current EGL state'e bağlıdır.
+* Parametre almaz.
+* Current context varsa ilişkili `EGLDisplay` döner.
+* Current context yoksa `EGL_NO_DISPLAY` döner.
+* Display'in yalnızca initialize edilmiş olması yeterli değildir.
+* Fonksiyonun davranışı parametreye değil, çağıran thread'in current EGL state'ine bağlıdır.
+
+![1788249707726](../eglFunctions/image/eglGetCurrentDisplay/1788249707726.jpg)
 
 ## Kavramsal Akış
 
@@ -2834,7 +3345,269 @@ Thread
   +-- current EGLDisplay
 ```
 
-`eglGetCurrentDisplay`, bu thread-local current state içindeki display'i sorgular.
+`eglGetCurrentDisplay`, bu thread-local current state içerisindeki display'i sorgular.
+
+Başka bir ifadeyle fonksiyon şu soruya cevap verir:
+
+```text
+"Bu fonksiyonu çağıran thread üzerinde
+current olan EGLContext hangi EGLDisplay'e bağlı?"
+```
+
+## Thread Nedir?
+
+**Thread**, bir program içerisindeki bağımsız yürütme veya çalışma akışıdır.
+
+Bir program çalıştığında işletim sistemi tarafından bir process oluşturulur. Bu process içerisinde bir veya birden fazla thread bulunabilir.
+
+Basit bir programda yalnızca bir ana thread bulunabilir:
+
+```text
+Program / Process
+      |
+      v
+ Main Thread
+      |
+      +-- EGL işlemleri
+      +-- OpenGL ES işlemleri
+      +-- diğer program kodları
+```
+
+Daha büyük bir uygulamada birden fazla thread aynı process içerisinde farklı işler yapabilir:
+
+```text
+Program / Process
+      |
+      +-- Thread 1 → kullanıcı arayüzü
+      |
+      +-- Thread 2 → rendering
+      |
+      +-- Thread 3 → dosya veya veri işlemleri
+```
+
+Thread'ler aynı programa ait olabilir ancak kendi yürütme akışlarına sahiptir.
+
+EGL açısından önemli olan nokta, **current state'in thread-local olmasıdır**.
+
+Bu, her thread'in kendine ait current EGL state'e sahip olabileceği anlamına gelir.
+
+Örneğin:
+
+```text
+Thread 1
+  |
+  +-- Current Context = Context A
+  +-- Current Display = Display A
+
+
+Thread 2
+  |
+  +-- Current Context = Context B
+  +-- Current Display = Display B
+```
+
+Bu durumda:
+
+```c
+eglGetCurrentDisplay();
+```
+
+Thread 1 üzerinden çağrılırsa `Display A`, Thread 2 üzerinden çağrılırsa `Display B` dönebilir.
+
+Dolayısıyla `eglGetCurrentDisplay`:
+
+```text
+"Programın herhangi bir yerinde kullanılan display hangisidir?"
+```
+
+sorusunu cevaplamaz.
+
+Bunun yerine:
+
+```text
+"Bu çağrıyı yapan thread'in current context'i
+hangi EGLDisplay'e bağlıdır?"
+```
+
+sorusunu cevaplar.
+
+![1788249749887](../eglFunctions/image/eglGetCurrentDisplay/1788249749887.jpg)
+
+## Current Context Nedir?
+
+Bir **EGLContext**, OpenGL ES gibi bir rendering API'nin çalışma durumunu temsil eden EGL nesnesidir.
+
+Context içerisinde rendering işlemleriyle ilişkili çeşitli state bilgileri tutulabilir. Örneğin aktif rendering durumu, kullanılan kaynaklarla ilişkiler ve OpenGL ES tarafındaki çalışma bilgileri context ile ilişkilidir.
+
+**Current context**, belirli bir thread üzerinde şu anda rendering işlemleri için aktif olarak bağlanmış olan context'tir.
+
+Buradaki **current** kelimesi:
+
+* ekranda görünen pencere,
+* ön plandaki uygulama,
+* kullanıcının seçtiği pencere,
+* fiziksel monitörde o anda görünen görüntü
+
+anlamına gelmez.
+
+Current olmak, bir context'in belirli bir thread üzerinde rendering işlemleri için **aktif olarak bağlanmış olması** anlamına gelir.
+
+Örneğin:
+
+```c
+eglMakeCurrent(dpy, surface, surface, ctx);
+```
+
+başarılı olduğunda `ctx`, çağrıyı yapan thread'in current context'i olur.
+
+Kavramsal olarak:
+
+```text
+Thread
+   |
+   v
+Current EGLContext
+   |
+   v
+Rendering işlemleri bu context ile yürütülür
+```
+
+## Current State Nedir?
+
+**Current state**, thread üzerinde o anda current durumda bulunan EGL nesnelerinin oluşturduğu durumdur.
+
+EGL açısından bu durum kavramsal olarak şunları içerir:
+
+```text
+Current EGL State
+      |
+      +-- current EGLContext
+      |
+      +-- current draw EGLSurface
+      |
+      +-- current read EGLSurface
+      |
+      +-- ilişkili EGLDisplay
+```
+
+Current state tek bir handle veya tek bir nesne değildir.
+
+Bir thread üzerinde hangi context'in, hangi surface'lerin ve bunlarla ilişkili hangi display'in aktif durumda olduğunu ifade eden genel durumdur.
+
+Bu state `eglMakeCurrent` çağrısıyla oluşturulur veya değiştirilir.
+
+Örneğin:
+
+```c
+eglMakeCurrent(dpy, surface, surface, ctx);
+```
+
+sonrasında kavramsal olarak:
+
+```text
+Current EGL State
+
+Context      = ctx
+Draw Surface = surface
+Read Surface = surface
+Display      = dpy
+```
+
+şeklinde bir durum oluşur.
+
+## Current Context, Current State ve Current Display Farkı
+
+Bu kavramlar birbirine bağlıdır ancak aynı şeyi ifade etmez.
+
+### Current Context
+
+Current context, thread üzerinde rendering için aktif olan `EGLContext` nesnesidir.
+
+```text
+Current Context
+      |
+      v
+EGLContext
+```
+
+Örneğin:
+
+```text
+Context A
+```
+
+thread üzerinde current olabilir.
+
+### Current State
+
+Current state, yalnızca context'ten oluşmaz.
+
+Thread üzerinde current olarak bağlı olan:
+
+```text
+Context
++
+Draw Surface
++
+Read Surface
++
+ilişkili Display
+```
+
+bilgilerinin tamamını ifade eder.
+
+Yani:
+
+```text
+Current Context
+       ↓
+Current State'in bir parçasıdır.
+```
+
+### Current Display
+
+Current display ise current context'in ilişkili olduğu `EGLDisplay`'dir.
+
+```text
+Current Context
+       |
+       v
+İlişkili EGLDisplay
+       |
+       v
+Current Display
+```
+
+Dolayısıyla:
+
+```text
+Current State
+    |
+    +-- Current Context
+    |
+    +-- Current Draw Surface
+    |
+    +-- Current Read Surface
+    |
+    +-- Current Display
+```
+
+şeklinde düşünülebilir.
+
+Kısaca:
+
+```text
+Current Context
+→ aktif EGLContext
+
+Current State
+→ thread üzerindeki bütün current EGL ilişkilerinin durumu
+
+Current Display
+→ current context'in bağlı olduğu EGLDisplay
+```
+
+`eglGetCurrentDisplay` yalnızca bu yapı içerisindeki **current display** bilgisini döndürür.
 
 ## Parametreler
 
@@ -2844,9 +3617,11 @@ Fonksiyon parametre almaz:
 eglGetCurrentDisplay(void);
 ```
 
-Bu nedenle görevdeki “parametreleri değiştirerek davranışı gözlemleme” yaklaşımı burada uygulanamaz.
+Bu nedenle davranışı fonksiyona verilen bir değere göre değişmez.
 
-Bunun yerine current EGL state değiştirildi.
+Görevdeki “parametreleri değiştirerek davranışı gözlemleme” yaklaşımı burada uygulanamaz.
+
+Bunun yerine current EGL state değiştirilerek fonksiyonun davranışı gözlemlenir.
 
 ## `eglGetDisplay` ile Farkı
 
@@ -2856,23 +3631,50 @@ Bunun yerine current EGL state değiştirildi.
 EGLDisplay eglGetDisplay(EGLNativeDisplayType display_id);
 ```
 
-Native display'den EGL display handle'ı elde eder.
+native display'den bir EGL display handle'ı elde eder.
 
-`eglGetCurrentDisplay`:
+Kavramsal olarak:
+
+```text
+Native display
+      |
+      v
+eglGetDisplay
+      |
+      v
+EGLDisplay
+```
+
+`eglGetCurrentDisplay` ise:
 
 ```c
 EGLDisplay eglGetCurrentDisplay(void);
 ```
 
-Current context'in bağlı olduğu display'i sorgular.
+current context'in ilişkili olduğu display'i sorgular.
+
+```text
+Current context
+      |
+      v
+eglGetCurrentDisplay
+      |
+      v
+İlişkili EGLDisplay
+```
+
+Temel fark:
 
 ```text
 eglGetDisplay
-native display -> EGLDisplay
+→ Bir native display'den EGLDisplay elde eder.
 
 eglGetCurrentDisplay
-current context -> ilişkili EGLDisplay
+→ Zaten mevcut olan current EGL state içerisindeki
+  EGLDisplay'i sorgular.
 ```
+
+`eglGetCurrentDisplay` yeni bir display oluşturmaz veya elde etmeye çalışmaz. Yalnızca thread'in current state'inde hangi display'in bulunduğunu kontrol eder.
 
 ## `eglInitialize` ile Farkı
 
@@ -2883,26 +3685,90 @@ eglInitialize
 Display EGL kullanımı için initialize edilir
 ```
 
-Bu işlem tek başına current state oluşturmaz:
+Ancak initialization işlemi tek başına current state oluşturmaz.
+
+Örneğin:
 
 ```text
-eglInitialize başarılı
-    |
-    v
-eglGetCurrentDisplay == EGL_NO_DISPLAY
+eglGetDisplay
+      |
+      v
+EGLDisplay elde edildi
+      |
+      v
+eglInitialize
+      |
+      v
+Display initialize edildi
+      |
+      v
+Current Context YOK
+      |
+      v
+eglGetCurrentDisplay
+      |
+      v
+EGL_NO_DISPLAY
 ```
+
+Dolayısıyla bir display'in mevcut ve initialize edilmiş olması, onun current display olduğu anlamına gelmez.
+
+Current display olabilmesi için o display ile ilişkili bir context'in thread üzerinde current hale getirilmiş olması gerekir.
 
 ## `eglMakeCurrent` ile İlişki
 
-`eglMakeCurrent`, current state'i değiştirir:
+`eglMakeCurrent`, thread'in current EGL state'ini oluşturur veya değiştirir.
+
+Örnek:
 
 ```c
 eglMakeCurrent(dpy, surface, surface, ctx);
 ```
 
-Başarılı bir çağrıdan sonra `eglGetCurrentDisplay()` ilgili display'i döndürür.
+Bu çağrının başarılı olması durumunda:
 
-Release:
+```text
+Thread
+  |
+  +-- Current Context = ctx
+  |
+  +-- Current Draw Surface = surface
+  |
+  +-- Current Read Surface = surface
+  |
+  +-- Current Display = dpy
+```
+
+durumu oluşur.
+
+Daha sonra:
+
+```c
+EGLDisplay current = eglGetCurrentDisplay();
+```
+
+çağrısı yapıldığında:
+
+```text
+current == dpy
+```
+
+olur.
+
+Yani `eglMakeCurrent` state'i **değiştirir veya oluşturur**, `eglGetCurrentDisplay` ise bu state'i **sorgular**.
+
+Bu fark önemlidir:
+
+```text
+eglMakeCurrent
+→ current state üzerinde değişiklik yapar
+
+eglGetCurrentDisplay
+→ current state'i değiştirmez,
+  yalnızca display bilgisini okur
+```
+
+Current state aşağıdaki çağrı ile serbest bırakılabilir:
 
 ```c
 eglMakeCurrent(
@@ -2913,7 +3779,21 @@ eglMakeCurrent(
 );
 ```
 
-sonrasında `eglGetCurrentDisplay()` tekrar `EGL_NO_DISPLAY` döndürür.
+Bu işlemden sonra thread üzerinde current context kalmaz.
+
+Dolayısıyla:
+
+```c
+eglGetCurrentDisplay();
+```
+
+tekrar:
+
+```text
+EGL_NO_DISPLAY
+```
+
+döndürür.
 
 `eglMakeCurrent` ayrıntıları için ilgili bölüme bakınız.
 
@@ -2925,35 +3805,87 @@ sonrasında `eglGetCurrentDisplay()` tekrar `EGL_NO_DISPLAY` döndürür.
 EGL_NO_DISPLAY
 ```
 
-current context bulunmadığında normal bir state sonucudur.
+sonucu current context bulunmadığında normal bir state sonucu olabilir.
 
-Örneğin:
+Örneğin program henüz yeni başlamış olsun:
 
 ```text
-Program yeni başladı
+Program başladı
+      |
+      v
+EGLDisplay henüz current değil
+      |
+      v
 Current context yok
-eglGetCurrentDisplay -> EGL_NO_DISPLAY
+      |
+      v
+eglGetCurrentDisplay()
+      |
+      v
+EGL_NO_DISPLAY
 ```
 
-Bu tek başına “EGL API hatası oluştu” anlamına gelmez.
+Bu durum tek başına EGL API hatası oluştuğu anlamına gelmez.
+
+Aynı şekilde yalnızca:
+
+```c
+eglGetDisplay(...)
+```
+
+ve:
+
+```c
+eglInitialize(...)
+```
+
+çağrılarının yapılmış olması da current state oluşturmaz.
 
 ## Thread-Local Durum
 
-Current state thread-local'dır.
+Current EGL state **thread-local**'dır.
 
-`eglGetCurrentDisplay`:
-
-```text
-“Programın herhangi bir yerinde kullanılan display hangisi?”
-```
-
-sorusunu değil:
+Örneğin aynı uygulamada:
 
 ```text
-“Bu çağrıyı yapan thread'in current context'i hangi display'e bağlı?”
+Thread A
+   |
+   +-- Context A
+   +-- Display A
+
+
+Thread B
+   |
+   +-- Context B
+   +-- Display B
 ```
 
-sorusunu cevaplar.
+olabilir.
+
+Bu nedenle aynı anda:
+
+```text
+Thread A:
+eglGetCurrentDisplay() → Display A
+
+Thread B:
+eglGetCurrentDisplay() → Display B
+```
+
+sonucu alınabilir.
+
+Başka bir thread üzerinde current context bulunmuyorsa:
+
+```text
+Thread C:
+eglGetCurrentDisplay() → EGL_NO_DISPLAY
+```
+
+olabilir.
+
+Dolayısıyla `eglGetCurrentDisplay`, programın global EGL durumunu sorgulayan bir fonksiyon değildir.
+
+Fonksiyon yalnızca kendisini çağıran thread'in current EGL state'ini değerlendirir.
 
 ## Temel Kullanım
 
@@ -2967,17 +3899,53 @@ if (current == EGL_NO_DISPLAY) {
 }
 ```
 
+Bu fonksiyon özellikle mevcut EGL durumunu kontrol etmek için kullanılabilir.
+
+Örneğin bir fonksiyon kendisine `EGLDisplay` parametresi verilmeden, thread üzerinde hangi display'in current olduğunu öğrenebilir:
+
+```c
+void check_current_display(void)
+{
+    EGLDisplay current = eglGetCurrentDisplay();
+
+    if (current == EGL_NO_DISPLAY) {
+        printf("Bu thread üzerinde current EGL display yok.\n");
+        return;
+    }
+
+    printf("Current EGLDisplay: %p\n", (void *)current);
+}
+```
+
+Ayrıca mevcut state'in beklenen display ile ilişkili olup olmadığını kontrol etmek için de kullanılabilir:
+
+```c
+if (eglGetCurrentDisplay() == expected_display) {
+    printf("Beklenen display current durumda.\n");
+}
+```
+
+Bu nedenle `eglGetCurrentDisplay`, yeni bir EGL nesnesi oluşturan fonksiyondan çok mevcut EGL durumunu **sorgulayan ve doğrulayan yardımcı bir fonksiyon** olarak düşünülebilir.
+
 ## Bölüm Özeti
 
-- `eglGetCurrentDisplay` parametre almaz.
-- Dönüş tipi `EGLDisplay`'dir.
-- Current context varsa onun bağlı olduğu display'i döndürür.
-- Current context yoksa `EGL_NO_DISPLAY` döndürür.
-- Display'in yalnızca oluşturulmuş veya initialize edilmiş olması yeterli değildir.
-- Current state `eglMakeCurrent` ile oluşturulur/değiştirilir.
-- Current context release edilince sonuç tekrar `EGL_NO_DISPLAY` olur.
-- `EGL_NO_DISPLAY` bu fonksiyonda normal bir state sonucu olabilir.
-- Current state thread-local'dır.
+* `eglGetCurrentDisplay` parametre almaz.
+* Dönüş tipi `EGLDisplay`'dir.
+* Fonksiyonu çağıran thread'in current context'i varsa onun bağlı olduğu display'i döndürür.
+* Current context yoksa `EGL_NO_DISPLAY` döndürür.
+* Thread, program içerisindeki bağımsız yürütme akışıdır.
+* Bir program bir veya birden fazla thread içerebilir.
+* EGL current state thread-local'dır; farklı thread'lerin farklı current context ve display'leri olabilir.
+* Current context, thread üzerinde rendering için aktif olan `EGLContext`'tir.
+* Current state, current context, draw surface, read surface ve ilişkili display durumunun tamamını ifade eder.
+* Current display, current context'in bağlı olduğu `EGLDisplay`'dir.
+* “Current” kavramı ekranda görünen pencere veya fiziksel monitörde gösterilen görüntü anlamına gelmez.
+* Display'in yalnızca oluşturulmuş veya initialize edilmiş olması yeterli değildir.
+* Current state `eglMakeCurrent` ile oluşturulur veya değiştirilir.
+* `eglMakeCurrent` current state'i değiştirirken `eglGetCurrentDisplay` yalnızca mevcut state'i sorgular.
+* Current context release edildiğinde `eglGetCurrentDisplay` tekrar `EGL_NO_DISPLAY` döndürür.
+* `EGL_NO_DISPLAY`, bu fonksiyonda normal bir state sonucu olabilir ve her zaman EGL API hatası anlamına gelmez.
+* `eglGetCurrentDisplay` yeni bir display oluşturmaz; mevcut thread-local EGL durumundaki display'i sorgular.
 
 ---
 
@@ -2989,12 +3957,12 @@ EGLContext eglGetCurrentContext(void);
 
 `eglGetCurrentContext`, çağrıyı yapan thread üzerinde o anda aktif olan `EGLContext` handle değerini döndürür. Fonksiyon parametre almaz; EGL'in thread-local durumunu okur. Bu yüzden aktif context varsa o context döner, aktif context yoksa `EGL_NO_CONTEXT` döner.
 
-Bu çalışmada fonksiyonun `void` parametreli yapısı iki pratik durum üzerinden incelenmiştir:
+Fonksiyon parametre almadığı için senaryolar parametre değişimine göre değil, çağıran thread'in current context durumuna göre oluşturulmuştur:
 
 | Senaryo | Test Edilen Durum | Beklenen Sonuç |
 |---|---|---|
-| Senaryo A | `eglMakeCurrent` ile context aktif hale getirildikten sonra `eglGetCurrentContext()` çağrılır. | Fonksiyon, aktif context handle değerini döndürür ve OpenGL ES çizimi yapılabilir. |
-| Senaryo B | Context önce aktif edilir, sonra `EGL_NO_CONTEXT` ile thread'den ayrılır. | Fonksiyon `EGL_NO_CONTEXT` döndürür; aktif context olmadığı için yeni çizim yapılmaz. |
+| Senaryo A | `eglMakeCurrent` ile context aktif hale getirildikten sonra `eglGetCurrentContext()` çağrılır. | Fonksiyon, aktif context handle değerini döndürür. |
+| Senaryo B | Current context `EGL_NO_CONTEXT` ile thread'den ayrıldıktan sonra `eglGetCurrentContext()` çağrılır. | Fonksiyon `EGL_NO_CONTEXT` döndürür. |
 
 ## Fonksiyonun Temel Mantığı
 
@@ -3002,23 +3970,17 @@ Bu çalışmada fonksiyonun `void` parametreli yapısı iki pratik durum üzerin
 
 `eglGetCurrentContext` global bir context listesinde arama yapmaz. Sadece çağrıldığı thread'in EGL state bilgisini kontrol eder. Aynı programda başka bir thread üzerinde aktif context bulunması, bu thread için sonucu değiştirmez.
 
-```text
-Çağıran thread üzerinde aktif EGLContext varsa:
-    eglGetCurrentContext() -> aktif EGLContext handle değeri
+Her çağrı yalnızca çağrıldığı thread'in current context bilgisini okur. Fonksiyon state değiştirmez; current context varsa ilgili `EGLContext` handle değerini, yoksa `EGL_NO_CONTEXT` değerini döndürür.
 
-Çağıran thread üzerinde aktif EGLContext yoksa:
-    eglGetCurrentContext() -> EGL_NO_CONTEXT
-```
-
-Bu davranış özellikle render kodlarında önemlidir. Çünkü OpenGL ES komutları, doğrudan fonksiyonlara verilen context ile değil, çağrıyı yapan thread'e current yapılmış context ile çalışır.
-
-## Parametre İncelemesi
+## Parametre Durumu
 
 Spesifikasyona göre fonksiyonun parametresi yoktur.
 
-| Parametre Biçimi | Anlamı | Testteki Etkisi |
-|---|---|---|
-| `void` | Fonksiyon argüman almaz. | Sonuç, tamamen çağıran thread'in mevcut EGL state durumuna bağlıdır. |
+| Durum | Açıklama |
+|---|---|
+| Parametre | Yok |
+| Girdi nereden gelir? | Çağıran thread'in current EGL state bilgisinden |
+| Çıktı | `EGLContext` veya `EGL_NO_CONTEXT` |
 
 `eglGetCurrentContext` doğrudan `NativeWindowType`, `NativePixmapType`, attribute listesi, buffer tipi veya surface parametresi almaz. Ancak dönen context, daha önce `eglMakeCurrent(display, draw, read, context)` çağrısıyla bir draw/read surface çiftine bağlanmış olabilir.
 
@@ -3056,21 +4018,15 @@ SENARYO A: Aktif bir context varken eglGetCurrentContext cagirimi
 ==================================================
 1. eglMakeCurrent basariyla cagirildi ve context aktif edildi.
 2. BASARILI: eglGetCurrentContext aktif olan context'i (0x...) dogru sekilde dondurdu.
-3. Cizim islemi baslatiliyor (Ekranda renkli bir ucgen gormelisiniz)...
-4. Cizim tamamlandi, pencere 3 saniye acik kalacak.
 ```
 
-### Görsel Çıktı
-
-![Senaryo A beklenen ekran çıktısı](../eglFunctions/image/eglGetCurrentContext/expected_output_scenario_a.svg)
-
-Context aktif olduğu için OpenGL ES komutları geçerli context üzerinde çalışır. Program önce arka planı koyu yeşilimsi renge temizler, sonra kırmızı, yeşil ve mavi köşelere sahip bir üçgen çizer. Son adımda `eglSwapBuffers` çağrısı ile çizilen görüntü ekrana taşınır.
+Current context doğrulandığı için daha sonraki OpenGL ES komutları bu context üzerinden çalışabilir.
 
 ## Senaryo B: Aktif Context Yokken
 
 Kaynak dosya: `void_param/scenario_b.c`
 
-Bu senaryoda context ilk başta aktif edilir ve ekran kırmızıya temizlenir. Daha sonra aşağıdaki çağrı ile context thread'den ayrılır:
+Bu senaryoda context ilk başta aktif edilir. Daha sonra aşağıdaki çağrı ile context thread'den ayrılır:
 
 ```c
 eglMakeCurrent(display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
@@ -3105,17 +4061,9 @@ SENARYO B: Aktif bir context YOKKEN eglGetCurrentContext cagirimi
 1. eglMakeCurrent ile aktif context kapatiliyor (EGL_NO_CONTEXT geciliyor).
 2. eglGetCurrentContext cagirildi.
 -> SONUC: Beklendigi gibi eglGetCurrentContext() EGL_NO_CONTEXT dondurdu.
-
->>> Bu senaryoda aktif bir context olmadigi icin ucgen cizilemedi ve ekrana HICBIR SEY CIZILEMEDI. <<<
-
-3. Gorsel ispat icin pencere 3 saniye acik tutuluyor. (Sadece kirmizi arka plan goreceksiniz, ucgen yok!)
 ```
 
-### Görsel Çıktı
-
-![Senaryo B beklenen ekran çıktısı](../eglFunctions/image/eglGetCurrentContext/expected_output_scenario_b.svg)
-
-Bu senaryoda `eglGetCurrentContext()` sonucu `EGL_NO_CONTEXT` olduğu için üçgen çizilmez. Program, görsel ayrımı kolaylaştırmak için detach öncesinde ekranı kırmızıya temizler. Daha sonra sadece mevcut buffer'ı göstermek amacıyla context geçici olarak tekrar bağlanır ve `eglSwapBuffers` yapılır; bu aşamada yeni çizim komutu verilmez. Bu yüzden beklenen görüntü sadece kırmızı arka plandır.
+Bu senaryoda `eglGetCurrentContext()` sonucu `EGL_NO_CONTEXT` olduğu için çağıran thread üzerinde current context yoktur.
 
 ## Sonuçların Karşılaştırması
 
@@ -3123,19 +4071,18 @@ Bu senaryoda `eglGetCurrentContext()` sonucu `EGL_NO_CONTEXT` olduğu için üç
 |---|---|---|
 | `eglMakeCurrent` sonrası thread state | Context aktif | Context detach edilmiş |
 | `eglGetCurrentContext()` sonucu | `state.egl_context` | `EGL_NO_CONTEXT` |
-| OpenGL ES çizimi yapılabilir mi? | Evet | Hayır, current context yoktur |
-| Görsel çıktı | Koyu arka plan üzerinde renkli üçgen | Sadece kırmızı arka plan |
+| Yeni GL komutları için current context mevcut mu? | Evet | Hayır |
 | Testin gösterdiği ana fikir | Fonksiyon aktif context'i doğru döndürür. | Aktif context yoksa güvenli biçimde `EGL_NO_CONTEXT` döner. |
 
 ## Hata Davranışı
 
-`eglGetCurrentContext` bir getter fonksiyonudur. State değiştirmez, parametre doğrulaması yapmaz ve normal kullanımda yeni bir EGL hatası üretmesi beklenmez.
+`eglGetCurrentContext` bir getter fonksiyonudur. State değiştirmez, parametre doğrulaması yapmaz ve current context olmaması tek başına EGL hatası değildir.
 
 | Durum | Dönüş Değeri | Açıklama |
 |---|---|---|
-| EGL initialize edilmemişse | `EGL_NO_CONTEXT` | Current context olmadığı için boş context döner. |
-| Mevcut thread'de context yoksa | `EGL_NO_CONTEXT` | Başka thread'deki context bu sonucu değiştirmez. |
-| `eglMakeCurrent` başarılı olduysa | Aktif `EGLContext` | Dönen handle beklenen context ile karşılaştırılabilir. |
+| Çağıran thread'de current context varsa | Aktif `EGLContext` | Dönen handle beklenen context ile karşılaştırılabilir. |
+| Çağıran thread'de current context yoksa | `EGL_NO_CONTEXT` | Bu durum tek başına hata değildir. |
+| Başka thread'de current context varsa | Bu thread'in current context durumuna göre sonuç döner | Başka thread'deki context bu sonucu değiştirmez. |
 
 `EGL_BAD_MATCH`, `EGL_BAD_NATIVE_WINDOW` veya `EGL_BAD_SURFACE` gibi hatalar bu getter fonksiyonundan değil; genellikle `eglMakeCurrent`, `eglCreateWindowSurface` veya `eglSwapBuffers` gibi surface/context ilişkisini kuran çağrılardan kaynaklanır.
 
@@ -3182,19 +4129,8 @@ void perform_safe_rendering(EGLDisplay dpy,
 - Fonksiyonun sonucu çağıran thread'in EGL state bilgisine bağlıdır.
 - Aktif context varsa gerçek `EGLContext` handle değeri döner.
 - Aktif context yoksa `EGL_NO_CONTEXT` döner.
-- Senaryo A, context doğrulamasını ve çizilebilir durumu gösterir.
-- Senaryo B, context detach edildikten sonra yeni çizimin yapılamayacağını gösterir.
-
-## Teslim Notu
-
-Bu rapordaki SVG görselleri, kodun beklenen davranışını şematik olarak anlatmak için hazırlanmıştır. Donanım üzerinde alınmış gerçek ekran görüntüleri eklenmek istenirse aşağıdaki dosya adları kullanılabilir:
-
-```text
-assets/screenshots/scenario_a_triangle.png
-assets/screenshots/scenario_b_red_background.png
-```
-
-Gerçek görüntüler EGL/GBM destekli Linux ortamında, `/dev/dri/card0` erişimi olan bir cihazda alınmalıdır. Bu çalışma Windows ortamında düzenlendiği için gerçek DRM/GBM ekran çıktısı yakalanmamıştır.
+- Senaryo A, current context varsa doğru handle değerinin döndüğünü gösterir.
+- Senaryo B, current context yoksa `EGL_NO_CONTEXT` döndüğünü gösterir.
 
 ---
 
@@ -3207,7 +4143,7 @@ EGLBoolean eglSwapBuffers(EGLDisplay dpy,
 
 `eglSwapBuffers`, EGL 1.0'da rendering sonrası color buffer'ı native window'a post etmek için kullanılır.
 
-Kısa özet:
+İşlev özeti:
 
 - Window surface için: color buffer native window'a post edilir.
 - Pbuffer surface için: etkisi yoktur.
@@ -3231,7 +4167,7 @@ eglSwapBuffers
 native window'a post/copy
 ```
 
-Somut olarak bir frame boyunca ön ve arka buffer'ı şöyle düşünebiliriz:
+Bir frame boyunca ön ve arka buffer'ın durumu aşağıdaki akışla gösterilebilir:
 
 ```text
 Frame N çizilirken:
@@ -3309,15 +4245,15 @@ surface hemen yok olmaz; current kaldığı sürece geçerlidir. İlgili thread'
 sonraki geçerli `eglMakeCurrent` ile bağlantı değiştiğinde gerçek silme
 tamamlanır ve bundan sonraki swap girişimi `EGL_BAD_SURFACE` olur.
 
-## EGL 1.0 Current Surface Şartı
+## EGL 1.0 Current Surface Gereksinimi
 
-EGL 1.0 spec'i için önemli kural:
+EGL 1.0 specification'ın gerektirdiği koşul:
 
 ```text
 surface, çağıran thread'in current context'ine bağlı olmalıdır.
 ```
 
-Doğru sıra:
+Geçerli çağrı sırası:
 
 ```C
 eglMakeCurrent(dpy, surface, surface, ctx);
@@ -3327,7 +4263,7 @@ eglMakeCurrent(dpy, surface, surface, ctx);
 eglSwapBuffers(dpy, surface);
 ```
 
-Yanlış sıra:
+Geçersiz çağrı sırası:
 
 ```c
 /* surface current yapılmadı */
@@ -3349,14 +4285,14 @@ EGL_BAD_SURFACE
 eglSwapBuffers(dpy, window_surface);
 ```
 
-Başarı için:
+Başarı koşulları:
 
 - `dpy` initialized olmalı.
 - `window_surface` geçerli olmalı.
 - `window_surface` current context'e bağlı olmalı.
 - Native window hala geçerli olmalı.
 
-Başarı sonucu:
+Başarılı çağrının sonucu:
 
 - `EGL_TRUE` döner.
 - Color buffer native window'a post edilir.
@@ -3379,7 +4315,7 @@ Pbuffer offscreen surface'tir:
 pbuffer -> native visible window yok
 ```
 
-Bu yüzden `eglSwapBuffers` fiziksel görüntü üretmez. Pbuffer içeriğini kullanmak istiyorsan tipik yollar:
+Bu nedenle `eglSwapBuffers` fiziksel bir görüntü üretmez. Pbuffer içeriğinin kullanımında başvurulabilecek yöntemler:
 
 - aynı context içinde texture/copy/readback akışı
 - `glReadPixels`
@@ -3421,7 +4357,7 @@ eglCopyBuffers(dpy, surface, native_pixmap);
 
 EGL 1.0 spec'i başarılı `eglSwapBuffers` sonrası surface color buffer içeriğinin tanımsız olduğunu söyler.
 
-Yani şu varsayım yanlıştır:
+Aşağıdaki varsayım geçersizdir:
 
 ```c
 eglSwapBuffers(dpy, surface);
@@ -3429,7 +4365,7 @@ eglSwapBuffers(dpy, surface);
 /* Yanlış varsayım: eski color buffer içeriği hala korunuyor */
 ```
 
-Doğru pratik:
+Önerilen kullanım:
 
 ```c
 /* Her frame'de gerekli içeriği yeniden çiz */
@@ -3459,12 +4395,9 @@ Bu `glFinish` değildir.
 
 EGL 1.0 metni, sonraki OpenGL ES komutlarının hemen verilebileceğini ama posting bitene kadar yürütülmeyebileceğini belirtir. Window surface için bu zamanlama tipik olarak vertical retrace ile ilişkilidir.
 
-Buradaki “typically” önemlidir: EGL 1.0 tek başına her swap'ın VSync beklediğini,
-tearing'in kesin engellendiğini veya swap'ın monitör yenileme hızında sabit FPS
-üreteceğini garanti etmez. Sunum yöntemi ve bloklama davranışı implementation ve
-native platforma bağlıdır.
+Specification'daki “typically” ifadesi kesin bir garanti oluşturmaz. EGL 1.0 tek başına her swap'ın VSync beklediğini, tearing'in engellendiğini veya swap'ın monitör yenileme hızında sabit FPS üreteceğini garanti etmez. Sunum yöntemi ve bloklama davranışı implementation ile native platforma bağlıdır.
 
-## Swap ne yapmaz?
+## `eglSwapBuffers` Kapsamına Girmeyen İşlemler
 
 - Yeni bir frame çizmez; o ana kadar üretilmiş color buffer'ı post eder.
 - `glFinish` gibi bütün GPU işlerinin tamamlanmasını zorunlu olarak beklemez.
@@ -3493,7 +4426,7 @@ draw_scene();
 eglSwapBuffers(dpy, surface);
 ```
 
-EGL surface resize edebilir, ama GL viewport'u senin uygulamanın sorumluluğundadır.
+EGL surface'i yeniden boyutlandırabilir; ancak GL viewport'unun güncellenmesi uygulamanın sorumluluğundadır.
 
 ## `eglSwapBuffers` ve DRM/KMS
 
@@ -3505,7 +4438,7 @@ EGL tek başına fiziksel monitörü yönetmez. Bu özellikle GBM + DRM/KMS tara
 GBM surface içinde render edilmiş front buffer hazır olur.
 ```
 
-Ama fiziksel monitör için hala şu gerekir:
+Fiziksel monitöre sunum için ek olarak aşağıdaki işlem gerekir:
 
 ```c
 struct gbm_bo *bo = gbm_surface_lock_front_buffer(gbm_surface);
@@ -3523,7 +4456,7 @@ Animasyonda sonraki buffer'a geçmek için:
 drmModePageFlip(fd, crtc_id, next_fb_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);
 ```
 
-Özet:
+Katman sorumlulukları:
 
 | Katman    | Sorumluluk                                                       |
 | --------- | ---------------------------------------------------------------- |
@@ -3532,7 +4465,7 @@ drmModePageFlip(fd, crtc_id, next_fb_id, DRM_MODE_PAGE_FLIP_EVENT, user_data);
 | GBM       | GPU/display paylaşılabilir buffer nesneleri sağlar.           |
 | DRM/KMS   | Framebuffer'ı CRTC/connector üzerinden monitöre scanout eder. |
 
-## Temel Window Surface Kullanımı
+## Window Surface Kullanım Örneği
 
 ```c
 eglMakeCurrent(dpy, window_surface, window_surface, ctx);
@@ -3546,7 +4479,7 @@ if (!eglSwapBuffers(dpy, window_surface)) {
 }
 ```
 
-## Temel Pbuffer Kullanımı
+## Pbuffer Surface Kullanım Örneği
 
 ```c
 eglMakeCurrent(dpy, pbuffer_surface, pbuffer_surface, ctx);
@@ -3557,18 +4490,18 @@ glClear(GL_COLOR_BUFFER_BIT);
 eglSwapBuffers(dpy, pbuffer_surface); /* EGL 1.0: no effect */
 ```
 
-Pbuffer için `eglSwapBuffers` çağrısı öğretici olabilir ama görünür output beklenmemelidir.
+Pbuffer için `eglSwapBuffers` çağrısı semantik olarak geçerli olsa da görünür bir output üretmez.
 
 ## Bölüm Özeti
 
 - `eglSwapBuffers` window surface için anlamlıdır.
 - Pbuffer ve pixmap surface için etkisi yoktur.
 - EGL 1.0'da surface current context'e bağlı olmalıdır.
-- Başarılı swap sonrası color buffer içeriğini korunmuş sayma.
+- Başarılı swap sonrasında color buffer içeriğinin korunduğu varsayılamaz.
 - `eglSwapBuffers` implicit `glFlush` yapar ama `glFinish` değildir.
 - “Swap” fiziksel olarak mutlaka pointer değişimi demek değildir; gözlemlenebilir işlem window'a post edilmesidir.
 - EGL 1.0 VSync, tearing engelleme veya sabit FPS garantisi vermez.
-- GBM/DRM kullanıyorsan swap sonrası ayrıca BO alma ve KMS scanout gerekir.
+- GBM/DRM kullanımında swap sonrasında ayrıca BO alma ve KMS scanout işlemleri gerekir.
 
 ---
 
@@ -3940,8 +4873,8 @@ Bu incelemede fonksiyonun tek parametresi olan `dpy` / `pDpyID` uc farkli durum 
 
 | Senaryo | `pDpyID` durumu | Test dosyasi | Beklenen sonuc |
 | :--- | :--- | :--- | :--- |
-| A | Gecerli ve initialize edilmis display | `pDpyID/ScenarioA_ValidDisplay.c` | Render hatti kurulur, ucgen cizilir, `eglTerminate(display)` `EGL_TRUE` dondurur. |
-| B | `EGL_NO_DISPLAY` / gecersiz display | `pDpyID/ScenarioB_InvalidDisplay.c` | Gecerli display olmadigi icin EGL/GBM/DRM hatti baslatilmaz; gercek cagrida beklenen hata `EGL_BAD_DISPLAY` olur. |
+| A | Gecerli ve initialize edilmis display | `pDpyID/ScenarioA_ValidDisplay.c` | `eglTerminate(display)` `EGL_TRUE` dondurur ve display EGL acisindan uninitialized duruma doner. |
+| B | `EGL_NO_DISPLAY` / gecersiz display | `pDpyID/ScenarioB_InvalidDisplay.c` | EGL acisindan beklenen sonuc `EGL_FALSE` ve `EGL_BAD_DISPLAY` hatasidir. |
 | C | Gecerli fakat initialize edilmemis display | `pDpyID/ScenarioC_UninitializedDisplay.c` | Render hatti kurulmaz; gecerli display uzerinde `eglTerminate(display)` guvenli bicimde `EGL_TRUE` dondurur. |
 
 ## Kisa Ozet
@@ -3953,16 +4886,22 @@ Bu incelemede fonksiyonun tek parametresi olan `dpy` / `pDpyID` uc farkli durum 
 Fonksiyonun anlasilmasi icin en onemli ayrim sudur:
 
 - `dpy` gecerli ve initialize edilmisse EGL kaynaklari kapatilir.
-- `dpy` gecerli ama initialize edilmemisse cagri hata sayilmaz; display zaten baslatilmamis durumdadir.
+- `dpy` gecerli ama initialize edilmemisse veya daha once terminate edilmisse cagri hata sayilmaz; display zaten baslatilmamis durumdadir.
 - `dpy` gecersizse fonksiyon basarili kabul edilmez ve `EGL_BAD_DISPLAY` beklenir.
+
+## EGL ve Native Kaynak Ayrimi
+
+![eglTerminate kaynak ayrimi](../eglFunctions/image/eglTerminate/eglterminate-resource-boundary.svg)
+
+`eglTerminate`, EGL tarafindaki display oturumunu ve bu oturuma bagli EGL kaynaklarini hedefler. DRM fd, GBM device, GBM surface ve native pencere kaynaklari EGL disindaki platform kaynaklaridir; bu nedenle ayri cleanup adimlariyla kapatilmalidir.
 
 ## Senaryo A: Gecerli ve Initialize Edilmis Display
 
 ![Senaryo A gecerli display akisi](../eglFunctions/image/eglTerminate/scenario-a-valid-display.svg)
 
-Bu senaryoda program once DRM/KMS ve GBM altyapisini kurar. Ardindan GBM device uzerinden gecerli bir `EGLDisplay` alir ve `eglInitialize` ile EGL oturumunu baslatir. Config secimi, window surface olusturma ve GLES2 context olusturma adimlari basarili olursa context current yapilir. Son olarak renkli ucgen cizilir, goruntu `drm_swap_buffers` ile ekrana sunulur ve `eglTerminate(display)` cagrilir.
+Bu senaryoda program once native altyapi uzerinden gecerli bir `EGLDisplay` alir ve `eglInitialize` ile EGL oturumunu baslatir. Context ve surface olusturulduktan sonra `eglTerminate(display)` cagrilir.
 
-**Kodun gosterdigi nokta:** Gecerli ve initialize edilmis `pDpyID`, `eglTerminate` icin dogru kullanim durumudur. Fonksiyon basarili oldugunda `EGL_TRUE` doner ve display EGL acisindan tekrar uninitialized hale gelir.
+**Kodun gosterdigi nokta:** Gecerli ve initialize edilmis `pDpyID`, `eglTerminate` icin dogru kullanim durumudur. Fonksiyon basarili oldugunda `EGL_TRUE` doner, EGL oturumu kapanir ve display EGL acisindan tekrar uninitialized hale gelir. Ucgen cizimi, sadece terminate oncesinde EGL oturumunun calisir durumda oldugunu gosteren yardimci kanittir.
 
 **Beklenen terminal ciktisi ozeti:**
 
@@ -3975,18 +4914,18 @@ EGL GBM display ... ile alindi
 
 Simdi eglTerminate(display) cagriliyor...
 -> eglTerminate BASARILI (EGL_TRUE dondu).
--> Gorsel Kanit: Ucgen basariyla cizildi ve ardindan EGL baglantisi temiz bir sekilde sonlandirildi.
+-> EGL oturumu sonlandirildi ve display uninitialized duruma dondu.
 ```
 
-**Gorsel yorum:** Semadaki ekran alani, programin basarili calismasinda olusan somut kaniti temsil eder: GLES2 ile cizilen kirmizi/yesil/mavi koseli ucgen DRM/KMS uzerinden fiziksel ekrana basilir. Bu nedenle Senaryo A yalnizca terminal ciktisiyla degil, gercek render sonucuyla da dogrulanabilir.
+**Gorsel yorum:** Bu senaryoda asil kanit, `eglTerminate(display)` cagrisinin `EGL_TRUE` donmesi ve display'in uninitialized duruma gecmesidir. Render ciktisi, EGL oturumunun terminate oncesinde aktif oldugunu gosteren ikincil kanittir.
 
 ## Senaryo B: `EGL_NO_DISPLAY` / Gecersiz Display
 
 ![Senaryo B gecersiz display akisi](../eglFunctions/image/eglTerminate/scenario-b-invalid-display.svg)
 
-Bu negatif senaryoda `pDpyID` olarak `EGL_NO_DISPLAY` veya NULL benzeri gecersiz bir display degeri ele alinir. Kod guvenlik ve sistem kararliligi icin gercek `eglTerminate(EGL_NO_DISPLAY)` cagrisi yapmaz; bunun yerine bu parametre sinifinin neden hatali oldugunu acikca gosterir.
+Bu negatif senaryoda `pDpyID` olarak `EGL_NO_DISPLAY` veya NULL benzeri gecersiz bir display degeri ele alinir. EGL acisindan bu cagri basarili kabul edilmez.
 
-**Kodun gosterdigi nokta:** Gecerli bir display yoksa EGL oturumu da yoktur. Bu durumda context, surface, cizim veya DRM present adimlari denenmemelidir. EGL spesifikasyonu acisindan gecersiz display ile yapilan cagrilarda beklenen hata sinifi `EGL_BAD_DISPLAY`'dir.
+**Kodun gosterdigi nokta:** Gecerli bir display yoksa EGL oturumu da yoktur. EGL spesifikasyonu acisindan gecersiz display ile yapilan cagrilarda beklenen sonuc `EGL_FALSE` ve hata sinifi `EGL_BAD_DISPLAY`'dir. Test kodu canli sistemde bu negatif cagriyi atlayabilir; ancak beklenen EGL davranisi budur.
 
 **Beklenen terminal ciktisi ozeti:**
 
@@ -3998,7 +4937,7 @@ Beklenen sonuc: EGL implementasyonu boyle bir display'i gecerli kabul etmemeli v
 SONUC: Gecerli display olmadigi icin context/surface olusturulmaz, cizim ve DRM present denenmez.
 ```
 
-**Gorsel yorum:** Bu senaryoda ekranda ucgen veya yeni frame beklenmez. En guclu kanit, render hattinin hic baslatilmamasi ve terminal ciktisinda gecersiz display durumunun acikca raporlanmasidir.
+**Gorsel yorum:** Bu senaryoda ana odak render hattinin baslatilmamasi degil, `eglTerminate(EGL_NO_DISPLAY)` icin beklenen EGL sonucudur: `EGL_FALSE` ve `EGL_BAD_DISPLAY`.
 
 ## Senaryo C: Gecerli Fakat Initialize Edilmemis Display
 
@@ -4006,7 +4945,7 @@ SONUC: Gecerli display olmadigi icin context/surface olusturulmaz, cizim ve DRM 
 
 Bu senaryoda DRM/KMS ve GBM altyapisi kurulur, ardindan gecerli bir `EGLDisplay` alinir. Ancak senaryo geregi `eglInitialize` cagrisi yapilmaz. Program dogrudan `eglTerminate(display)` cagirir.
 
-EGL 1.0 davranisina gore display handle gecerli oldugu surece, display daha once initialize edilmemis olsa bile `eglTerminate` cagrisi hata uretmeden tamamlanabilir. Cunku EGL tarafinda kapatilacak aktif bir oturum veya render kaynagi yoktur.
+EGL 1.0 davranisina gore display handle gecerli oldugu surece, display daha once initialize edilmemis veya zaten terminate edilmis olsa bile `eglTerminate` cagrisi hata uretmeden tamamlanabilir. Cunku EGL tarafinda kapatilacak aktif bir oturum veya render kaynagi yoktur.
 
 **Kodun gosterdigi nokta:** `pDpyID` gecerlidir, fakat display initialize edilmedigi icin `eglGetConfigs`, `eglChooseConfig`, context olusturma, surface olusturma, cizim ve DRM present adimlari calistirilmaz. Buna ragmen `eglTerminate(display)` `EGL_TRUE` dondurur.
 
@@ -4026,14 +4965,20 @@ Bu display eglInitialize ile baslatilmadigi icin eglGetConfigs/eglChooseConfig, 
 SONUC: EGL Context olusturulamaz ve ekrana yeni bir gorsel basilmamalidir.
 ```
 
-**Gorsel yorum:** Senaryo C'de display handle gecerli olsa da EGL state machine baslatilmadigi icin cizim hatti olusmaz. Bu nedenle beklenen gorsel sonuc "yeni goruntu yok" durumudur; dogrulama terminaldeki `EGL_TRUE` sonucu ve render adimlarinin atlanmasi uzerinden yapilir.
+**Gorsel yorum:** Senaryo C'de display handle gecerli olsa da EGL state machine baslatilmadigi icin context ve surface yoktur. Bu nedenle `eglTerminate(display)` no-op benzeri bir kapanis davranisi gosterir ve `EGL_TRUE` doner.
+
+## Current Kaynak Durumu
+
+![eglTerminate current kaynak durumu](../eglFunctions/image/eglTerminate/eglterminate-current-resources.svg)
+
+Bir context veya surface herhangi bir thread icin current durumdaysa, `eglTerminate` sonrasinda bu kaynaklar artik normal kullanim icin gecerli kabul edilmez. Ancak fiziksel yok etme islemi, current baglanti cozulecek sekilde sonraki uygun `eglMakeCurrent` cagrisina kadar ertelenebilir.
 
 ## Hata ve Durum Matrisi
 
 | Durum | `eglTerminate` sonucu | Beklenen EGL hata durumu | Yan etki |
 | :--- | :--- | :--- | :--- |
 | `dpy` gecerli ve initialized | `EGL_TRUE` | `EGL_SUCCESS` | EGL oturumu sonlanir, display uninitialized olur. |
-| `dpy` gecerli fakat uninitialized | `EGL_TRUE` | `EGL_SUCCESS` | Aktif EGL kaynagi olmadigi icin guvenli no-op davranisi gorulur. |
+| `dpy` gecerli fakat uninitialized veya zaten terminated | `EGL_TRUE` | `EGL_SUCCESS` | Aktif EGL kaynagi olmadigi icin guvenli no-op davranisi gorulur. |
 | `dpy == EGL_NO_DISPLAY` veya gecersiz | `EGL_FALSE` | `EGL_BAD_DISPLAY` | EGL state degismez; render hatti kurulmaz. |
 
 > [!WARNING]
