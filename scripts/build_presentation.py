@@ -14,7 +14,7 @@ import tempfile
 GENERATED_NOTICE = """<!--
 AUTO-GENERATED FILE. DO NOT EDIT DIRECTLY.
 Run: python scripts/build_presentation.py
-Source order: docs/presentation-order.txt
+Source order: docs/other/presentation-order.txt
 -->"""
 
 
@@ -27,30 +27,30 @@ MARKDOWN_IMAGE = re.compile(r"(!\[[^\]\n]*\]\()([^\s)]+)([^)\n]*\))")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Build docs/eglFunctions.md from ordered Markdown sources."
+        description="Build docs/other/eglFunctions.md from ordered Markdown sources."
     )
     parser.add_argument(
         "--order",
         type=Path,
-        default=Path("docs/presentation-order.txt"),
+        default=Path("docs/other/presentation-order.txt"),
         help="order file; entries are relative to this file (default: %(default)s)",
     )
     parser.add_argument(
         "--preamble",
         type=Path,
-        default=Path("docs/presentation-preamble.md"),
+        default=Path("docs/other/presentation-preamble.md"),
         help="presentation introduction (default: %(default)s)",
     )
     parser.add_argument(
         "--footer",
         type=Path,
-        default=Path("docs/presentation-footer.md"),
+        default=Path("docs/other/presentation-footer.md"),
         help="presentation ending (default: %(default)s)",
     )
     parser.add_argument(
         "--output",
         type=Path,
-        default=Path("docs/eglFunctions.md"),
+        default=Path("docs/other/eglFunctions.md"),
         help="generated Markdown file (default: %(default)s)",
     )
     parser.add_argument(

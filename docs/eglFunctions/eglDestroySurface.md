@@ -1,189 +1,173 @@
 # EGL 1.0: `eglDestroySurface`
 
 ```c
-EGLBoolean eglDestroySurface(
-    EGLDisplay dpy,
-    EGLSurface surface
-);
+EGLBoolean eglDestroySurface(EGLDisplay dpy,
+                             EGLSurface surface);
 ```
 
-## 1. Bu Fonksiyon Ne Yapar?
+`eglDestroySurface`, window, pixmap veya pbuffer türündeki bir EGL rendering
+surface ile ilişkili kaynakları silinmek üzere işaretler. Surface herhangi bir
+thread'de current draw/read surface ise gerçek silme ertelenir.
 
-`eglDestroySurface`, window, pbuffer veya pixmap türündeki bir `EGLSurface`
-nesnesini silinmek üzere işaretler.
+![EGLSurface türleri ve sahiplik modeli](image/eglDestroySurface/ownership.svg)
+
+## EGLSurface Neyi Temsil Eder?
+
+`EGLSurface`, OpenGL ES rendering için color buffer ve config tarafından
+tanımlanan depth, stencil veya multisample buffer'larına erişim sağlayan opaque
+bir EGL handle'ıdır.
 
 ```text
-Current değil -> eglDestroySurface() -> silinebilir
-Current       -> eglDestroySurface() -> silme için işaretlenir
-                                      -> current kaldığı sürece geçerlidir
+EGLSurface
+  +-- Window surface  -> native window ile ilişkili
+  +-- Pixmap surface  -> native pixmap ile ilişkili
+  +-- Pbuffer surface -> EGL tarafında off-screen buffer
 ```
 
-Bu projede EGL surface ile GBM native surface ayrı nesnelerdir:
+Window/pixmap surface ile native nesne aynı nesne değildir. EGL surface'in
+destroy edilmesi native window, native pixmap veya GBM surface'i otomatik olarak
+destroy etmez.
 
-```text
-eglDestroySurface()       -> EGLSurface nesnesini yönetir
-gbm_surface_destroy()     -> struct gbm_surface nesnesini yönetir
-```
+## Parametreler
 
-Fonksiyon iki parametre alır:
+### `dpy`
 
-```text
-dpy     -> Surface'in ait olduğu, initialize edilmiş EGLDisplay
-surface -> Silinecek EGLSurface
-```
+`dpy`, surface'in oluşturulduğu initialize edilmiş EGL display'dir.
 
----
+| Durum | Sonuç |
+| --- | --- |
+| Geçerli, initialize edilmiş ve surface'in sahibi display | `surface` geçerliyse işlem yürütülür. |
+| `EGL_NO_DISPLAY` veya geçersiz handle | `EGL_FALSE`, `EGL_BAD_DISPLAY`. |
+| Initialize edilmemiş display | `EGL_FALSE`, `EGL_NOT_INITIALIZED`. |
 
-# 2. Birinci Parametre: `dpy`
+### `surface`
 
-## 2.1 Senaryo A - Geçerli `EGLDisplay`
+`surface`, `dpy` üzerinde bir EGL surface creation fonksiyonuyla oluşturulmuş
+geçerli handle olmalıdır.
+
+| Durum | Davranış |
+| --- | --- |
+| Hiçbir thread'de current değil | Silme işaretlenir; kaynaklar en kısa sürede serbest bırakılabilir. |
+| Current draw veya read surface | `EGL_TRUE`; gerçek silme ertelenir. |
+| Geçersiz handle | `EGL_FALSE`, `EGL_BAD_SURFACE`. |
+
+## Draw Surface ve Read Surface
+
+`eglMakeCurrent`, context ile iki surface binding'i kurar:
 
 ```c
-EGLBoolean result = eglDestroySurface(
-    egl_display,
-    egl_surface
-);
+eglMakeCurrent(dpy, draw_surface, read_surface, context);
 ```
 
-`surface` aynı display'a ait ve geçerliyse beklenen sonuç:
+- draw surface, rendering komutlarının hedefidir.
+- read surface, pixel okuma/kopyalama işlemlerinin kaynağı olabilir.
+- Aynı surface her iki rol için de kullanılabilir.
 
-```text
-result = EGL_TRUE
-```
+Bir surface bu rollerden herhangi birinde current ise `eglDestroySurface`
+sonrası gerçek release ertelenir.
 
-## 2.2 Senaryo B - `EGL_NO_DISPLAY`
+![Current surface için ertelenmiş silme](image/eglDestroySurface/deferred-destruction.svg)
+
+## Ertelenmiş Silme
+
+Current surface destroy edildiğinde:
+
+1. Surface ve kaynakları silinmek üzere işaretlenir.
+2. `eglDestroySurface` `EGL_TRUE` döndürür.
+3. Mevcut current binding geçerliliğini korur.
+4. Surface yalnızca current kaldığı sürece kullanılabilir.
+5. İlgili thread'in sonraki geçerli `eglMakeCurrent` çağrısı eski binding'i kaldırır.
+6. Artık current olmayan surface'in gerçek silinmesi tamamlanabilir.
+
+Release için yaygın çağrı:
 
 ```c
-EGLBoolean result = eglDestroySurface(
-    EGL_NO_DISPLAY,
-    egl_surface
-);
-
-EGLint error = eglGetError();
+eglMakeCurrent(dpy,
+               EGL_NO_SURFACE,
+               EGL_NO_SURFACE,
+               EGL_NO_CONTEXT);
 ```
 
-Beklenen sonuç:
+Bu çağrı tek başına surface'i destroy etmez; yalnızca calling thread'in
+current binding'ini kaldırır.
+
+## EGLSurface ve Native Nesne Yaşam Döngüsü
+
+Window surface için iki ayrı sahiplik alanı vardır:
 
 ```text
-result = EGL_FALSE
-error  = EGL_BAD_DISPLAY
+EGL ownership                     Platform ownership
+-------------                     ------------------
+EGLSurface                        X11 Window
+                                  wl_surface / wl_egl_window
+                                  HWND
+                                  gbm_surface
 ```
 
-## 2.3 Initialize Edilmemiş Display
-
-```text
-result = EGL_FALSE
-error  = EGL_NOT_INITIALIZED
-```
-
-![eglDestroySurface dpy senaryoları](image/eglDestroySurface/dpy-flow.svg)
-
----
-
-# 3. İkinci Parametre: `surface`
-
-## 3.1 Senaryo A - Geçerli ve Current Olmayan Surface
-
-Surface hiçbir thread'de current draw veya current read surface değilse silme
-isteği başarılı olur ve kaynakları mümkün olan en kısa sürede serbest
-bırakılabilir.
+Bu projedeki GBM cleanup sırası kavramsal olarak:
 
 ```c
-EGLBoolean result = eglDestroySurface(
-    egl_display,
-    egl_surface
-);
+eglMakeCurrent(dpy,
+               EGL_NO_SURFACE,
+               EGL_NO_SURFACE,
+               EGL_NO_CONTEXT);
+
+eglDestroySurface(dpy, egl_surface);
+gbm_surface_destroy(gbm_surface);
 ```
 
-Beklenen sonuç:
+Native nesne EGLSurface hala ona bağlı ve kullanılırken yok edilmemelidir.
+Kesin sıralama platform entegrasyonunun kurallarına da bağlıdır.
 
-```text
-result = EGL_TRUE
-```
+![EGL ve native surface cleanup sırası](image/eglDestroySurface/native-cleanup.svg)
 
-## 3.2 Senaryo B - Geçerli ve Current Surface
+## Window, Pixmap ve Pbuffer Farkı
 
-Current draw veya read surface için silme isteği kabul edilir, fakat gerçek
-silme ertelenir.
-
-```c
-eglMakeCurrent(
-    egl_display,
-    egl_surface,
-    egl_surface,
-    egl_context
-);
-
-EGLBoolean result = eglDestroySurface(
-    egl_display,
-    egl_surface
-);
-```
-
-Beklenen davranış:
-
-```text
-result  = EGL_TRUE
-surface = silme için işaretli, ancak hala current
-```
-
-Sonraki geçerli `eglMakeCurrent` çağrısı eski surface'i current durumdan
-çıkardığında gerçek silme tamamlanabilir:
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-```
-
-## 3.3 Senaryo C - Geçersiz `EGLSurface`
-
-```c
-EGLSurface invalid_surface = (EGLSurface)0;
-
-EGLBoolean result = eglDestroySurface(
-    egl_display,
-    invalid_surface
-);
-
-EGLint error = eglGetError();
-```
-
-Beklenen sonuç:
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_SURFACE
-```
-
-> `(EGLSurface)0` yalnızca geçersiz handle senaryosunu göstermek içindir.
-
-![eglDestroySurface surface senaryoları](image/eglDestroySurface/surface-flow.svg)
-
----
-
-# 4. Current ve Current Olmayan Surface Karşılaştırması
-
-| Surface durumu | `eglDestroySurface` sonucu | Gerçek silme |
+| Surface türü | Native nesne | Destroy sonrası ayrı cleanup |
 | --- | --- | --- |
-| Current değil | `EGL_TRUE` | Mümkün olan en kısa sürede |
-| Current | `EGL_TRUE` | Sonraki geçerli `eglMakeCurrent` sonrası |
-| Geçersiz handle | `EGL_FALSE` | Silinecek geçerli nesne yok |
+| Window | Native window vardır | Native window platform API'siyle yok edilir. |
+| Pixmap | Native pixmap vardır | Native pixmap platform API'siyle yok edilir. |
+| Pbuffer | Ayrı native pencere yoktur | EGL pbuffer kaynaklarını EGL yönetir. |
 
-EGL surface silindikten sonra ona karşılık gelen native window veya GBM
-surface gerekiyorsa kendi platform API'siyle ayrıca temizlenmelidir.
+`eglDestroySurface` üç surface türü için de aynı API'dir; fark,
+surface'in oluşturulma kaynağı ve native nesne sahipliğindedir.
 
----
+## Dönüş Değeri ve Hatalar
 
-# 5. Dönüş Değeri
+| Sonuç | Anlam |
+| --- | --- |
+| `EGL_TRUE` | Silme isteği kabul edildi; release ertelenmiş olabilir. |
+| `EGL_FALSE` | İşlem başarısız; `eglGetError` ile hata okunur. |
 
-```text
-EGL_TRUE  -> Silme isteği kabul edildi
-EGL_FALSE -> İşlem başarısız; eglGetError() ile hata okunmalı
+| Koşul | Hata |
+| --- | --- |
+| EGL `dpy` için initialize edilmemiş | `EGL_NOT_INITIALIZED` |
+| `dpy` geçerli display değil | `EGL_BAD_DISPLAY` |
+| `surface` geçerli rendering surface değil | `EGL_BAD_SURFACE` |
+
+## Temel Kullanım
+
+```c
+if (eglDestroySurface(dpy, surface) == EGL_FALSE) {
+    EGLint error = eglGetError();
+    /* Handle the error. */
+}
+
+surface = EGL_NO_SURFACE;
 ```
 
-`EGL_TRUE`, current surface kaynaklarının o anda fiziksel olarak serbest
-bırakıldığı anlamına gelmez.
+Başarılı destroy sonrası uygulama eski opaque handle'ı yeniden
+kullanmamalıdır. Değişkeni `EGL_NO_SURFACE` yapmak yanlış kullanımı
+azaltır; EGL tarafındaki destroy işleminin yerine geçmez.
+
+## Bölüm Özeti
+
+- Fonksiyon window, pixmap ve pbuffer surface'leri silinmek üzere işaretler.
+- Current surface'in gerçek silinmesi sonraki geçerli `eglMakeCurrent` çağrısına ertelenir.
+- Draw ve read binding'lerinden herhangi biri deferred destruction için yeterlidir.
+- EGLSurface ile native window/pixmap/GBM surface farklı nesnelerdir.
+- Başarılı `EGL_TRUE`, fiziksel belleğin aynı anda serbest kaldığını garanti etmez.
+
+## Kaynak
+
+- EGL 1.0 Specification, Section 3.5.4, Destroying Rendering Surfaces.

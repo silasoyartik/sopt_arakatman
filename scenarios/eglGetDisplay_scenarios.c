@@ -3,8 +3,8 @@
 #include <stdio.h>
 
 /*
- * eglGetDisplay(display_id) icin all-in-one senaryo dosyasi.
- * main ve diger EGL kurulum adimlari bilerek cikarilmistir.
+ * All-in-one scenario file for eglGetDisplay(display_id).
+ * main and other EGL setup steps are deliberately omitted.
  */
 
 static const char *egl_error_name(EGLint error)
@@ -27,25 +27,25 @@ static const char *egl_error_name(EGLint error)
 
 
 /*
- * SENARYO A - EGL_DEFAULT_DISPLAY.
- * Beklenen: EGL_NO_DISPLAY disinda gecerli bir EGLDisplay handle'i.
+ * SCENARIO A - EGL_DEFAULT_DISPLAY.
+ * Expected: a valid EGLDisplay handle other than EGL_NO_DISPLAY.
  */
 void scenario_a_default_display(void)
 {
     EGLDisplay dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
     if (dpy != EGL_NO_DISPLAY) {
-        printf("Senaryo A basarili: EGLDisplay=%p\n", (void *)dpy);
+        printf("Scenario A passed: EGLDisplay=%p\n", (void *)dpy);
     } else {
-        printf("Senaryo A hatali: %s\n",
+        printf("Scenario A failed: %s\n",
                egl_error_name(eglGetError()));
     }
 }
 
 
 /*
- * SENARYO B - Ayni EGL_DEFAULT_DISPLAY ile iki cagri.
- * Test ortamimizda ayni EGLDisplay handle'i gozlenmesi beklenir.
+ * SCENARIO B - Two calls with the same EGL_DEFAULT_DISPLAY.
+ * The same EGLDisplay handle is expected in our test environment.
  */
 void scenario_b_repeated_default_display(void)
 {
@@ -53,30 +53,30 @@ void scenario_b_repeated_default_display(void)
     EGLDisplay dpy2 = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
     if (dpy1 == EGL_NO_DISPLAY || dpy2 == EGL_NO_DISPLAY) {
-        printf("Senaryo B hatali: display alinamadi.\n");
+        printf("Scenario B failed: could not obtain a display.\n");
         return;
     }
 
     if (dpy1 == dpy2) {
-        printf("Senaryo B basarili: handle'lar ayni (%p).\n",
+        printf("Scenario B passed: the handles are identical (%p).\n",
                (void *)dpy1);
     } else {
-        printf("Senaryo B farkli sonuc: dpy1=%p dpy2=%p\n",
+        printf("Scenario B returned a different result: dpy1=%p dpy2=%p\n",
                (void *)dpy1, (void *)dpy2);
     }
 }
 
 
 /*
- * SENARYO C - Explicit Wayland display.
- * Beklenen: gecerli wl_display icin EGL_NO_DISPLAY disinda bir handle.
+ * SCENARIO C - Explicit Wayland display.
+ * Expected: a handle other than EGL_NO_DISPLAY for a valid wl_display.
  */
 void scenario_c_explicit_wayland_display(void)
 {
     struct wl_display *native_dpy = wl_display_connect(NULL);
 
     if (native_dpy == NULL) {
-        printf("Senaryo C baslatilamadi: Wayland display alinamadi.\n");
+        printf("Scenario C setup failed: could not obtain a Wayland display.\n");
         return;
     }
 
@@ -84,9 +84,9 @@ void scenario_c_explicit_wayland_display(void)
         eglGetDisplay((EGLNativeDisplayType)native_dpy);
 
     if (dpy != EGL_NO_DISPLAY) {
-        printf("Senaryo C basarili: EGLDisplay=%p\n", (void *)dpy);
+        printf("Scenario C passed: EGLDisplay=%p\n", (void *)dpy);
     } else {
-        printf("Senaryo C hatali: %s\n",
+        printf("Scenario C failed: %s\n",
                egl_error_name(eglGetError()));
     }
 
