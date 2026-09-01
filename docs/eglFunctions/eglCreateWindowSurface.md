@@ -21,37 +21,63 @@ ile EGL tarafındaki surface arasındaki bağı kurar.
 ## Kavramsal Model
 
 ```text
-Native platform                         EGL
----------------                         ---
-X11 Window       --\
-wl_egl_window    ----> NativeWindowType ---> eglCreateWindowSurface
-Win32 HWND       --/                              |
-GBM surface      -/                               v
-                                               EGLSurface
-                                                   |
-                                                   v
-                                             eglMakeCurrent
-                                                   |
-                                                   v
-                                           OpenGL ES rendering
+Native window ----\
+EGLDisplay --------+--> eglCreateWindowSurface --> EGLSurface
+EGLConfig --------/                                  ^
+                                                       |
+EGLContext ---------------- eglMakeCurrent ------------+
+                                                       |
+                                                       v
+                                              OpenGL ES rendering
 ```
 
-`NativeWindowType` platforma bağlıdır. Modern header'larda aynı kavram
-`EGLNativeWindowType` typedef'iyle görülebilir. Uygulama, kullandığı EGL
-platformunun beklediği native nesneyi vermelidir.
+Native window; X11 Window, `wl_egl_window`, Win32 `HWND` veya GBM surface gibi
+platforma özgü bir nesnedir. `NativeWindowType` platforma bağlıdır. Modern
+header'larda aynı kavram `EGLNativeWindowType` typedef'iyle görülebilir.
+Uygulama, kullandığı EGL platformunun beklediği native nesneyi vermelidir.
 
 ## Parametreler
 
+Fonksiyonun dört parametresi birlikte şu cümleyi kurar:
+
+> `dpy` EGL ortamında, `config` ile tarif edilen tampon özelliklerini kullanarak,
+> `win` native penceresine bağlı ve `attrib_list` ek ayarlarına sahip bir
+> `EGLSurface` oluştur.
+
+| Parametre       | En temel anlamı                            | Cevapladığı soru                                    |
+| --------------- | ------------------------------------------- | ------------------------------------------------------ |
+| `dpy`         | EGL ile platform arasındaki bağlantı     | Hangi EGL ortamı kullanılacak?                       |
+| `config`      | Surface'in framebuffer tarifi               | OpenGL ES hangi tür tamponlara çizecek?              |
+| `win`         | Platformun daha önce oluşturduğu pencere | Çizilen görüntü hangi native pencereye ait olacak? |
+| `attrib_list` | Surface oluşturulurken verilen ek ayarlar  | Bu surface için ek bir oluşturma seçeneği var mı? |
+
 ### `dpy`
 
-`dpy`, initialize edilmiş EGL display bağlantısıdır. Hem `config` hem de
-dönen `EGLSurface` bu display'in namespace'ine aittir.
+`dpy`, EGL'nin native platformla konuştuğu initialize edilmiş bağlantıdır.
+Adında "display" geçse de yalnızca fiziksel monitörü ifade etmez; X11,
+Wayland veya GBM gibi platforma ait EGL kaynaklarının hangi ortamda
+oluşturulacağını belirler.
 
-| Durum | Sonuç |
-| --- | --- |
-| Geçerli ve initialize edilmiş `EGLDisplay` | Diğer argümanlar uygunsa surface oluşturulabilir. |
-| `EGL_NO_DISPLAY` veya geçersiz handle | `EGL_NO_SURFACE`, `EGL_BAD_DISPLAY`. |
-| Geçerli fakat initialize edilmemiş display | `EGL_NO_SURFACE`, `EGL_NOT_INITIALIZED`. |
+Tipik olarak önce alınır ve initialize edilir:
+
+```c
+EGLDisplay dpy = eglGetDisplay(native_display);
+
+if (dpy == EGL_NO_DISPLAY ||
+    eglInitialize(dpy, NULL, NULL) == EGL_FALSE) {
+    /* EGL ortamı kullanıma hazır değil. */
+}
+```
+
+`eglCreateWindowSurface`, hangi EGL ortamını kullanacağını `dpy`
+parametresinden anlar. Hem `config` hem de dönen `EGLSurface` bu display'in
+namespace'ine aittir.
+
+| Durum                                         | Sonuç                                               |
+| --------------------------------------------- | ---------------------------------------------------- |
+| Geçerli ve initialize edilmiş`EGLDisplay` | Diğer argümanlar uygunsa surface oluşturulabilir. |
+| `EGL_NO_DISPLAY` veya geçersiz handle      | `EGL_NO_SURFACE`, `EGL_BAD_DISPLAY`.             |
+| Geçerli fakat initialize edilmemiş display  | `EGL_NO_SURFACE`, `EGL_NOT_INITIALIZED`.         |
 
 Display, config, context ve surface nesneleri arasındaki sahiplik ilişkisi
 önemlidir:
@@ -72,9 +98,52 @@ Bir display'den alınan config başka display'de kullanılamaz.
 
 ### `config`
 
-`config`, surface'in framebuffer özelliklerini ve desteklediği surface
-türlerini tanımlar. Window surface oluşturabilmek için config'in
-`EGL_SURFACE_TYPE` bitmask'i `EGL_WINDOW_BIT` içermelidir.
+`config`, oluşturulacak surface'in **framebuffer tarifidir**. Native pencerenin
+boyutunu veya ekrandaki konumunu belirlemez; OpenGL ES'in o pencereye çizerken
+kullanacağı color, depth, stencil ve multisample tamponlarının özelliklerini
+belirler.
+
+Örneğin bir config kavramsal olarak şunları tarif edebilir:
+
+```text
+Red / green / blue / alpha  -> kanal başına 8 bit
+Depth buffer               -> 24 bit
+Stencil buffer             -> 8 bit
+Surface desteği            -> window surface
+Rendering desteği          -> OpenGL ES
+```
+
+`EGLConfig`, uygulamanın alanlarını doldurduğu bir C `struct` değildir.
+Uygulama istediği özellikleri `eglChooseConfig` fonksiyonuna bildirir; EGL de
+uygun config handle'larını döndürür:
+
+```c
+const EGLint config_attributes[] = {
+    EGL_RED_SIZE,       8,
+    EGL_GREEN_SIZE,     8,
+    EGL_BLUE_SIZE,      8,
+    EGL_ALPHA_SIZE,     8,
+    EGL_DEPTH_SIZE,    24,
+    EGL_STENCIL_SIZE,   8,
+    EGL_SURFACE_TYPE,   EGL_WINDOW_BIT,
+    EGL_NONE
+};
+
+EGLConfig config;
+EGLint config_count = 0;
+
+eglChooseConfig(dpy, config_attributes, &config, 1, &config_count);
+```
+
+Burada elde edilen `config`, daha sonra `eglCreateWindowSurface` fonksiyonuna
+verilir. Dolayısıyla `config` parametresi fonksiyona kabaca şunu söyler:
+
+> Bu native pencere için oluşturacağın çizim yüzeyinde, EGL'nin daha önce
+> seçtiği bu framebuffer özelliklerini kullan.
+
+Window surface oluşturabilmek için config'in `EGL_SURFACE_TYPE` bitmask'i
+`EGL_WINDOW_BIT` içermelidir. Config ayrıca native pencerenin pixel formatıyla
+uyumlu olmalıdır.
 
 ```c
 EGLint surface_type = 0;
@@ -90,12 +159,12 @@ Config ayrıca color, depth, stencil ve multisample buffer özelliklerini
 belirler. Bu değerlerin tamamı
 [`eglGetConfigAttrib`](eglGetConfigAttrib.md) ile sorgulanabilir.
 
-| Config durumu | Sonuç |
-| --- | --- |
-| Geçerli ve `EGL_WINDOW_BIT` destekli | Native window ile uyumluysa surface oluşturulur. |
-| Geçersiz config handle | `EGL_NO_SURFACE`, `EGL_BAD_CONFIG`. |
-| `EGL_WINDOW_BIT` içermiyor | `EGL_NO_SURFACE`, `EGL_BAD_MATCH`. |
-| Native window formatıyla uyumsuz | `EGL_NO_SURFACE`, `EGL_BAD_MATCH`. |
+| Config durumu                          | Sonuç                                            |
+| -------------------------------------- | ------------------------------------------------- |
+| Geçerli ve`EGL_WINDOW_BIT` destekli | Native window ile uyumluysa surface oluşturulur. |
+| Geçersiz config handle                | `EGL_NO_SURFACE`, `EGL_BAD_CONFIG`.           |
+| `EGL_WINDOW_BIT` içermiyor          | `EGL_NO_SURFACE`, `EGL_BAD_MATCH`.            |
+| Native window formatıyla uyumsuz      | `EGL_NO_SURFACE`, `EGL_BAD_MATCH`.            |
 
 ![Config ile native window uyumluluğu](image/eglCreateWindowSurface/compatibility.svg)
 
@@ -120,18 +189,46 @@ EGL_RED_SIZE, EGL_DEPTH_SIZE, EGL_SURFACE_TYPE
 
 ### `win`
 
-`win`, platformun geçerli native window nesnesidir.
+`win`, OpenGL ES görüntüsünün ait olacağı geçerli native window
+nesnesidir. Bu pencereyi EGL oluşturmaz; uygulama pencereyi daha önce X11,
+Wayland, Win32 veya GBM gibi platformun kendi API'siyle oluşturur ve elde
+ettiği handle/pointer değerini bu parametreyle EGL'ye verir.
 
-| Platform | Yaygın native nesne | Not |
-| --- | --- | --- |
-| X11 | `Window` | X server tarafında oluşturulmuş pencere ID'si. |
-| Wayland | `struct wl_egl_window *` | Genellikle `wl_surface` üzerinden `wayland-egl` ile oluşturulur. |
-| Win32 | `HWND` | Win32 pencere handle'ı. |
-| Mesa/GBM | `struct gbm_surface *` | DRM/KMS tabanlı platform entegrasyonunda kullanılabilir. |
+```text
+Platform API'si              EGL
+---------------              ---
+native window oluşturulur
+        |
+        +---- win ---------> eglCreateWindowSurface
+                                  |
+                                  v
+                              EGLSurface
+```
+
+`win` ve fonksiyonun döndürdüğü `EGLSurface` aynı nesne değildir:
+
+- Native window; pencerenin platformdaki varlığını, boyutunu ve olaylarını
+  temsil eder.
+- `EGLSurface`; OpenGL ES'in color/depth/stencil tamponlarına eriştiği ve
+  `eglSwapBuffers` ile sunum yaptığı EGL çizim hedefidir.
+
+Fonksiyon bu iki ayrı nesneyi birbirine bağlar; native window'u kopyalamaz
+veya sahipliğini devralmaz.
+
+| Platform | Yaygın native nesne       | Not                                                                   |
+| -------- | -------------------------- | --------------------------------------------------------------------- |
+| X11      | `Window`                 | X server tarafında oluşturulmuş pencere ID'si.                     |
+| Wayland  | `struct wl_egl_window *` | Genellikle`wl_surface` üzerinden `wayland-egl` ile oluşturulur. |
+| Win32    | `HWND`                   | Win32 pencere handle'ı.                                              |
+| Mesa/GBM | `struct gbm_surface *`   | DRM/KMS tabanlı platform entegrasyonunda kullanılabilir.            |
 
 Native nesnenin gerçek türü, `EGLDisplay` elde edilirken seçilen
 platformla uyumlu olmalıdır. X11 display ile Wayland window veya GBM display
 ile X11 Window kullanmak geçerli bir platform eşleşmesi değildir.
+
+Ayrıca `win` ile `config` birbiriyle uyumlu olmalıdır. Örneğin native
+pencerenin pixel formatı, config'in color buffer/native visual beklentisiyle
+uyuşmazsa surface oluşturulamaz ve `EGL_BAD_MATCH` oluşabilir.
 
 Geçersiz native window implementation tarafından algılanabilirse fonksiyon
 `EGL_NO_SURFACE` döndürür ve `EGL_BAD_NATIVE_WINDOW` kaydeder. EGL 1.0,
@@ -164,8 +261,21 @@ DRM/KMS katmanının işidir.
 
 ### `attrib_list`
 
-EGL 1.0 core, `eglCreateWindowSurface` için değiştirilebilir bir window
-surface creation attribute'u tanımlamaz. Bu nedenle core kullanımı:
+`attrib_list`, oluşturulacak window surface'e ait **ek oluşturma ayarlarını**
+taşıyan listedir. Genel EGL attribute listeleri şu düzende yazılır:
+
+```text
+attribute_adı, değer,
+attribute_adı, değer,
+EGL_NONE
+```
+
+Fonksiyona ayrıca liste uzunluğu verilmediği için dolu bir listenin sonuna
+`EGL_NONE` yazılması gerekir. `NULL` ise "ek ayar vermiyorum" anlamına gelir.
+
+Ancak bu dokümanın ele aldığı **EGL 1.0 core**, `eglCreateWindowSurface`
+için değiştirilebilir bir window surface creation attribute'u tanımlamaz.
+Bu nedenle EGL 1.0 core kullanımında pratik seçenekler yalnızca şunlardır:
 
 ```c
 NULL
@@ -181,6 +291,19 @@ const EGLint attributes[] = {
 
 şeklindedir. İki biçim de ek attribute verilmediğini ifade eder.
 
+#### `config` ile `attrib_list` Neden Aynı Şey Değil?
+
+Bu iki parametre kolayca karıştırılabilir:
+
+| Kavram                | Ne zaman kullanılır?                    | Neyi belirler?                                                                                   |
+| --------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Config seçim listesi | `eglChooseConfig` çağrısında        | Color, depth, stencil ve desteklenen surface türü gibi framebuffer gereksinimlerini            |
+| `config`            | `eglCreateWindowSurface` çağrısında | EGL'nin seçtiği framebuffer tariflerinden hangisinin kullanılacağını                       |
+| `attrib_list`       | `eglCreateWindowSurface` çağrısında | Oluşturulan surface'e ait, EGL sürümü veya extension tarafından tanımlanmış ek ayarları |
+
+Bu nedenle `EGL_RED_SIZE` veya `EGL_DEPTH_SIZE` gibi config seçim
+attribute'ları bu parametreye yazılmaz:
+
 ```c
 /* Wrong: EGL_RED_SIZE is a config selection attribute. */
 const EGLint wrong_attributes[] = {
@@ -191,7 +314,9 @@ const EGLint wrong_attributes[] = {
 
 Tanınmayan bir attribute veya değer kullanılması `EGL_BAD_ATTRIBUTE`
 oluşturabilir. Sonraki EGL sürümleri veya extension'lar yeni surface
-attribute'ları tanımlayabilir; bunlar EGL 1.0 core davranışı sayılmaz.
+attribute'ları tanımlayabilir. Bu tür bir attribute ancak kullanılan EGL
+sürümü veya extension onu açıkça destekliyorsa geçerlidir; EGL 1.0 core
+davranışı sayılmaz.
 
 ## Native Window ile Config Uyumluluğu
 
@@ -263,17 +388,17 @@ oluşturmadan önce eski EGLSurface'in yaşam döngüsünü tamamlamalıdır.
 
 Başarısız durumda dönüş değeri `EGL_NO_SURFACE` olur.
 
-| Koşul | Hata |
-| --- | --- |
-| EGL ilgili display için initialize edilmemiş | `EGL_NOT_INITIALIZED` |
-| `dpy` geçerli display değil | `EGL_BAD_DISPLAY` |
-| `config` geçerli config değil | `EGL_BAD_CONFIG` |
-| Config `EGL_WINDOW_BIT` içermiyor | `EGL_BAD_MATCH` |
-| Native window attribute'ları config ile uyuşmuyor | `EGL_BAD_MATCH` |
-| Native window geçersiz ve durum algılanabiliyor | `EGL_BAD_NATIVE_WINDOW` |
-| Native window zaten EGL config ile ilişkili | `EGL_BAD_ALLOC` |
-| Yeni surface için kaynak ayrılamıyor | `EGL_BAD_ALLOC` |
-| Attribute listesinde tanınmayan attribute/değer var | `EGL_BAD_ATTRIBUTE` |
+| Koşul                                                | Hata                      |
+| ----------------------------------------------------- | ------------------------- |
+| EGL ilgili display için initialize edilmemiş        | `EGL_NOT_INITIALIZED`   |
+| `dpy` geçerli display değil                       | `EGL_BAD_DISPLAY`       |
+| `config` geçerli config değil                     | `EGL_BAD_CONFIG`        |
+| Config`EGL_WINDOW_BIT` içermiyor                   | `EGL_BAD_MATCH`         |
+| Native window attribute'ları config ile uyuşmuyor   | `EGL_BAD_MATCH`         |
+| Native window geçersiz ve durum algılanabiliyor     | `EGL_BAD_NATIVE_WINDOW` |
+| Native window zaten EGL config ile ilişkili          | `EGL_BAD_ALLOC`         |
+| Yeni surface için kaynak ayrılamıyor               | `EGL_BAD_ALLOC`         |
+| Attribute listesinde tanınmayan attribute/değer var | `EGL_BAD_ATTRIBUTE`     |
 
 ## Temel Kullanım
 
