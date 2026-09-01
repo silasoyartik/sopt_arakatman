@@ -93,16 +93,16 @@ monitor
 
 ### `surface`
 
-| Değer                                                 | Sonuç                                                         |
-| ------------------------------------------------------ | -------------------------------------------------------------- |
-| Current context'e bağlı geçerli window surface      | Color buffer native window'a post edilir.                      |
-| Current context'e bağlı geçerli pbuffer surface     | EGL 1.0'a göre etkisi yoktur.                                 |
-| Current context'e bağlı geçerli pixmap surface      | EGL 1.0'a göre etkisi yoktur.                                 |
-| Geçerli ama current context'e bağlı olmayan surface | Başarısız,`EGL_BAD_SURFACE`.                              |
-| `EGL_NO_SURFACE`                                     | Başarısız,`EGL_BAD_SURFACE`.                              |
-| Geçersiz surface                                      | Başarısız,`EGL_BAD_SURFACE`.                              |
-| Yok edilmiş ve artık current olmayan surface          | Başarısız,`EGL_BAD_SURFACE`.                              |
-| Native window'u geçersiz window surface               | Başarısız,`EGL_BAD_NATIVE_WINDOW`.                        |
+| Değer                                                 | Sonuç                                    |
+| ------------------------------------------------------ | ----------------------------------------- |
+| Current context'e bağlı geçerli window surface      | Color buffer native window'a post edilir. |
+| Current context'e bağlı geçerli pbuffer surface     | EGL 1.0'a göre etkisi yoktur.            |
+| Current context'e bağlı geçerli pixmap surface      | EGL 1.0'a göre etkisi yoktur.            |
+| Geçerli ama current context'e bağlı olmayan surface | Başarısız,`EGL_BAD_SURFACE`.         |
+| `EGL_NO_SURFACE`                                     | Başarısız,`EGL_BAD_SURFACE`.         |
+| Geçersiz surface                                      | Başarısız,`EGL_BAD_SURFACE`.         |
+| Yok edilmiş ve artık current olmayan surface         | Başarısız,`EGL_BAD_SURFACE`.         |
+| Native window'u geçersiz window surface               | Başarısız,`EGL_BAD_NATIVE_WINDOW`.   |
 
 Current durumdayken `eglDestroySurface` ile silinmek üzere işaretlenmiş bir
 surface hemen yok olmaz; current kaldığı sürece geçerlidir. İlgili thread'deki
@@ -119,7 +119,7 @@ surface, çağıran thread'in current context'ine bağlı olmalıdır.
 
 Doğru sıra:
 
-```c
+```C
 eglMakeCurrent(dpy, surface, surface, ctx);
 
 /* OpenGL ES çizimleri */
@@ -369,9 +369,3 @@ Pbuffer için `eglSwapBuffers` çağrısı öğretici olabilir ama görünür ou
 - “Swap” fiziksel olarak mutlaka pointer değişimi demek değildir; gözlemlenebilir işlem window'a post edilmesidir.
 - EGL 1.0 VSync, tearing engelleme veya sabit FPS garantisi vermez.
 - GBM/DRM kullanıyorsan swap sonrası ayrıca BO alma ve KMS scanout gerekir.
-
-## Kaynak
-
-Posting, resize, implicit flush ve hata kuralları için Khronos'un
-[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
-belgesindeki 3.8 bölümü esas alınmıştır.

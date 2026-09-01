@@ -244,7 +244,3 @@ if (eglMakeCurrent(dpy, draw, read, context) == EGL_FALSE) {
 - Önce EGL fonksiyonunun kendi return değeri kontrol edilmelidir.
 - Hata, başarısız çağrıdan hemen sonra okunmalıdır.
 - Handle, state, allocation, compatibility ve native platform hataları ayrı anlam taşır.
-
-## Kaynak
-
-- EGL 1.0 Specification, Section 3.1, Errors.

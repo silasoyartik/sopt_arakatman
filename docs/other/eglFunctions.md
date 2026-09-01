@@ -36,14 +36,16 @@ EGLDisplay eglGetDisplay(EGLNativeDisplayType display_id);
 
 `eglGetDisplay`, native görüntüleme sistemine ait bir display tanımlayıcısını EGL tarafından kullanılabilecek bir `EGLDisplay` handle'ı ile ilişkilendirmek için kullanılır.
 
+Başarılı olduğunda fonksiyon, EGL'nin kendi içinde yönettiği bir display nesnesini temsil eden `EGLDisplay` değerini döndürür.
+
 Kısa özet:
 
-- Girdi: `EGLNativeDisplayType`
-- Çıktı: `EGLDisplay`
-- Başarısızlık değeri: `EGL_NO_DISPLAY`
-- `EGL_DEFAULT_DISPLAY`, varsayılan native display'i istemek için kullanılır.
-- `EGLDisplay`, fiziksel monitörün kendisi değil, EGL'nin kullandığı opaque handle'dır.
-- `eglGetDisplay` display'i initialize etmez; bunun için `eglInitialize` gerekir.
+* Girdi: `EGLNativeDisplayType`
+* Çıktı: `EGLDisplay`
+* Başarısızlık değeri: `EGL_NO_DISPLAY`
+* `EGL_DEFAULT_DISPLAY`, varsayılan native display'i istemek için kullanılır.
+* `EGLDisplay`, fiziksel monitörün kendisi değil, EGL'nin kullandığı opaque handle'dır.
+* `eglGetDisplay` display'i initialize etmez; bunun için `eglInitialize` gerekir.
 
 ## Kavramsal Akış
 
@@ -60,13 +62,31 @@ EGLDisplay handle
 eglInitialize
 ```
 
-`eglGetDisplay` native platform ile EGL arasındaki ilk bağlantı noktalarından biridir.
+`eglGetDisplay`, native platform ile EGL arasındaki ilk bağlantı noktalarından biridir.
+
+Buradaki **native** ifadesi, EGL'nin dışında bulunan ve işletim sistemi veya pencereleme sistemi tarafından sağlanan platforma özgü yapıları ifade eder. Örneğin Linux üzerinde Wayland ve X11 farklı native görüntüleme sistemleridir.
+
+Native görüntüleme sistemi, uygulamaların işletim sisteminin pencereleme ve görüntüleme altyapısıyla iletişim kurmasını sağlar. Bu nedenle EGL'deki display kavramı doğrudan fiziksel monitör anlamına gelmez.
+
+![1788246916132](../eglFunctions/image/eglGetDisplay/1788246916132.jpg)
 
 ## Parametreler
 
 ### `display_id`
 
 `display_id`, hangi native display'in EGL tarafında temsil edileceğini belirtir.
+
+Bu nedenle `display_id` bir **display tanımlayıcısı** olarak düşünülebilir. Başka bir ifadeyle EGL'ye hangi native görüntüleme ortamı veya display bağlantısı ile çalışılacağını bildirir.
+
+Bu bölümde kullanılan kavramlar kısaca şu şekilde ayrılabilir:
+
+* **Display:** Bir görüntüleme ortamını temsil eden genel kavramdır. Doğrudan fiziksel monitör anlamına gelmez.
+* **Display tanımlayıcısı:** Hangi native display'in kullanılacağını EGL'ye bildiren değerdir. `display_id` bu görevi görür.
+* **Display bağlantısı:** Uygulamanın native görüntüleme sistemiyle kurduğu bağlantıdır. Wayland'daki `wl_display *` buna örnektir.
+* **Display nesnesi:** EGL veya başka bir API'nin belirli bir görüntüleme ortamını kendi içinde temsil etmek ve onunla ilgili durumu yönetmek için kullandığı yazılımsal nesnedir.
+* **Native:** EGL'nin kendisine ait olmayan, işletim sistemi veya pencereleme sistemi tarafından sağlanan platforma özgü yapıları ifade eder.
+* **Native display sistemi:** Wayland veya X11 gibi platformun görüntüleme ve pencereleme altyapısıdır.
+* **Native görüntüleme ortamı:** Uygulamanın içerisinde çalıştığı native görüntüleme sistemini ve bu sistemle olan ilişkisini genel olarak ifade eder.
 
 `EGLNativeDisplayType` platforma bağımlıdır. Ubuntu header dosyalarında farklı platformlar için örneğin şu tanımlar bulunur:
 
@@ -85,6 +105,10 @@ Aynı anda bunların hepsi aktif değildir; platform header'ları uygun tanımı
 #define EGL_DEFAULT_DISPLAY EGL_CAST(EGLNativeDisplayType,0)
 ```
 
+`EGL_DEFAULT_DISPLAY`, uygulamanın belirli bir native display bağlantısını açıkça vermediği durumda kullanılır. Bu değer ile EGL'den platform için varsayılan native display'in kullanılması istenir.
+
+Buradaki “default display” ifadesi doğrudan “varsayılan fiziksel monitör” şeklinde yorumlanmamalıdır. EGL açısından varsayılan native görüntüleme ortamının kullanılmasını ifade eder.
+
 | `display_id` değeri           | Anlamı                                                                  |
 | -------------------------------- | ------------------------------------------------------------------------ |
 | `EGL_DEFAULT_DISPLAY`          | Varsayılan native display için bir`EGLDisplay` istenir.              |
@@ -92,26 +116,47 @@ Aynı anda bunların hepsi aktif değildir; platform header'ları uygun tanımı
 
 ## `EGLDisplay` Nedir?
 
-`EGLDisplay`, uygulamanın iç yapısını yorumlamaması gereken bir EGL handle'ıdır.
+`EGLDisplay`, EGL'nin kendi içinde yönettiği bir display nesnesini temsil eden **opaque handle**'dır.
 
-Örnek:
+Bir **handle**, bir API içerisindeki nesneyi temsil eden bir tanımlayıcı veya referans olarak düşünülebilir. Uygulama gerçek EGL display nesnesine doğrudan erişmez. Bunun yerine `eglGetDisplay`, EGL'nin kendi içinde tuttuğu display nesnesine daha sonraki EGL çağrılarında erişilebilmesini sağlayan bir `EGLDisplay` değeri döndürür.
+
+Örneğin:
 
 ```text
 0x629b25a1cdf0
 ```
 
+gibi bir değer gözlemlenebilir.
+
 Bu değer:
 
-- çözünürlük değildir,
-- ekran numarası değildir,
-- GPU numarası değildir,
-- EGL sürümü değildir.
+* çözünürlük değildir,
+* ekran numarası değildir,
+* GPU numarası değildir,
+* EGL sürümü değildir,
+* fiziksel monitörün kendisi veya adresi değildir.
 
-Uygulama bu handle'ı daha sonraki EGL çağrılarına geçirir:
+Örneğin:
 
 ```c
-eglInitialize(display, &major, &minor);
+EGLDisplay dpy = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 ```
+
+satırındaki `dpy`, ekrandaki görüntüyü veya fiziksel monitörü temsil etmez. EGL'nin kendi içinde tuttuğu display ile ilgili durumu temsil eden bir handle'dır.
+
+Uygulama EGL'nin içindeki gerçek display nesnesine doğrudan erişemez. Handle'ın arkasındaki veri yapısının nasıl oluşturulduğu, hangi bilgileri tuttuğu veya EGL implementation'ının bu nesneyi nasıl yönettiği uygulamadan gizlidir.
+
+Bu nedenle `EGLDisplay` bir **opaque handle** olarak tanımlanır. “Opaque”, handle'ın arkasındaki gerçek yapının uygulama tarafından görülmediği ve yorumlanmadığı anlamına gelir.
+
+Uygulama handle'ı yalnızca daha sonraki EGL fonksiyonlarına geri verir:
+
+```c
+eglInitialize(dpy, &major, &minor);
+```
+
+Bu çağrıda EGL, `dpy` handle'ının kendi içinde hangi display nesnesini temsil ettiğini bilir ve işlemi ilgili display üzerinde gerçekleştirir.
+
+Opaque handle kullanımı EGL'nin kendi iç yapısını uygulamadan gizlemesine, implementation detaylarını gerektiğinde değiştirebilmesine ve farklı native platformların aynı EGL API'si üzerinden kullanılabilmesine olanak sağlar.
 
 `eglInitialize` ayrıntıları için ilgili bölüme bakınız.
 
@@ -127,7 +172,26 @@ if (dpy == EGL_NO_DISPLAY) {
 }
 ```
 
-Bu kullanımda native display bağlantısını uygulamanın kendisinin açması gerekmez.
+Bu kullanımda native display bağlantısını uygulamanın kendisinin açması gerekmez. Uygulama EGL'ye belirli bir native display bağlantısı vermek yerine, platformun varsayılan native display'inin kullanılmasını ister.
+
+Kavramsal olarak:
+
+```text
+eglGetDisplay(EGL_DEFAULT_DISPLAY)
+
+        |
+        v
+
+Platform için varsayılan
+native display kullanılır
+
+        |
+        v
+
+EGLDisplay
+```
+
+şeklinde düşünülebilir.
 
 ## Açık Wayland Display Bağlantısı
 
@@ -141,6 +205,22 @@ EGLDisplay dpy =
 ```
 
 `wl_display_connect` bir EGL fonksiyonu değildir; Wayland API'sine aittir.
+
+`wl_display *`, fiziksel monitörü değil, uygulamanın Wayland görüntüleme sistemiyle kurduğu bağlantıyı temsil eder.
+
+`EGL_DEFAULT_DISPLAY` ile açık Wayland bağlantısı arasındaki temel fark, native display'in nasıl belirtildiğidir:
+
+```text
+EGL_DEFAULT_DISPLAY
+    |
+    +-- Native display seçimi EGL/platforma bırakılır.
+
+Açık Wayland bağlantısı
+    |
+    +-- Uygulama belirli bir wl_display * bağlantısını EGL'ye verir.
+```
+
+Her iki durumda da `eglGetDisplay` sonucunda bir `EGLDisplay` handle'ı elde edilir. Fark, bu handle'ın ilişkilendirileceği native display'in uygulama tarafından açıkça verilip verilmemesidir.
 
 ## `eglGetDisplay` ve `eglInitialize` İlişkisi
 
@@ -159,6 +239,8 @@ Display EGL kullanımı için initialize edilir
 
 `eglGetDisplay` başarılı olsa bile display henüz initialize edilmiş sayılmaz.
 
+`eglGetDisplay`, native display ile ilişkili EGL display nesnesini temsil eden handle'ın elde edilmesini sağlar. Display'in EGL işlemleri için hazırlanması ise daha sonra `eglInitialize` ile gerçekleştirilir.
+
 ## Temel Kullanım
 
 ```c
@@ -171,14 +253,22 @@ if (dpy == EGL_NO_DISPLAY) {
 
 ## Bölüm Özeti
 
-- `eglGetDisplay` bir native display'den `EGLDisplay` handle'ı elde eder.
-- Tek parametresi `display_id`'dir.
-- `display_id`, `EGLNativeDisplayType` türündedir ve platforma bağımlıdır.
-- `EGL_DEFAULT_DISPLAY`, varsayılan native display'i istemek için kullanılır.
-- Geçerli explicit native display değerleri de verilebilir.
-- Başarısızlıkta `EGL_NO_DISPLAY` döner.
-- `EGLDisplay` opaque handle'dır; sayısal değeri yorumlanmamalıdır.
-- `eglGetDisplay` display'i initialize etmez; sonraki adım tipik olarak `eglInitialize`'dır.
+* `eglGetDisplay` bir native display'den `EGLDisplay` handle'ı elde eder.
+* Tek parametresi `display_id`'dir.
+* `display_id`, hangi native display'in kullanılacağını belirten tanımlayıcıdır.
+* `display_id`, `EGLNativeDisplayType` türündedir ve platforma bağımlıdır.
+* Native display doğrudan fiziksel monitör anlamına gelmez.
+* `EGL_DEFAULT_DISPLAY`, varsayılan native display'in kullanılmasını istemek için kullanılır.
+* Geçerli explicit native display değerleri de verilebilir.
+* Wayland'da `wl_display *`, uygulamanın native Wayland görüntüleme sistemiyle kurduğu bağlantıyı temsil eder.
+* `EGLDisplay`, EGL'nin kendi display nesnesini temsil eden opaque handle'dır.
+* Handle, API içerisindeki bir nesneyi temsil eden tanımlayıcı veya referanstır.
+* Uygulama EGL'nin gerçek display nesnesine ve iç yapısına doğrudan erişmez.
+* `EGLDisplay` fiziksel monitör, ekran numarası veya GPU numarası değildir.
+* Handle'ın sayısal değeri uygulama tarafından yorumlanmamalıdır.
+* `EGL_DEFAULT_DISPLAY` kullanımında native display seçimi EGL/platforma bırakılır; açık Wayland kullanımında belirli bir `wl_display *` uygulama tarafından verilir.
+* Başarısızlıkta `EGL_NO_DISPLAY` döner.
+* `eglGetDisplay` display'i initialize etmez; sonraki adım tipik olarak `eglInitialize`'dır.
 
 ---
 
@@ -851,7 +941,7 @@ EGLDisplay
 
 `eglGetConfigAttrib` sadece bir `EGLConfig` ve bir `attribute` için değer döndürür.
 
-Bu fonksiyon bir ayar yapmaz ve config'i değiştirmez. Örneğin
+Bu fonksiyon bir **ayar yapmaz** ve **config'i değiştirmez**. Örneğin
 `EGL_SAMPLES` değerini sorgulamak multisampling'i açmaz; yalnızca config'in
 kaç sample sağlayacağını bildirir. Kullanılacak özellikler surface ve context
 oluşturulmadan önce config seçimiyle belirlenir.
@@ -887,7 +977,7 @@ EGLConfig handle'ları, ait oldukları EGLDisplay terminate edilene kadar geçer
 
 `attribute`, EGL 1.0 Table 3.1 içinde tanımlı bir `EGLConfig` attribute'u olmalıdır. Geçersizse:
 
-```text
+```C
 eglGetConfigAttrib(...) == EGL_FALSE
 eglGetError() == EGL_BAD_ATTRIBUTE
 ```
@@ -901,7 +991,7 @@ eglGetError() == EGL_BAD_ATTRIBUTE
 
 Doğru kullanım:
 
-```c
+```C
 EGLint red_bits = 0;
 if (!eglGetConfigAttrib(dpy, config, EGL_RED_SIZE, &red_bits)) {
     EGLint err = eglGetError();
@@ -910,37 +1000,37 @@ if (!eglGetConfigAttrib(dpy, config, EGL_RED_SIZE, &red_bits)) {
 
 ## EGL 1.0 Geçerli Attribute Listesi
 
-| Attribute                       |     Tip | Anlam                                                             |
-| ------------------------------- | ------: | ----------------------------------------------------------------- |
-| `EGL_BUFFER_SIZE`             | integer | Color buffer toplam bit derinliği.                               |
-| `EGL_RED_SIZE`                | integer | Red component bit sayısı.                                       |
-| `EGL_GREEN_SIZE`              | integer | Green component bit sayısı.                                     |
-| `EGL_BLUE_SIZE`               | integer | Blue component bit sayısı.                                      |
-| `EGL_ALPHA_SIZE`              | integer | Alpha component bit sayısı.                                     |
-| `EGL_CONFIG_CAVEAT`           |    enum | `EGL_NONE`, `EGL_SLOW_CONFIG`, `EGL_NON_CONFORMANT_CONFIG`. |
-| `EGL_CONFIG_ID`               | integer | Unique config id.                                                 |
-| `EGL_DEPTH_SIZE`              | integer | Depth buffer bit sayısı.                                        |
-| `EGL_LEVEL`                   | integer | Framebuffer level.                                                |
-| `EGL_MAX_PBUFFER_WIDTH`       | integer | Maksimum pbuffer genişliği.                                     |
-| `EGL_MAX_PBUFFER_HEIGHT`      | integer | Maksimum pbuffer yüksekliği.                                    |
-| `EGL_MAX_PBUFFER_PIXELS`      | integer | Maksimum pbuffer pixel sayısı.                                  |
-| `EGL_NATIVE_RENDERABLE`       | boolean | Native rendering API surface'e render edebilir mi?                |
-| `EGL_NATIVE_VISUAL_ID`        | integer | Platform-dependent native visual id.                              |
-| `EGL_NATIVE_VISUAL_TYPE`      | integer | Platform-dependent native visual type.                            |
-| `EGL_SAMPLE_BUFFERS`          | integer | Multisample buffer sayısı;`0` veya `1`.                     |
-| `EGL_SAMPLES`                 | integer | Pixel başına sample sayısı.                                   |
-| `EGL_STENCIL_SIZE`            | integer | Stencil buffer bit sayısı.                                      |
-| `EGL_SURFACE_TYPE`            | bitmask | Desteklenen surface tipleri.                                      |
-| `EGL_TRANSPARENT_TYPE`        |    enum | `EGL_NONE` veya `EGL_TRANSPARENT_RGB`.                        |
-| `EGL_TRANSPARENT_RED_VALUE`   | integer | Transparent red key.                                              |
-| `EGL_TRANSPARENT_GREEN_VALUE` | integer | Transparent green key.                                            |
-| `EGL_TRANSPARENT_BLUE_VALUE`  | integer | Transparent blue key.                                             |
+| Attribute                       |     Tip | Anlam                                                                  |
+| ------------------------------- | ------: | ---------------------------------------------------------------------- |
+| `EGL_BUFFER_SIZE`             | integer | Color buffer toplam bit derinliği.                                    |
+| `EGL_RED_SIZE`                | integer | Red component bit sayısı.                                            |
+| `EGL_GREEN_SIZE`              | integer | Green component bit sayısı.                                          |
+| `EGL_BLUE_SIZE`               | integer | Blue component bit sayısı.                                           |
+| `EGL_ALPHA_SIZE`              | integer | Alpha component bit sayısı.                                          |
+| `EGL_CONFIG_CAVEAT`           |    enum | `EGL_NONE`, `EGL_SLOW_CONFIG`,<br />`EGL_NON_CONFORMANT_CONFIG`. |
+| `EGL_CONFIG_ID`               | integer | Unique config id.                                                      |
+| `EGL_DEPTH_SIZE`              | integer | Depth buffer bit sayısı.                                             |
+| `EGL_LEVEL`                   | integer | Framebuffer level.                                                     |
+| `EGL_MAX_PBUFFER_WIDTH`       | integer | Maksimum pbuffer genişliği.                                          |
+| `EGL_MAX_PBUFFER_HEIGHT`      | integer | Maksimum pbuffer yüksekliği.                                         |
+| `EGL_MAX_PBUFFER_PIXELS`      | integer | Maksimum pbuffer pixel sayısı.                                       |
+| `EGL_NATIVE_RENDERABLE`       | boolean | Native rendering API surface'e render edebilir mi?                     |
+| `EGL_NATIVE_VISUAL_ID`        | integer | Platform-dependent native visual id.                                   |
+| `EGL_NATIVE_VISUAL_TYPE`      | integer | Platform-dependent native visual type.                                 |
+| `EGL_SAMPLE_BUFFERS`          | integer | Multisample buffer sayısı;`0` veya `1`.                          |
+| `EGL_SAMPLES`                 | integer | Pixel başına sample sayısı.                                        |
+| `EGL_STENCIL_SIZE`            | integer | Stencil buffer bit sayısı.                                           |
+| `EGL_SURFACE_TYPE`            | bitmask | Desteklenen surface tipleri.                                           |
+| `EGL_TRANSPARENT_TYPE`        |    enum | `EGL_NONE` veya `EGL_TRANSPARENT_RGB`.                             |
+| `EGL_TRANSPARENT_RED_VALUE`   | integer | Transparent red key.                                                   |
+| `EGL_TRANSPARENT_GREEN_VALUE` | integer | Transparent green key.                                                 |
+| `EGL_TRANSPARENT_BLUE_VALUE`  | integer | Transparent blue key.                                                  |
 
 ## Attribute Ayrıntıları
 
 ### Color Buffer: bit sayısı gerçekte neyi değiştirir?
 
-```text
+```
 EGL_BUFFER_SIZE = EGL_RED_SIZE
                 + EGL_GREEN_SIZE
                 + EGL_BLUE_SIZE
@@ -949,7 +1039,7 @@ EGL_BUFFER_SIZE = EGL_RED_SIZE
 
 Örnek:
 
-```text
+```
 R=8, G=8, B=8, A=8 -> EGL_BUFFER_SIZE = 32
 R=5, G=6, B=5, A=0 -> EGL_BUFFER_SIZE = 16
 ```
@@ -978,7 +1068,7 @@ bit kırmızı, yumuşak bir kırmızı gradyanda basamakların belirginleşmesi
 (`color banding`) yol açabilir. 5 bitte 32, 8 bitte 256 seviye bulunduğu için
 geçiş giderek daha pürüzsüz görünür.
 
-![1788177784345](../eglFunctions/image/eglGetConfigAttrib/1788177784345.png)
+![1788181993384](../eglFunctions/image/eglGetConfigAttrib/1788181993384.png)![1788181996090](../eglFunctions/image/eglGetConfigAttrib/1788181996090.png)
 
 #### Yaygın color format karşılaştırması
 
@@ -1004,21 +1094,65 @@ Bu yalnızca teorik payload hesabıdır. Satır hizalama, tiling, sıkıştırma
 driver metadata'sı ve birden fazla buffer gerçek bellek kullanımını
 değiştirebilir.
 
+![1788181276849](../eglFunctions/image/eglGetConfigAttrib/1788181276849.png)![1788181317179](../eglFunctions/image/eglGetConfigAttrib/1788181317179.png)![1788181319721](../eglFunctions/image/eglGetConfigAttrib/1788181319721.png)![1788181604515](../eglFunctions/image/eglGetConfigAttrib/1788181604515.png)![1788181607763](../eglFunctions/image/eglGetConfigAttrib/1788181607763.png)
+
 #### `EGL_ALPHA_SIZE` ne sağlar, ne sağlamaz?
 
-Alpha component genellikle saydamlık/opaklık bilgisini taşır:
+EGL 1.0 specification bu iki attribute'u farklı şeyler olarak tanımlar:
+
+- Table 3.1'de `EGL_ALPHA_SIZE`, yalnızca “color buffer'daki Alpha bitlerinin
+  sayısı”dır.
+- `EGL_TRANSPARENT_TYPE` ise bir config'in transparent pixel destekleyip
+  desteklemediğini belirtir.
+
+Dolayısıyla EGL 1.0 açısından alpha ile transparency aynı şey değildir:
+
+- **Alpha**, her pixel ile birlikte saklanabilen sayısal bir component'tir.
+  OpenGL ES gibi rendering API'leri bu değeri blending hesabında kullanabilir.
+- **Transparency (saydamlık)**, birleştirme sonucunda arka planın ne kadar
+  göründüğüdür. Alpha bu sonucu üretmek için kullanılabilir; fakat alpha
+  değerinin varlığı tek başına saydamlık oluşturmaz.
+
+Pratik bir kısa anlatımla alpha **veri**, blending bu veriyi kullanabilen
+**işlem**, saydamlık ise ekranda görülebilen **sonuç**tur. Bu üçlü açıklama
+kavramları ayırmak içindir; EGL 1.0 specification alpha değerinin blending'de
+nasıl kullanılacağını tanımlamaz.
+
+`EGL_ALPHA_SIZE`, color buffer'da pixel başına alpha component'i için kaç bit
+ayrıldığını bildirir:
 
 | `EGL_ALPHA_SIZE` | Saklanabilen alpha seviyeleri                                       |
 | -----------------: | ------------------------------------------------------------------- |
 |                  0 | Alpha component yoktur.                                             |
-|                  1 | Yalnızca tamamen saydam veya tamamen opak gibi iki değer vardır. |
-|                  8 | `0..255`, yani 256 alpha seviyesi vardır.                        |
+|                  1 | İki alpha değeri saklanabilir: `0` veya `1`.                     |
+|                  8 | `0..255`, yani 256 alpha seviyesi saklanabilir.                  |
 
-Ancak alpha buffer bulunması tek başına blending'i açmaz, pencereyi masaüstüne
-karşı saydam yapmaz ve `EGL_TRANSPARENT_RGB` anlamına gelmez. OpenGL ES
-blending ayrı bir render state'idir; native pencere kompozisyonu da platformun
-pencere sistemi/compositor kurallarına bağlıdır. EGL 1.0'ın aşağıda anlatılan
-transparent RGB özelliği ise alpha değil, exact RGB color key kullanır.
+Örneğin RGBA8888'de alpha değeri `128` olan bir pixel, standart alpha blending
+ile opak bir arka planın üzerine çizilirse kaynak renk ile arka plan yaklaşık
+yarı yarıya karışır. Blending kapalıysa aynı `128` değeri buffer'da bulunmasına
+rağmen çizilen pixel otomatik olarak yarı saydam görünmez; kaynak renk doğrudan
+yazılabilir.
+
+Benzer biçimde alpha buffer bulunması pencereyi masaüstüne karşı otomatik olarak
+saydam yapmaz. Bunun için pencere sistemi/compositor'ın surface alpha'sını
+desteklemesi ve kullanması gerekir.
+
+EGL 1.0'daki `EGL_TRANSPARENT_RGB` ise farklı bir mekanizmadır. Specification'a
+göre framebuffer'dan okunan red, green ve blue değerlerinin üç transparent
+değerle **tam eşleştiği** pixel transparent çizilir. Eşleşmede alpha değeri
+yer almadığı için bu, alpha blending değil RGB color key yöntemidir. Dolayısıyla
+kavramlar şöyle ayrılır:
+
+| Kavram | Ne tarif eder? | Kısmi saydamlık sağlar mı? |
+| --- | --- | --- |
+| `EGL_ALPHA_SIZE` | Pixel başına saklanabilen alpha bitlerini | Tek başına hayır |
+| OpenGL ES blending | Kaynak ve hedef renklerin nasıl karıştırılacağını | Seçilen blending işlemine bağlı olarak evet |
+| `EGL_TRANSPARENT_RGB` | Tam eşleşen tek bir RGB renginin saydam sayılmasını | Hayır; pixel ya eşleşir ya eşleşmez |
+
+![1788182807715](../eglFunctions/image/eglGetConfigAttrib/1788182807715.png)
+
+Damalı bir arka plan üzerine birleştirilmiş RGBA görsel örneği. Alpha değeri
+üstte %0, altta %100'dür.
 
 ### Ancillary buffer'lar: depth ve stencil
 
@@ -1440,957 +1574,447 @@ tanımsız olduğu için örnek kod bunları yalnızca type gerçekten
 - `EGL_SURFACE_TYPE` bitmask'tir; exact integer gibi yorumlama.
 - `EGL_NATIVE_VISUAL_ID` platform-dependent olduğundan anlamı X11, GBM veya başka native platforma göre değişebilir.
 
-## Kaynak
-
-Attribute tanımları, sınırlar ve EGL 1.0'a özgü davranışlar için Khronos'un
-[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
-belgesindeki 3.4 “Configuration Management” bölümü esas alınmıştır.
-
 ---
 
-# EGL 1.0: `eglCreateWindowSurface` senaryolu
+# EGL 1.0: `eglCreateWindowSurface`
 
 ```c
-EGLSurface eglCreateWindowSurface(
-    EGLDisplay dpy,
-    EGLConfig config,
-    NativeWindowType win,
-    const EGLint *attrib_list
-);
+EGLSurface eglCreateWindowSurface(EGLDisplay dpy,
+                                  EGLConfig config,
+                                  NativeWindowType win,
+                                  const EGLint *attrib_list);
 ```
 
-## 1. Bu Fonksiyon Ne Yapar?
+`eglCreateWindowSurface`, native pencere sistemi tarafından daha önce
+oluşturulmuş bir pencereyi EGL rendering surface'i ile ilişkilendirir.
+Başarılı olduğunda OpenGL ES context'inin draw/read hedefi olarak
+kullanılabilecek bir `EGLSurface` handle'ı döndürür.
 
-`eglCreateWindowSurface`, daha önce native platform tarafından oluşturulmuş bir **native window / native surface** üzerinde OpenGL ES'in çizim yapabileceği bir `EGLSurface` oluşturur.
+Fonksiyon native pencereyi oluşturmaz, ekranda gösterecek compositor veya KMS
+ayarını yapmaz ve rendering context oluşturmaz. Yalnızca mevcut native nesne
+ile EGL tarafındaki surface arasındaki bağı kurar.
 
-Buradaki en önemli nokta şudur:
+![Native window ile EGLSurface arasındaki katmanlar](../eglFunctions/image/eglCreateWindowSurface/object-model.svg)
 
-> `eglCreateWindowSurface()` native window'u kendisi oluşturmaz. Var olan native nesnenin üzerine EGL tarafında bir rendering surface oluşturur.
+## Kavramsal Model
 
-Bu projede X11 veya Wayland kullanılmadığı için native window rolünü Mesa/GBM tarafındaki:
+```text
+Native window ----\
+EGLDisplay --------+--> eglCreateWindowSurface --> EGLSurface
+EGLConfig --------/                                  ^
+                                                       |
+EGLContext ---------------- eglMakeCurrent ------------+
+                                                       |
+                                                       v
+                                              OpenGL ES rendering
+```
+
+Native window; X11 Window, `wl_egl_window`, Win32 `HWND` veya GBM surface gibi
+platforma özgü bir nesnedir. `NativeWindowType` platforma bağlıdır. Modern
+header'larda aynı kavram `EGLNativeWindowType` typedef'iyle görülebilir.
+Uygulama, kullandığı EGL platformunun beklediği native nesneyi vermelidir.
+
+## Parametreler
+
+Fonksiyonun dört parametresi birlikte şu cümleyi kurar:
+
+> `dpy` EGL ortamında, `config` ile tarif edilen tampon özelliklerini kullanarak,
+> `win` native penceresine bağlı ve `attrib_list` ek ayarlarına sahip bir
+> `EGLSurface` oluştur.
+
+| Parametre       | En temel anlamı                            | Cevapladığı soru                                    |
+| --------------- | ------------------------------------------- | ------------------------------------------------------ |
+| `dpy`         | EGL ile platform arasındaki bağlantı     | Hangi EGL ortamı kullanılacak?                       |
+| `config`      | Surface'in framebuffer tarifi               | OpenGL ES hangi tür tamponlara çizecek?              |
+| `win`         | Platformun daha önce oluşturduğu pencere | Çizilen görüntü hangi native pencereye ait olacak? |
+| `attrib_list` | Surface oluşturulurken verilen ek ayarlar  | Bu surface için ek bir oluşturma seçeneği var mı? |
+
+### `dpy`
+
+`dpy`, EGL'nin native platformla konuştuğu initialize edilmiş bağlantıdır.
+Adında "display" geçse de yalnızca fiziksel monitörü ifade etmez; X11,
+Wayland veya GBM gibi platforma ait EGL kaynaklarının hangi ortamda
+oluşturulacağını belirler.
+
+Tipik olarak önce alınır ve initialize edilir:
 
 ```c
-struct gbm_surface *
-```
+EGLDisplay dpy = eglGetDisplay(native_display);
 
-nesnesi üstlenir.
-
-Temel kullanım:
-
-```c
-EGLSurface egl_surface = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
-```
-
----
-
-# 2. Önce Büyük Resim
-
-Bu projede görüntü zinciri kabaca şöyledir:
-
-```text
-/dev/dri/card*
-      |
-      v
-    DRM/KMS
-      |
-      v
- gbm_device
-      |
-      v
- gbm_surface
-      |
-      | NativeWindowType olarak EGL'e verilir
-      v
-eglCreateWindowSurface()
-      |
-      v
-  EGLSurface
-      |
-      v
- eglMakeCurrent()
-      |
-      v
- OpenGL ES 2.0
-```
-
-Burada iki farklı surface kavramı vardır:
-
-```text
-struct gbm_surface *  -> GBM / native platform surface'i
-EGLSurface            -> EGL / OpenGL ES rendering surface'i
-```
-
-Yani:
-
-```text
-GBM surface
-    |
-    | EGL'e native window olarak verilir
-    v
-EGLSurface
-    |
-    | OpenGL ES buraya render eder
-    v
-Rendering
-```
-
----
-
-# 3. Parametrelerin Genel Mantığı
-
-Fonksiyonun dört parametresi vardır:
-
-```c
-eglCreateWindowSurface(
-    dpy,
-    config,
-    win,
-    attrib_list
-);
-```
-
-Bunları basit şekilde şöyle düşünebiliriz:
-
-```text
-dpy
--> Hangi EGL display üzerinde çalışıyorum?
-
-config
--> Surface'in framebuffer / pixel özellikleri nasıl olacak?
-
-win
--> Hangi native surface üzerine EGLSurface oluşturuyorum?
-
-attrib_list
--> Surface oluşturulurken ek EGL window attribute'u var mı?
-```
-
-Bu dokümanda her parametre için:
-
-1. Parametrenin ne yaptığı,
-2. Parametre değiştirilince sürecin nasıl değiştiği,
-3. Örnek kod,
-4. Beklenen veya kavramsal çıktı,
-5. Flow chart
-
-ayrı ayrı gösterilecektir.
-
-> Önemli: Aşağıdaki bazı çıktılar **örnek/beklenen çıktıdır**. Gerçek çalıştırma sonucu gibi sunulmamalıdır. Amaç parametrenin sürece etkisini açıkça göstermektir.
-
----
-
-# 4. Birinci Parametre: `dpy`
-
-```c
-EGLDisplay dpy
-```
-
-## 4.1 `dpy` Nedir?
-
-`dpy`, oluşturulacak `EGLSurface` nesnesinin hangi `EGLDisplay` üzerinde oluşturulacağını belirler.
-
-Basitçe:
-
-```text
-dpy = "Hangi EGL display bağlantısı üzerinde çalışıyorum?"
-```
-
-Bu projede display zinciri:
-
-```text
-DRM file descriptor
-        |
-        v
-gbm_create_device()
-        |
-        v
-struct gbm_device *
-        |
-        v
-EGLDisplay
-```
-
-şeklindedir.
-
-Normal kullanım:
-
-```c
-EGLSurface surface = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
-```
-
-Burada:
-
-```text
-dpy = egl_display
-```
-
-olur.
-
----
-
-## 4.2 `dpy` Neyi Değiştirir?
-
-`dpy` değiştiğinde fonksiyonun çalışacağı EGL display bağlantısı değişir.
-
-Geçerli bir `EGLDisplay` verilirse, diğer parametreler de uygunsa surface oluşturulabilir.
-
-Geçerli olmayan bir display verilirse surface oluşturulamaz.
-
-Bu yüzden `dpy` için en anlaşılır karşılaştırma:
-
-```text
-Geçerli EGLDisplay
-        vs
-EGL_NO_DISPLAY
-```
-
-şeklindedir.
-
----
-
-## 4.3 Senaryo A - Geçerli `EGLDisplay`
-
-```c
-EGLSurface surface_valid = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
-
-if (surface_valid != EGL_NO_SURFACE) {
-    printf("VALID DPY TEST: SUCCESS\n");
-} else {
-    printf("VALID DPY TEST: FAILED\n");
-    printf("EGL error = 0x%X\n", eglGetError());
+if (dpy == EGL_NO_DISPLAY ||
+    eglInitialize(dpy, NULL, NULL) == EGL_FALSE) {
+    /* EGL ortamı kullanıma hazır değil. */
 }
 ```
 
-Beklenen mantık:
+`eglCreateWindowSurface`, hangi EGL ortamını kullanacağını `dpy`
+parametresinden anlar. Hem `config` hem de dönen `EGLSurface` bu display'in
+namespace'ine aittir.
+
+| Durum                                         | Sonuç                                               |
+| --------------------------------------------- | ---------------------------------------------------- |
+| Geçerli ve initialize edilmiş`EGLDisplay` | Diğer argümanlar uygunsa surface oluşturulabilir. |
+| `EGL_NO_DISPLAY` veya geçersiz handle      | `EGL_NO_SURFACE`, `EGL_BAD_DISPLAY`.             |
+| Geçerli fakat initialize edilmemiş display  | `EGL_NO_SURFACE`, `EGL_NOT_INITIALIZED`.         |
+
+Display, config, context ve surface nesneleri arasındaki sahiplik ilişkisi
+önemlidir:
 
 ```text
-Geçerli EGLDisplay
-        |
-        v
-eglCreateWindowSurface()
-        |
-        v
-Display kabul edilir
-        |
-        v
-Diğer parametreler de uygunsa
-        |
-        v
-EGLSurface oluşturulur
+EGLDisplay A
+  +-- EGLConfig A1
+  +-- EGLContext A2
+  +-- EGLSurface A3
+
+EGLDisplay B
+  +-- EGLConfig B1
+  +-- EGLContext B2
+  +-- EGLSurface B3
 ```
 
-Örnek beklenen terminal çıktısı:
+Bir display'den alınan config başka display'de kullanılamaz.
 
-```text
-VALID DPY TEST: SUCCESS
-```
+### `config`
 
----
-
-## 4.4 Senaryo B - `EGL_NO_DISPLAY`
-
-Bu sefer diğer üç parametre aynı tutulur.
-
-Yalnızca:
-
-```text
-dpy
-```
-
-değiştirilir.
-
-```c
-EGLSurface surface_invalid = eglCreateWindowSurface(
-    EGL_NO_DISPLAY,
-    egl_config,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
-
-if (surface_invalid == EGL_NO_SURFACE) {
-    printf("INVALID DPY TEST: FAILED AS EXPECTED\n");
-
-    EGLint error = eglGetError();
-
-    printf("EGL error = 0x%X\n", error);
-}
-```
-
-Beklenen mantık:
-
-```text
-EGL_NO_DISPLAY
-        |
-        v
-eglCreateWindowSurface()
-        |
-        v
-Geçerli EGL display yok
-        |
-        v
-Surface oluşturulamaz
-        |
-        v
-EGL_NO_SURFACE
-        |
-        v
-eglGetError()
-```
-
-Örnek beklenen terminal çıktısı:
-
-```text
-INVALID DPY TEST: FAILED AS EXPECTED
-EGL error = 0x....
-```
-
-Gerçek hata kodu çalıştırılan EGL implementation'dan alınmalıdır.
-
----
-
-## 4.5 `dpy` İçin Flow Chart
-
-![dpy parametresi senaryoları](../eglFunctions/image/eglCreateWindowSurface/dpy-flow.svg)
-
----
-
-## 4.6 Rastgele Bir Değer Yazılırsa?
-
-`dpy` bir `EGLDisplay` handle'ı bekler.
-
-Bu yüzden:
-
-```c
-EGLDisplay fake_dpy =
-    (EGLDisplay)0x1234;
-```
-
-gibi rastgele bir değer üretmek doğru API kullanımı değildir.
-
-Kavramsal olarak:
-
-```text
-Rastgele değer
-      |
-      v
-Geçerli EGLDisplay değil
-      |
-      v
-Surface oluşturulması beklenmez
-```
-
-Kontrollü test için rastgele değer yerine:
-
-```c
-EGL_NO_DISPLAY
-```
-
-kullanmak daha doğru ve anlaşılır bir yöntemdir.
-
----
-
-## 4.7 `dpy` Neyi Değiştirmez?
-
-`dpy` aşağıdaki özellikleri doğrudan belirlemez:
-
-```text
-Çözünürlük
-RGB bit sayıları
-GBM pixel formatı
-Native window
-Surface attribute'ları
-```
-
-Yani:
-
-```text
-dpy
--> display bağlantısını seçer
-```
-
-ama:
-
-```text
-config
--> pixel/framebuffer özelliklerini
-
-win
--> native target'ı
-
-attrib_list
--> ek window surface attribute listesini
-```
-
+`config`, oluşturulacak surface'in **framebuffer tarifidir**. Native pencerenin
+boyutunu veya ekrandaki konumunu belirlemez; OpenGL ES'in o pencereye çizerken
+kullanacağı color, depth, stencil ve multisample tamponlarının özelliklerini
 belirler.
 
----
-
-# 5. İkinci Parametre: `config`
-
-```c
-EGLConfig config
-```
-
-## 5.1 `config` Nedir?
-
-`config`, oluşturulacak surface'in framebuffer / pixel yapılandırmasını temsil eder.
-
-Bu parametredeki senaryonun odağı config'in renk, depth veya stencil
-değerlerini birbirleriyle karşılaştırmak değildir. Bu özellikler config
-seçimi ve sorgulamasıyla ilgilidir. Ayrıntılar için
-[`eglGetConfigAttrib`](eglGetConfigAttrib.md) dokümanına bakılmalıdır.
-
-Bu fonksiyon açısından `config` iki temel senaryoya sahiptir:
+Örneğin bir config kavramsal olarak şunları tarif edebilir:
 
 ```text
-1. Geçerli EGLConfig
-2. Geçersiz EGLConfig
+Red / green / blue / alpha  -> kanal başına 8 bit
+Depth buffer               -> 24 bit
+Stencil buffer             -> 8 bit
+Surface desteği            -> window surface
+Rendering desteği          -> OpenGL ES
 ```
 
----
-
-## 5.2 Senaryo A - Geçerli `EGLConfig`
-
-Geçerli senaryoda `config`:
-
-```text
-- dpy ile aynı EGLDisplay'a ait olmalıdır,
-- EGL tarafından döndürülmüş geçerli bir handle olmalıdır,
-- window surface oluşturmayı desteklemelidir.
-```
-
-Config seçilirken `EGL_SURFACE_TYPE` içinde `EGL_WINDOW_BIT`
-istenmesi bu son koşulu sağlar:
+`EGLConfig`, uygulamanın alanlarını doldurduğu bir C `struct` değildir.
+Uygulama istediği özellikleri `eglChooseConfig` fonksiyonuna bildirir; EGL de
+uygun config handle'larını döndürür:
 
 ```c
-const EGLint config_attribs[] = {
-    EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+const EGLint config_attributes[] = {
+    EGL_RED_SIZE,       8,
+    EGL_GREEN_SIZE,     8,
+    EGL_BLUE_SIZE,      8,
+    EGL_ALPHA_SIZE,     8,
+    EGL_DEPTH_SIZE,    24,
+    EGL_STENCIL_SIZE,   8,
+    EGL_SURFACE_TYPE,   EGL_WINDOW_BIT,
     EGL_NONE
 };
 
-EGLConfig valid_config;
-EGLint num_configs = 0;
+EGLConfig config;
+EGLint config_count = 0;
 
-eglChooseConfig(
-    egl_display,
-    config_attribs,
-    &valid_config,
-    1,
-    &num_configs
-);
-
-EGLSurface surface = eglCreateWindowSurface(
-    egl_display,
-    valid_config,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
+eglChooseConfig(dpy, config_attributes, &config, 1, &config_count);
 ```
 
-`num_configs > 0` ise ve diğer parametreler de geçerliyse beklenen sonuç:
+Burada elde edilen `config`, daha sonra `eglCreateWindowSurface` fonksiyonuna
+verilir. Dolayısıyla `config` parametresi fonksiyona kabaca şunu söyler:
 
-```text
-surface != EGL_NO_SURFACE
-```
+> Bu native pencere için oluşturacağın çizim yüzeyinde, EGL'nin daha önce
+> seçtiği bu framebuffer özelliklerini kullan.
 
----
-
-## 5.3 Senaryo B - Geçersiz `EGLConfig`
-
-Geçersiz, uydurma veya `dpy` için tanımlı olmayan bir config handle'ı
-verilirse surface oluşturulamaz.
+Window surface oluşturabilmek için config'in `EGL_SURFACE_TYPE` bitmask'i
+`EGL_WINDOW_BIT` içermelidir. Config ayrıca native pencerenin pixel formatıyla
+uyumlu olmalıdır.
 
 ```c
-EGLConfig invalid_config = (EGLConfig)0;
+EGLint surface_type = 0;
 
-EGLSurface surface = eglCreateWindowSurface(
-    egl_display,
-    invalid_config,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
-
-if (surface == EGL_NO_SURFACE) {
-    printf("EGL error = 0x%X\n", eglGetError());
+if (eglGetConfigAttrib(dpy, config,
+                       EGL_SURFACE_TYPE, &surface_type) == EGL_TRUE &&
+    (surface_type & EGL_WINDOW_BIT) != 0) {
+    /* config supports window surfaces */
 }
 ```
 
-Beklenen sonuç:
+Config ayrıca color, depth, stencil ve multisample buffer özelliklerini
+belirler. Bu değerlerin tamamı
+[`eglGetConfigAttrib`](eglGetConfigAttrib.md) ile sorgulanabilir.
+
+| Config durumu                          | Sonuç                                            |
+| -------------------------------------- | ------------------------------------------------- |
+| Geçerli ve`EGL_WINDOW_BIT` destekli | Native window ile uyumluysa surface oluşturulur. |
+| Geçersiz config handle                | `EGL_NO_SURFACE`, `EGL_BAD_CONFIG`.           |
+| `EGL_WINDOW_BIT` içermiyor          | `EGL_NO_SURFACE`, `EGL_BAD_MATCH`.            |
+| Native window formatıyla uyumsuz      | `EGL_NO_SURFACE`, `EGL_BAD_MATCH`.            |
+
+![Config ile native window uyumluluğu](../eglFunctions/image/eglCreateWindowSurface/compatibility.svg)
+
+#### Config Attribute'u ile Surface Attribute'u Farkı
+
+`EGL_RED_SIZE`, `EGL_DEPTH_SIZE` ve `EGL_SURFACE_TYPE` gibi değerler
+`eglChooseConfig` için config seçim kriteridir. Bunlar
+`eglCreateWindowSurface` fonksiyonunun `attrib_list` parametresine yazılmaz.
 
 ```text
-surface = EGL_NO_SURFACE
-error   = EGL_BAD_CONFIG
+EGL_RED_SIZE, EGL_DEPTH_SIZE, EGL_SURFACE_TYPE
+                    |
+                    v
+             eglChooseConfig
+                    |
+                    v
+               EGLConfig
+                    |
+                    v
+         eglCreateWindowSurface
 ```
 
-> `(EGLConfig)0` yalnızca geçersiz handle senaryosunu göstermek içindir;
-> geçerli bir config oluşturma yöntemi değildir.
+### `win`
 
----
-
-## 5.4 `config` İçin Flow Chart
-
-![config parametresi senaryoları](../eglFunctions/image/eglCreateWindowSurface/config-flow.svg)
-
-Config'in renk, alpha, depth, stencil ve diğer attribute değerleri bu iki
-senaryonun alt konusu değildir. Bu değerler
-[`eglGetConfigAttrib`](eglGetConfigAttrib.md) ile incelenir.
-
----
-
-# 6. Üçüncü Parametre: `win`
-
-```c
-NativeWindowType win
-```
-
-## 6.1 `win` Nedir?
-
-`win`, EGL'in üzerine `EGLSurface` oluşturacağı native window / native surface handle'ıdır.
-
-EGL 1.0 gerçek native window türünü platforma bırakır. Bu nedenle
-`EGLNativeWindowType` projeden projeye değişir:
+`win`, OpenGL ES görüntüsünün ait olacağı geçerli native window
+nesnesidir. Bu pencereyi EGL oluşturmaz; uygulama pencereyi daha önce X11,
+Wayland, Win32 veya GBM gibi platformun kendi API'siyle oluşturur ve elde
+ettiği handle/pointer değerini bu parametreyle EGL'ye verir.
 
 ```text
-Platform / entegrasyon   Native window kaynağı
-----------------------   ---------------------------
-X11                      X11 Window
-Wayland                  wl_egl_window / surface
-Windows                  Native window handle (HWND)
-Mesa/GBM                 struct gbm_surface *
-Diğer platformlar         Platformun native window handle'ı
-```
-
-Kullanılacak gerçek tür, projenin EGL platform entegrasyonuna ve EGL
-header'larındaki `EGLNativeWindowType` tanımına bağlıdır.
-
-Bu projede:
-
-```text
-Mesa/GBM -> struct gbm_surface *
-```
-
-kullanılır.
-
-Yani:
-
-```c
-win = (EGLNativeWindowType)gbm_surface;
-```
-
----
-
-## 6.2 Platforma Göre `win` Senaryoları
-
-Her projede aynı anda bütün native window türleri kullanılmaz. `dpy` hangi
-platform için oluşturulduysa `win` de o platformun beklediği native nesne
-olmalıdır.
-
-### Senaryo A - X11
-
-```c
-Window x11_window = /* XCreateWindow() ile oluşturulan pencere */;
-
-EGLSurface surface = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)x11_window,
-    NULL
-);
-```
-
-### Senaryo B - Wayland
-
-Wayland entegrasyonunda yaygın kullanım, `wl_surface` temel alınarak
-oluşturulan bir `wl_egl_window` nesnesini EGL'e vermektir.
-
-```c
-struct wl_egl_window *wayland_window = /* platform tarafında oluşturulur */;
-
-EGLSurface surface = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)wayland_window,
-    NULL
-);
-```
-
-### Senaryo C - Windows
-
-```c
-HWND native_window = /* Win32 tarafında oluşturulan pencere */;
-
-EGLSurface surface = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)native_window,
-    NULL
-);
-```
-
-### Senaryo D - Bu Projede Mesa/GBM
-
-```c
-struct gbm_surface *gbm_surface = /* gbm_surface_create() sonucu */;
-
-EGLSurface surface = eglCreateWindowSurface(
-    egl_display,
-    egl_config,
-    (EGLNativeWindowType)gbm_surface,
-    NULL
-);
-```
-
-Ortak kural:
-
-> `win`, aktif EGL platformuyla uyumlu ve geçerli bir native window olmalıdır.
-
-Uyumsuz, yok edilmiş veya uydurma bir native window verilirse beklenen sonuç
-`EGL_NO_SURFACE`, hata ise `EGL_BAD_NATIVE_WINDOW` olur.
-
-### Bu Projede Farklı Native Target Örneği
-
-`win` parametresi değiştiğinde oluşturulan `EGLSurface`'in hangi native surface'e bağlı olduğu değişir.
-
-Örneğin iki farklı GBM surface düşünelim:
-
-```c
-struct gbm_surface *gbm_surface_A;
-struct gbm_surface *gbm_surface_B;
-```
-
-Bunlardan:
-
-```c
-EGLSurface surface_A =
-    eglCreateWindowSurface(
-        egl_display,
-        egl_config,
-        (EGLNativeWindowType)gbm_surface_A,
-        NULL
-    );
-```
-
-ve:
-
-```c
-EGLSurface surface_B =
-    eglCreateWindowSurface(
-        egl_display,
-        egl_config,
-        (EGLNativeWindowType)gbm_surface_B,
-        NULL
-    );
-```
-
-oluşturulabilir.
-
-Burada:
-
-```text
-dpy         = aynı
-config      = aynı
-attrib_list = aynı
-
-win         = farklı
-```
-
-olduğu için native target değişmiştir.
-
----
-
-## 6.3 `win` İçin Flow Chart
-
-![win parametresinin platform senaryoları](../eglFunctions/image/eglCreateWindowSurface/win-flow.svg)
-
-Ana sonuç:
-
-> `win` türü projeden projeye değişir; verilen nesne aktif EGL platformuyla
-> uyumlu olmalıdır.
-
----
-
-# 7. Dördüncü Parametre: `attrib_list`
-
-```c
-const EGLint *attrib_list
-```
-
-## 7.1 `attrib_list` Nedir?
-
-Bu parametre, window surface oluşturulurken kullanılabilecek surface attribute listesini temsil eder.
-
-Ancak `eglCreateWindowSurface()` için EGL 1.0 core standardında önemli bir durum vardır:
-
-> EGL 1.0 core'da bu fonksiyon için tanımlanmış değiştirilebilir window-surface attribute yoktur.
-
-Bu nedenle normal kullanım:
-
-```c
-NULL
-```
-
-veya:
-
-```c
-const EGLint attrs[] = {
-    EGL_NONE
-};
-```
-
-şeklindedir.
-
----
-
-## 7.2 Senaryo A - `NULL`
-
-```c
-EGLSurface surfaceA =
-    eglCreateWindowSurface(
-        egl_display,
-        egl_config,
-        (EGLNativeWindowType)gbm_surface,
-        NULL
-    );
-```
-
-Anlamı:
-
-```text
-attrib_list = NULL
+Platform API'si              EGL
+---------------              ---
+native window oluşturulur
         |
-        v
-Ek window surface attribute'u yok
+        +---- win ---------> eglCreateWindowSurface
+                                  |
+                                  v
+                              EGLSurface
 ```
 
----
+`win` ve fonksiyonun döndürdüğü `EGLSurface` aynı nesne değildir:
 
-## 7.3 Senaryo B - `{ EGL_NONE }`
+- Native window; pencerenin platformdaki varlığını, boyutunu ve olaylarını
+  temsil eder.
+- `EGLSurface`; OpenGL ES'in color/depth/stencil tamponlarına eriştiği ve
+  `eglSwapBuffers` ile sunum yaptığı EGL çizim hedefidir.
 
-```c
-const EGLint attrs[] = {
-    EGL_NONE
-};
+Fonksiyon bu iki ayrı nesneyi birbirine bağlar; native window'u kopyalamaz
+veya sahipliğini devralmaz.
 
-EGLSurface surfaceB =
-    eglCreateWindowSurface(
-        egl_display,
-        egl_config,
-        (EGLNativeWindowType)gbm_surface,
-        attrs
-    );
+| Platform | Yaygın native nesne       | Not                                                                   |
+| -------- | -------------------------- | --------------------------------------------------------------------- |
+| X11      | `Window`                 | X server tarafında oluşturulmuş pencere ID'si.                     |
+| Wayland  | `struct wl_egl_window *` | Genellikle`wl_surface` üzerinden `wayland-egl` ile oluşturulur. |
+| Win32    | `HWND`                   | Win32 pencere handle'ı.                                              |
+| Mesa/GBM | `struct gbm_surface *`   | DRM/KMS tabanlı platform entegrasyonunda kullanılabilir.            |
+
+Native nesnenin gerçek türü, `EGLDisplay` elde edilirken seçilen
+platformla uyumlu olmalıdır. X11 display ile Wayland window veya GBM display
+ile X11 Window kullanmak geçerli bir platform eşleşmesi değildir.
+
+Ayrıca `win` ile `config` birbiriyle uyumlu olmalıdır. Örneğin native
+pencerenin pixel formatı, config'in color buffer/native visual beklentisiyle
+uyuşmazsa surface oluşturulamaz ve `EGL_BAD_MATCH` oluşabilir.
+
+Geçersiz native window implementation tarafından algılanabilirse fonksiyon
+`EGL_NO_SURFACE` döndürür ve `EGL_BAD_NATIVE_WINDOW` kaydeder. EGL 1.0,
+geçersiz native handle'ların her platformda mutlaka algılanmasını garanti
+etmez.
+
+#### GBM ve DRM/KMS İlişkisi
+
+Bu projede native window rolünü `struct gbm_surface *` üstlenir:
+
+```text
+DRM device fd
+      |
+      v
+gbm_create_device
+      |
+      v
+gbm_surface_create
+      |
+      v
+eglCreateWindowSurface
+      |
+      v
+EGLSurface
 ```
 
-Burada:
+`eglCreateWindowSurface` monitör connector'ı, CRTC, mode veya page flip
+seçmez. GBM front buffer'ını DRM framebuffer'a bağlamak ve ekranda sunmak
+DRM/KMS katmanının işidir.
 
-```c
+### `attrib_list`
+
+`attrib_list`, oluşturulacak window surface'e ait **ek oluşturma ayarlarını**
+taşıyan listedir. Genel EGL attribute listeleri şu düzende yazılır:
+
+```text
+attribute_adı, değer,
+attribute_adı, değer,
 EGL_NONE
 ```
 
-attribute listesinin bittiğini belirtir.
+Fonksiyona ayrıca liste uzunluğu verilmediği için dolu bir listenin sonuna
+`EGL_NONE` yazılması gerekir. `NULL` ise "ek ayar vermiyorum" anlamına gelir.
 
-Yani:
+Ancak bu dokümanın ele aldığı **EGL 1.0 core**, `eglCreateWindowSurface`
+için değiştirilebilir bir window surface creation attribute'u tanımlamaz.
+Bu nedenle EGL 1.0 core kullanımında pratik seçenekler yalnızca şunlardır:
 
-```text
-Liste başlıyor
-      |
-      v
-İlk değer EGL_NONE
-      |
-      v
-Liste hemen bitiyor
-      |
-      v
-Ek attribute yok
-```
-
----
-
-## 7.4 `NULL` ile `{ EGL_NONE }` Arasında Görsel Fark Var mı?
-
-EGL 1.0 core açısından:
-
-```text
+```c
 NULL
 ```
 
-ve:
-
-```text
-{ EGL_NONE }
-```
-
-ikisi de ek window-surface attribute verilmediğini ifade eder.
-
-Bu nedenle burada:
-
-```text
-kırmızı ekran
-vs
-mavi ekran
-```
-
-gibi anlamlı bir görsel fark beklenmez.
-
-Bu parametre için en doğru kanıt türü **flow chart**'tır.
-
----
-
-## 7.5 `attrib_list` İçin Flow Chart
-
-![attrib_list parametresi senaryoları](../eglFunctions/image/eglCreateWindowSurface/attrib-list-flow.svg)
-
----
-
-## 7.6 Neden Başka Bir Core Senaryo Yoktur?
-
-Teknik olarak bir `EGLint` dizisi verilebilir:
+veya boş liste:
 
 ```c
-const EGLint attrs[] = {
+const EGLint attributes[] = {
     EGL_NONE
 };
 ```
 
-Ancak EGL 1.0 core'da `eglCreateWindowSurface()` için anlamlı bir window-surface attribute tanımlı değildir.
+şeklindedir. İki biçim de ek attribute verilmediğini ifade eder.
 
-Örneğin:
+#### `config` ile `attrib_list` Neden Aynı Şey Değil?
+
+Bu iki parametre kolayca karıştırılabilir:
+
+| Kavram                | Ne zaman kullanılır?                    | Neyi belirler?                                                                                   |
+| --------------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Config seçim listesi | `eglChooseConfig` çağrısında        | Color, depth, stencil ve desteklenen surface türü gibi framebuffer gereksinimlerini            |
+| `config`            | `eglCreateWindowSurface` çağrısında | EGL'nin seçtiği framebuffer tariflerinden hangisinin kullanılacağını                       |
+| `attrib_list`       | `eglCreateWindowSurface` çağrısında | Oluşturulan surface'e ait, EGL sürümü veya extension tarafından tanımlanmış ek ayarları |
+
+Bu nedenle `EGL_RED_SIZE` veya `EGL_DEPTH_SIZE` gibi config seçim
+attribute'ları bu parametreye yazılmaz:
 
 ```c
-const EGLint attrs[] = {
+/* Wrong: EGL_RED_SIZE is a config selection attribute. */
+const EGLint wrong_attributes[] = {
     EGL_RED_SIZE, 8,
     EGL_NONE
 };
 ```
 
-yazmak doğru değildir.
+Tanınmayan bir attribute veya değer kullanılması `EGL_BAD_ATTRIBUTE`
+oluşturabilir. Sonraki EGL sürümleri veya extension'lar yeni surface
+attribute'ları tanımlayabilir. Bu tür bir attribute ancak kullanılan EGL
+sürümü veya extension onu açıkça destekliyorsa geçerlidir; EGL 1.0 core
+davranışı sayılmaz.
 
-Çünkü:
+## Native Window ile Config Uyumluluğu
 
-```c
-EGL_RED_SIZE
-```
-
-`eglCreateWindowSurface()` için window-surface attribute değildir.
-
-Bu tür özellikler:
-
-```c
-eglChooseConfig()
-```
-
-tarafında config seçimi için kullanılır.
-
-Yani:
-
-```text
-EGL_RED_SIZE
-      |
-      v
-eglChooseConfig()
-```
-
-doğrudur.
-
-Ama:
-
-```text
-EGL_RED_SIZE
-      |
-      v
-eglCreateWindowSurface attrib_list
-```
-
-EGL 1.0 core açısından doğru kullanım değildir.
-
----
-
-## 7.7 Extension'lar Ne Olur?
-
-Platform veya EGL extension'ları ilerleyen sürümlerde/uygulamalarda ek attribute'lar tanımlayabilir.
-
-Ancak bunlar:
-
-```text
-EGL 1.0 core
-```
-
-davranışı değildir.
-
-Bu dokümanın kapsamı EGL 1.0 olduğu için normal kullanım:
+Config'in color formatı ile native window'un beklediği format birbiriyle
+uyumlu olmalıdır. Örneğin GBM tarafında seçilen pixel formatı, EGL config'in
+native visual bilgisiyle eşleştirilebilir.
 
 ```c
-NULL
+EGLint native_visual_id = 0;
+
+if (eglGetConfigAttrib(dpy, config,
+                       EGL_NATIVE_VISUAL_ID,
+                       &native_visual_id) == EGL_TRUE) {
+    /* Use the platform-specific value when creating the native window. */
+}
 ```
 
-veya:
+`EGL_NATIVE_VISUAL_ID` platforma bağlıdır. GBM/Mesa ortamında pratikte
+DRM fourcc/GBM format seçimini yönlendirebilir; X11'de native visual ID anlamı
+taşır. Taşınabilir kod bu değeri kendi başına evrensel bir pixel format
+numarası gibi yorumlamamalıdır.
+
+## Oluşturulan Surface'in Özellikleri
+
+Window surface'in boyutu genellikle native window boyutundan gelir.
+`eglCreateWindowSurface` çağrısına width/height verilmez. Oluşturulduktan
+sonra surface bilgileri `eglQuerySurface` ile sorgulanabilir:
 
 ```c
-{ EGL_NONE }
+EGLint width = 0;
+EGLint height = 0;
+
+eglQuerySurface(dpy, surface, EGL_WIDTH, &width);
+eglQuerySurface(dpy, surface, EGL_HEIGHT, &height);
 ```
 
-olarak ele alınır.
+`EGL_WIDTH` ve `EGL_HEIGHT`, config attribute'u değil surface query
+attribute'udur.
 
----
+## Context ile Bağlama ve Sunum
 
-# 8. Fonksiyonun Dönüş Değeri
-
-Fonksiyonun dönüş tipi:
+Surface oluşturulması onu current yapmaz. Rendering için uyumlu bir context
+ile bağlanması gerekir:
 
 ```c
-EGLSurface
+if (eglMakeCurrent(dpy, surface, surface, context) == EGL_FALSE) {
+    EGLint error = eglGetError();
+}
 ```
 
-Başarı durumunda:
-
-```text
-geçerli EGLSurface handle
-```
-
-döner.
-
-Başarısız olduğunda:
+Rendering sonrası `eglSwapBuffers` window surface'in color buffer'larını
+native platformun sunum mekanizmasına iletir:
 
 ```c
-EGL_NO_SURFACE
+glDrawArrays(GL_TRIANGLES, 0, 3);
+eglSwapBuffers(dpy, surface);
 ```
 
-döner.
+![Window surface yaşam döngüsü](../eglFunctions/image/eglCreateWindowSurface/lifecycle.svg)
 
-Örnek:
+## Bir Native Window'a Birden Fazla EGLSurface
+
+EGL 1.0'a göre aynı native window zaten daha önce oluşturulmuş bir EGL
+config ile ilişkiliyse yeni surface oluşturma kaynak ayıramayabilir ve
+`EGL_BAD_ALLOC` oluşabilir. Uygulama aynı native window için yeni surface
+oluşturmadan önce eski EGLSurface'in yaşam döngüsünü tamamlamalıdır.
+
+## Hata Matrisi
+
+Başarısız durumda dönüş değeri `EGL_NO_SURFACE` olur.
+
+| Koşul                                                | Hata                      |
+| ----------------------------------------------------- | ------------------------- |
+| EGL ilgili display için initialize edilmemiş        | `EGL_NOT_INITIALIZED`   |
+| `dpy` geçerli display değil                       | `EGL_BAD_DISPLAY`       |
+| `config` geçerli config değil                     | `EGL_BAD_CONFIG`        |
+| Config`EGL_WINDOW_BIT` içermiyor                   | `EGL_BAD_MATCH`         |
+| Native window attribute'ları config ile uyuşmuyor   | `EGL_BAD_MATCH`         |
+| Native window geçersiz ve durum algılanabiliyor     | `EGL_BAD_NATIVE_WINDOW` |
+| Native window zaten EGL config ile ilişkili          | `EGL_BAD_ALLOC`         |
+| Yeni surface için kaynak ayrılamıyor               | `EGL_BAD_ALLOC`         |
+| Attribute listesinde tanınmayan attribute/değer var | `EGL_BAD_ATTRIBUTE`     |
+
+## Temel Kullanım
 
 ```c
-EGLSurface surface =
-    eglCreateWindowSurface(
-        egl_display,
-        egl_config,
-        (EGLNativeWindowType)gbm_surface,
-        NULL
-    );
+EGLSurface surface = eglCreateWindowSurface(
+    dpy,
+    config,
+    native_window,
+    NULL
+);
 
 if (surface == EGL_NO_SURFACE) {
     EGLint error = eglGetError();
-
-    printf(
-        "eglCreateWindowSurface failed: 0x%X\n",
-        error
-    );
+    /* Handle the error. */
 }
 ```
+
+Kullanım tamamlandığında:
+
+```c
+eglMakeCurrent(dpy,
+               EGL_NO_SURFACE,
+               EGL_NO_SURFACE,
+               EGL_NO_CONTEXT);
+eglDestroySurface(dpy, surface);
+```
+
+Native window ayrı bir nesnedir ve kendi platform API'siyle ayrıca yok
+edilmelidir.
+
+## Bölüm Özeti
+
+- Fonksiyon mevcut native window üzerinde bir EGL window surface oluşturur.
+- `dpy`, `config` ve dönen surface aynı EGLDisplay namespace'ine aittir.
+- Config `EGL_WINDOW_BIT` içermeli ve native window formatıyla uyuşmalıdır.
+- Native window türü EGL platformuna bağlıdır.
+- EGL 1.0 core'da `attrib_list` için tanımlı window attribute'u yoktur.
+- Surface oluşturmak context'i current yapmaz ve fiziksel sunumu tek başına gerçekleştirmez.
 
 ---
 
@@ -3008,12 +2632,6 @@ eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 - Context veya surface başka thread'de bağlıysa `EGL_BAD_ACCESS` beklenir.
 - Surface/context format ve display açısından uyumsuzsa `EGL_BAD_MATCH` beklenir.
 
-## Kaynak
-
-Bağlama, uyumluluk, thread ve hata kuralları için Khronos'un
-[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
-belgesindeki 2.2 ve 3.6.3 bölümleri esas alınmıştır.
-
 ---
 
 # EGL 1.0: `eglGetCurrentDisplay`
@@ -3505,16 +3123,16 @@ monitor
 
 ### `surface`
 
-| Değer                                                 | Sonuç                                                         |
-| ------------------------------------------------------ | -------------------------------------------------------------- |
-| Current context'e bağlı geçerli window surface      | Color buffer native window'a post edilir.                      |
-| Current context'e bağlı geçerli pbuffer surface     | EGL 1.0'a göre etkisi yoktur.                                 |
-| Current context'e bağlı geçerli pixmap surface      | EGL 1.0'a göre etkisi yoktur.                                 |
-| Geçerli ama current context'e bağlı olmayan surface | Başarısız,`EGL_BAD_SURFACE`.                              |
-| `EGL_NO_SURFACE`                                     | Başarısız,`EGL_BAD_SURFACE`.                              |
-| Geçersiz surface                                      | Başarısız,`EGL_BAD_SURFACE`.                              |
-| Yok edilmiş ve artık current olmayan surface          | Başarısız,`EGL_BAD_SURFACE`.                              |
-| Native window'u geçersiz window surface               | Başarısız,`EGL_BAD_NATIVE_WINDOW`.                        |
+| Değer                                                 | Sonuç                                    |
+| ------------------------------------------------------ | ----------------------------------------- |
+| Current context'e bağlı geçerli window surface      | Color buffer native window'a post edilir. |
+| Current context'e bağlı geçerli pbuffer surface     | EGL 1.0'a göre etkisi yoktur.            |
+| Current context'e bağlı geçerli pixmap surface      | EGL 1.0'a göre etkisi yoktur.            |
+| Geçerli ama current context'e bağlı olmayan surface | Başarısız,`EGL_BAD_SURFACE`.         |
+| `EGL_NO_SURFACE`                                     | Başarısız,`EGL_BAD_SURFACE`.         |
+| Geçersiz surface                                      | Başarısız,`EGL_BAD_SURFACE`.         |
+| Yok edilmiş ve artık current olmayan surface         | Başarısız,`EGL_BAD_SURFACE`.         |
+| Native window'u geçersiz window surface               | Başarısız,`EGL_BAD_NATIVE_WINDOW`.   |
 
 Current durumdayken `eglDestroySurface` ile silinmek üzere işaretlenmiş bir
 surface hemen yok olmaz; current kaldığı sürece geçerlidir. İlgili thread'deki
@@ -3531,7 +3149,7 @@ surface, çağıran thread'in current context'ine bağlı olmalıdır.
 
 Doğru sıra:
 
-```c
+```C
 eglMakeCurrent(dpy, surface, surface, ctx);
 
 /* OpenGL ES çizimleri */
@@ -3782,397 +3400,361 @@ Pbuffer için `eglSwapBuffers` çağrısı öğretici olabilir ama görünür ou
 - EGL 1.0 VSync, tearing engelleme veya sabit FPS garantisi vermez.
 - GBM/DRM kullanıyorsan swap sonrası ayrıca BO alma ve KMS scanout gerekir.
 
-## Kaynak
-
-Posting, resize, implicit flush ve hata kuralları için Khronos'un
-[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
-belgesindeki 3.8 bölümü esas alınmıştır.
-
 ---
 
 # EGL 1.0: `eglDestroyContext`
 
 ```c
-EGLBoolean eglDestroyContext(
-    EGLDisplay dpy,
-    EGLContext ctx
-);
+EGLBoolean eglDestroyContext(EGLDisplay dpy,
+                             EGLContext ctx);
 ```
 
-## 1. Bu Fonksiyon Ne Yapar?
+`eglDestroyContext`, bir EGL rendering context ile ilişkili kaynakları
+silinmek üzere işaretler. Fonksiyonun başarılı olması, context belleğinin
+aynı anda fiziksel olarak serbest bırakıldığı anlamına gelmez.
 
-`eglDestroyContext`, bir `EGLContext` nesnesini silinmek üzere işaretler.
-Context herhangi bir thread'de current değilse kaynakları mümkün olan en
-kısa sürede serbest bırakılabilir. Context current ise gerçek silme işlemi
-ertelenir.
+EGL 1.0, current context için deferred destruction uygular: context herhangi
+bir thread'de current ise gerçek silme, o thread başka bir geçerli
+`eglMakeCurrent` çağrısı yapana kadar ertelenir.
+
+![EGLContext sahiplik ve current binding modeli](../eglFunctions/image/eglDestroyContext/ownership.svg)
+
+## EGLContext Neyi Temsil Eder?
+
+`EGLContext`, OpenGL ES rendering state'ini taşıyan opaque bir handle'dır.
+Program, texture ve buffer binding'leri, etkin render state'leri ve paylaşılan
+nesne namespace'leri context yaşam döngüsüyle ilişkilidir.
 
 ```text
-Current değil -> eglDestroyContext() -> silinebilir
-Current       -> eglDestroyContext() -> silme için işaretlenir
-                                      -> current kaldığı sürece geçerlidir
+EGLDisplay
+  |
+  +-- EGLConfig
+  |
+  +-- EGLContext
+        |
+        +-- OpenGL ES state
+        +-- object bindings
+        +-- shared object relationship
 ```
 
-Fonksiyon iki parametre alır:
+Context oluşturmak onu otomatik olarak current yapmaz. `eglMakeCurrent`,
+context'i calling thread ile draw/read surface'lere bağlar.
+
+## Parametreler
+
+### `dpy`
+
+`dpy`, context'in oluşturulduğu initialize edilmiş `EGLDisplay` olmalıdır.
+EGL nesne handle'ları display namespace'leri arasında taşınamaz.
+
+| Durum | Sonuç |
+| --- | --- |
+| Geçerli, initialize edilmiş ve context'in sahibi display | `ctx` geçerliyse işlem yürütülür. |
+| `EGL_NO_DISPLAY` veya geçersiz handle | `EGL_FALSE`, `EGL_BAD_DISPLAY`. |
+| Initialize edilmemiş display | `EGL_FALSE`, `EGL_NOT_INITIALIZED`. |
+
+### `ctx`
+
+`ctx`, `dpy` üzerinde `eglCreateContext` ile oluşturulmuş geçerli bir
+context handle'ı olmalıdır.
+
+| Durum | `eglDestroyContext` davranışı |
+| --- | --- |
+| Context current değil | Kaynaklar silinmek üzere işaretlenir ve en kısa sürede serbest bırakılabilir. |
+| Context herhangi bir thread'de current | İşlem `EGL_TRUE`; gerçek silme ertelenir. |
+| Geçersiz context handle | `EGL_FALSE`, `EGL_BAD_CONTEXT`. |
+
+## Current Context ve Thread Bağı
+
+Bir context aynı anda en fazla bir thread'de current olabilir. Calling thread
+üzerindeki current state kavramsal olarak şu üçlüyü tutar:
 
 ```text
-dpy -> Context'in ait olduğu, initialize edilmiş EGLDisplay
-ctx -> Silinecek EGLContext
+current context
+current draw surface
+current read surface
 ```
-
----
-
-# 2. Birinci Parametre: `dpy`
-
-## 2.1 Senaryo A - Geçerli `EGLDisplay`
-
-`dpy`, `ctx` nesnesinin oluşturulduğu initialize edilmiş display olmalıdır.
 
 ```c
-EGLBoolean result = eglDestroyContext(
-    egl_display,
-    egl_context
-);
+eglMakeCurrent(dpy, draw_surface, read_surface, context);
 ```
 
-`ctx` de geçerliyse beklenen sonuç:
+Context current iken `eglDestroyContext` çağrılırsa:
 
-```text
-result = EGL_TRUE
-```
+1. Context silinmek üzere işaretlenir.
+2. Fonksiyon `EGL_TRUE` döndürür.
+3. Mevcut thread binding'i geçerliliğini korur.
+4. Context yalnızca current kaldığı sürece kullanılabilir.
+5. Thread'in sonraki geçerli `eglMakeCurrent` çağrısı eski binding'i kaldırır ve silme tamamlanabilir.
 
-## 2.2 Senaryo B - `EGL_NO_DISPLAY`
+![Current context için ertelenmiş silme yaşam döngüsü](../eglFunctions/image/eglDestroyContext/deferred-destruction.svg)
+
+## Context'i Release Etmek ve Destroy Etmek
+
+Bu iki işlem farklıdır:
 
 ```c
-EGLBoolean result = eglDestroyContext(
-    EGL_NO_DISPLAY,
-    egl_context
-);
-
-EGLint error = eglGetError();
+eglMakeCurrent(dpy,
+               EGL_NO_SURFACE,
+               EGL_NO_SURFACE,
+               EGL_NO_CONTEXT);
 ```
 
-Beklenen sonuç:
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_DISPLAY
-```
-
-## 2.3 Initialize Edilmemiş Display
-
-Handle geçerli olsa bile EGL ilgili display üzerinde initialize edilmemişse
-işlem başarısız olur:
-
-```text
-result = EGL_FALSE
-error  = EGL_NOT_INITIALIZED
-```
-
-![eglDestroyContext dpy senaryoları](../eglFunctions/image/eglDestroyContext/dpy-flow.svg)
-
----
-
-# 3. İkinci Parametre: `ctx`
-
-## 3.1 Senaryo A - Geçerli ve Current Olmayan Context
-
-Context herhangi bir thread'de current değilse silme isteği başarılı olur ve
-kaynakları mümkün olan en kısa sürede serbest bırakılabilir.
+Calling thread'in current binding'ini bırakır; context'i silmez.
 
 ```c
-EGLBoolean result = eglDestroyContext(
-    egl_display,
-    egl_context
-);
+eglDestroyContext(dpy, context);
 ```
 
-Beklenen sonuç:
+Context'i silinmek üzere işaretler; current ise binding'i o anda kaldırmaz.
 
-```text
-result = EGL_TRUE
-```
-
-Bu çağrıdan sonra uygulama `egl_context` handle'ını tekrar kullanmamalıdır.
-
-## 3.2 Senaryo B - Geçerli ve Current Context
-
-Current context için `eglDestroyContext` yine başarılı olur; fakat context
-hemen serbest bırakılmaz.
-
-```c
-eglMakeCurrent(
-    egl_display,
-    egl_surface,
-    egl_surface,
-    egl_context
-);
-
-EGLBoolean result = eglDestroyContext(
-    egl_display,
-    egl_context
-);
-```
-
-Beklenen davranış:
-
-```text
-result = EGL_TRUE
-context = silme için işaretli, ancak hala current
-```
-
-Thread sonraki geçerli `eglMakeCurrent` çağrısıyla context'i bıraktığında
-gerçek silme tamamlanabilir:
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-```
-
-## 3.3 Senaryo C - Geçersiz `EGLContext`
-
-```c
-EGLContext invalid_context = (EGLContext)0;
-
-EGLBoolean result = eglDestroyContext(
-    egl_display,
-    invalid_context
-);
-
-EGLint error = eglGetError();
-```
-
-Beklenen sonuç:
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_CONTEXT
-```
-
-> `(EGLContext)0` yalnızca geçersiz handle senaryosunu göstermek içindir.
-
-![eglDestroyContext ctx senaryoları](../eglFunctions/image/eglDestroyContext/context-flow.svg)
-
----
-
-# 4. Current ve Current Olmayan Context Karşılaştırması
-
-| Context durumu | `eglDestroyContext` sonucu | Gerçek silme |
+| İşlem | Thread binding | Context yaşam döngüsü |
 | --- | --- | --- |
-| Current değil | `EGL_TRUE` | Mümkün olan en kısa sürede |
-| Current | `EGL_TRUE` | Sonraki geçerli `eglMakeCurrent` sonrası |
-| Geçersiz handle | `EGL_FALSE` | Silinecek geçerli nesne yok |
+| Release | Current binding kaldırılır | Context destroy edilmediyse yaşar. |
+| Destroy, current değil | Değişmez | Silme başlatılır. |
+| Destroy, current | Binding korunur | Silme release/rebind sonrasına ertelenir. |
 
-`eglMakeCurrent(..., EGL_NO_CONTEXT)` context'i thread'den ayırır;
-`eglDestroyContext()` ise context'i silinmek üzere işaretler. Bunlar aynı
-işlem değildir.
+## Shared Context İlişkisi
 
----
-
-# 5. Dönüş Değeri
+`eglCreateContext` sırasında `share_context` kullanılması iki context'in
+belirli OpenGL ES nesnelerini paylaşmasını sağlayabilir. Bir context'i destroy
+etmek, paylaşım grubundaki diğer context handle'larını otomatik olarak destroy
+etmez. Paylaşılan nesnelerin gerçek yaşam süresi GL nesne referanslarına ve
+paylaşım grubundaki kalan context'lere bağlıdır.
 
 ```text
-EGL_TRUE  -> Silme isteği kabul edildi
-EGL_FALSE -> İşlem başarısız; eglGetError() ile hata okunmalı
+Share group
+  +-- Context A (destroyed)
+  +-- Context B (still alive)
+  +-- Shared textures/buffers may remain reachable through B
 ```
 
-`EGL_TRUE`, current context kaynaklarının o anda fiziksel olarak serbest
-bırakıldığı anlamına gelmez.
+## Doğru Cleanup Sırası
+
+Tek thread'li yaygın kapanış sırası:
+
+```c
+eglMakeCurrent(dpy,
+               EGL_NO_SURFACE,
+               EGL_NO_SURFACE,
+               EGL_NO_CONTEXT);
+
+eglDestroyContext(dpy, context);
+```
+
+Bu sıra zorunlu tek sıra değildir; current context destroy edilebilir.
+Ancak önce release etmek kaynak yaşam döngüsünü daha açık hale getirir.
+
+Birden fazla thread kullanılıyorsa her thread kendi current binding'ini uygun
+şekilde bırakmalı ve uygulama destroy sırasını senkronize etmelidir.
+
+## Dönüş Değeri ve Hatalar
+
+| Sonuç | Anlam |
+| --- | --- |
+| `EGL_TRUE` | Silme isteği kabul edildi. Fiziksel release ertelenmiş olabilir. |
+| `EGL_FALSE` | İşlem başarısız; hata `eglGetError` ile okunur. |
+
+| Koşul | Hata |
+| --- | --- |
+| EGL `dpy` için initialize edilmemiş | `EGL_NOT_INITIALIZED` |
+| `dpy` geçerli display değil | `EGL_BAD_DISPLAY` |
+| `ctx` geçerli context değil | `EGL_BAD_CONTEXT` |
+
+## Temel Kullanım
+
+```c
+if (eglDestroyContext(dpy, context) == EGL_FALSE) {
+    EGLint error = eglGetError();
+    /* Handle the error. */
+}
+
+context = EGL_NO_CONTEXT;
+```
+
+Uygulama, başarılı destroy çağrısından sonra kendi değişkenini
+`EGL_NO_CONTEXT` yaparak eski opaque handle'ın yanlışlıkla yeniden
+kullanılmasını önleyebilir.
+
+## Bölüm Özeti
+
+- `eglDestroyContext`, context'i silinmek üzere işaretler.
+- Current olmayan context en kısa sürede serbest bırakılabilir.
+- Current context'in gerçek silinmesi sonraki geçerli `eglMakeCurrent` çağrısına ertelenir.
+- Release ve destroy farklı işlemlerdir.
+- Context, oluşturulduğu EGLDisplay ile birlikte kullanılmalıdır.
 
 ---
 
 # EGL 1.0: `eglDestroySurface`
 
 ```c
-EGLBoolean eglDestroySurface(
-    EGLDisplay dpy,
-    EGLSurface surface
-);
+EGLBoolean eglDestroySurface(EGLDisplay dpy,
+                             EGLSurface surface);
 ```
 
-## 1. Bu Fonksiyon Ne Yapar?
+`eglDestroySurface`, window, pixmap veya pbuffer türündeki bir EGL rendering
+surface ile ilişkili kaynakları silinmek üzere işaretler. Surface herhangi bir
+thread'de current draw/read surface ise gerçek silme ertelenir.
 
-`eglDestroySurface`, window, pbuffer veya pixmap türündeki bir `EGLSurface`
-nesnesini silinmek üzere işaretler.
+![EGLSurface türleri ve sahiplik modeli](../eglFunctions/image/eglDestroySurface/ownership.svg)
+
+## EGLSurface Neyi Temsil Eder?
+
+`EGLSurface`, OpenGL ES rendering için color buffer ve config tarafından
+tanımlanan depth, stencil veya multisample buffer'larına erişim sağlayan opaque
+bir EGL handle'ıdır.
 
 ```text
-Current değil -> eglDestroySurface() -> silinebilir
-Current       -> eglDestroySurface() -> silme için işaretlenir
-                                      -> current kaldığı sürece geçerlidir
+EGLSurface
+  +-- Window surface  -> native window ile ilişkili
+  +-- Pixmap surface  -> native pixmap ile ilişkili
+  +-- Pbuffer surface -> EGL tarafında off-screen buffer
 ```
 
-Bu projede EGL surface ile GBM native surface ayrı nesnelerdir:
+Window/pixmap surface ile native nesne aynı nesne değildir. EGL surface'in
+destroy edilmesi native window, native pixmap veya GBM surface'i otomatik olarak
+destroy etmez.
 
-```text
-eglDestroySurface()       -> EGLSurface nesnesini yönetir
-gbm_surface_destroy()     -> struct gbm_surface nesnesini yönetir
-```
+## Parametreler
 
-Fonksiyon iki parametre alır:
+### `dpy`
 
-```text
-dpy     -> Surface'in ait olduğu, initialize edilmiş EGLDisplay
-surface -> Silinecek EGLSurface
-```
+`dpy`, surface'in oluşturulduğu initialize edilmiş EGL display'dir.
 
----
+| Durum                                                      | Sonuç                                        |
+| ---------------------------------------------------------- | --------------------------------------------- |
+| Geçerli, initialize edilmiş ve surface'in sahibi display | `surface` geçerliyse işlem yürütülür. |
+| `EGL_NO_DISPLAY` veya geçersiz handle                   | `EGL_FALSE`, `EGL_BAD_DISPLAY`.           |
+| Initialize edilmemiş display                              | `EGL_FALSE`, `EGL_NOT_INITIALIZED`.       |
 
-# 2. Birinci Parametre: `dpy`
+### `surface`
 
-## 2.1 Senaryo A - Geçerli `EGLDisplay`
+`surface`, `dpy` üzerinde bir EGL surface creation fonksiyonuyla oluşturulmuş
+geçerli handle olmalıdır.
+
+| Durum                            | Davranış                                                              |
+| -------------------------------- | ----------------------------------------------------------------------- |
+| Hiçbir thread'de current değil | Silme işaretlenir; kaynaklar en kısa sürede serbest bırakılabilir. |
+| Current draw veya read surface   | `EGL_TRUE`; gerçek silme ertelenir.                                  |
+| Geçersiz handle                 | `EGL_FALSE`, `EGL_BAD_SURFACE`.                                     |
+
+## Draw Surface ve Read Surface
+
+`eglMakeCurrent`, context ile iki surface binding'i kurar:
 
 ```c
-EGLBoolean result = eglDestroySurface(
-    egl_display,
-    egl_surface
-);
+eglMakeCurrent(dpy, draw_surface, read_surface, context);
 ```
 
-`surface` aynı display'a ait ve geçerliyse beklenen sonuç:
+- draw surface, rendering komutlarının hedefidir.
+- read surface, pixel okuma/kopyalama işlemlerinin kaynağı olabilir.
+- Aynı surface her iki rol için de kullanılabilir.
 
-```text
-result = EGL_TRUE
-```
+Bir surface bu rollerden herhangi birinde current ise `eglDestroySurface`
+sonrası gerçek release ertelenir.
 
-## 2.2 Senaryo B - `EGL_NO_DISPLAY`
+![Current surface için ertelenmiş silme](../eglFunctions/image/eglDestroySurface/deferred-destruction.svg)
+
+## Ertelenmiş Silme
+
+Current surface destroy edildiğinde:
+
+1. Surface ve kaynakları silinmek üzere işaretlenir.
+2. `eglDestroySurface` `EGL_TRUE` döndürür.
+3. Mevcut current binding geçerliliğini korur.
+4. Surface yalnızca current kaldığı sürece kullanılabilir.
+5. İlgili thread'in sonraki geçerli `eglMakeCurrent` çağrısı eski binding'i kaldırır.
+6. Artık current olmayan surface'in gerçek silinmesi tamamlanabilir.
+
+**Release için yaygın çağrı:**
 
 ```c
-EGLBoolean result = eglDestroySurface(
-    EGL_NO_DISPLAY,
-    egl_surface
-);
-
-EGLint error = eglGetError();
+eglMakeCurrent(dpy,
+               EGL_NO_SURFACE,
+               EGL_NO_SURFACE,
+               EGL_NO_CONTEXT);
 ```
 
-Beklenen sonuç:
+Bu çağrı tek başına surface'i destroy etmez; yalnızca calling thread'in
+current binding'ini kaldırır.
+
+## EGLSurface ve Native Nesne Yaşam Döngüsü
+
+Window surface için iki ayrı sahiplik alanı vardır:
 
 ```text
-result = EGL_FALSE
-error  = EGL_BAD_DISPLAY
+EGL ownership                     Platform ownership
+-------------                     ------------------
+EGLSurface                        X11 Window
+                                  wl_surface / wl_egl_window
+                                  HWND
+                                  gbm_surface
 ```
 
-## 2.3 Initialize Edilmemiş Display
-
-```text
-result = EGL_FALSE
-error  = EGL_NOT_INITIALIZED
-```
-
-![eglDestroySurface dpy senaryoları](../eglFunctions/image/eglDestroySurface/dpy-flow.svg)
-
----
-
-# 3. İkinci Parametre: `surface`
-
-## 3.1 Senaryo A - Geçerli ve Current Olmayan Surface
-
-Surface hiçbir thread'de current draw veya current read surface değilse silme
-isteği başarılı olur ve kaynakları mümkün olan en kısa sürede serbest
-bırakılabilir.
+Bu projedeki GBM cleanup sırası kavramsal olarak:
 
 ```c
-EGLBoolean result = eglDestroySurface(
-    egl_display,
-    egl_surface
-);
+eglMakeCurrent(dpy,
+               EGL_NO_SURFACE,
+               EGL_NO_SURFACE,
+               EGL_NO_CONTEXT);
+
+eglDestroySurface(dpy, egl_surface);
+gbm_surface_destroy(gbm_surface);
 ```
 
-Beklenen sonuç:
+Native nesne EGLSurface hala ona bağlı ve kullanılırken yok edilmemelidir.
+Kesin sıralama platform entegrasyonunun kurallarına da bağlıdır.
 
-```text
-result = EGL_TRUE
-```
+![EGL ve native surface cleanup sırası](../eglFunctions/image/eglDestroySurface/native-cleanup.svg)
 
-## 3.2 Senaryo B - Geçerli ve Current Surface
+## Window, Pixmap ve Pbuffer Farkı
 
-Current draw veya read surface için silme isteği kabul edilir, fakat gerçek
-silme ertelenir.
+| Surface türü | Native nesne                | Destroy sonrası ayrı cleanup               |
+| -------------- | --------------------------- | -------------------------------------------- |
+| Window         | Native window vardır       | Native window platform API'siyle yok edilir. |
+| Pixmap         | Native pixmap vardır       | Native pixmap platform API'siyle yok edilir. |
+| Pbuffer        | Ayrı native pencere yoktur | EGL pbuffer kaynaklarını EGL yönetir.     |
+
+`eglDestroySurface` üç surface türü için de aynı API'dir; fark,
+surface'in oluşturulma kaynağı ve native nesne sahipliğindedir.
+
+## Dönüş Değeri ve Hatalar
+
+| Sonuç        | Anlam                                                     |
+| ------------- | --------------------------------------------------------- |
+| `EGL_TRUE`  | Silme isteği kabul edildi; release ertelenmiş olabilir. |
+| `EGL_FALSE` | İşlem başarısız;`eglGetError` ile hata okunur.     |
+
+| Koşul                                        | Hata                    |
+| --------------------------------------------- | ----------------------- |
+| EGL`dpy` için initialize edilmemiş        | `EGL_NOT_INITIALIZED` |
+| `dpy` geçerli display değil               | `EGL_BAD_DISPLAY`     |
+| `surface` geçerli rendering surface değil | `EGL_BAD_SURFACE`     |
+
+## Temel Kullanım
 
 ```c
-eglMakeCurrent(
-    egl_display,
-    egl_surface,
-    egl_surface,
-    egl_context
-);
+if (eglDestroySurface(dpy, surface) == EGL_FALSE) {
+    EGLint error = eglGetError();
+    /* Handle the error. */
+}
 
-EGLBoolean result = eglDestroySurface(
-    egl_display,
-    egl_surface
-);
+surface = EGL_NO_SURFACE;
 ```
 
-Beklenen davranış:
+Başarılı destroy sonrası uygulama eski opaque handle'ı yeniden
+kullanmamalıdır. Değişkeni `EGL_NO_SURFACE` yapmak yanlış kullanımı
+azaltır; EGL tarafındaki destroy işleminin yerine geçmez.
 
-```text
-result  = EGL_TRUE
-surface = silme için işaretli, ancak hala current
-```
+## Bölüm Özeti
 
-Sonraki geçerli `eglMakeCurrent` çağrısı eski surface'i current durumdan
-çıkardığında gerçek silme tamamlanabilir:
-
-```c
-eglMakeCurrent(
-    egl_display,
-    EGL_NO_SURFACE,
-    EGL_NO_SURFACE,
-    EGL_NO_CONTEXT
-);
-```
-
-## 3.3 Senaryo C - Geçersiz `EGLSurface`
-
-```c
-EGLSurface invalid_surface = (EGLSurface)0;
-
-EGLBoolean result = eglDestroySurface(
-    egl_display,
-    invalid_surface
-);
-
-EGLint error = eglGetError();
-```
-
-Beklenen sonuç:
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_SURFACE
-```
-
-> `(EGLSurface)0` yalnızca geçersiz handle senaryosunu göstermek içindir.
-
-![eglDestroySurface surface senaryoları](../eglFunctions/image/eglDestroySurface/surface-flow.svg)
-
----
-
-# 4. Current ve Current Olmayan Surface Karşılaştırması
-
-| Surface durumu | `eglDestroySurface` sonucu | Gerçek silme |
-| --- | --- | --- |
-| Current değil | `EGL_TRUE` | Mümkün olan en kısa sürede |
-| Current | `EGL_TRUE` | Sonraki geçerli `eglMakeCurrent` sonrası |
-| Geçersiz handle | `EGL_FALSE` | Silinecek geçerli nesne yok |
-
-EGL surface silindikten sonra ona karşılık gelen native window veya GBM
-surface gerekiyorsa kendi platform API'siyle ayrıca temizlenmelidir.
-
----
-
-# 5. Dönüş Değeri
-
-```text
-EGL_TRUE  -> Silme isteği kabul edildi
-EGL_FALSE -> İşlem başarısız; eglGetError() ile hata okunmalı
-```
-
-`EGL_TRUE`, current surface kaynaklarının o anda fiziksel olarak serbest
-bırakıldığı anlamına gelmez.
+- Fonksiyon window, pixmap ve pbuffer surface'leri silinmek üzere işaretler.
+- Current surface'in gerçek silinmesi sonraki geçerli `eglMakeCurrent` çağrısına ertelenir.
+- Draw ve read binding'lerinden herhangi biri deferred destruction için yeterlidir.
+- EGLSurface ile native window/pixmap/GBM surface farklı nesnelerdir.
+- Başarılı `EGL_TRUE`, fiziksel belleğin aynı anda serbest kaldığını garanti etmez.
 
 ---
 
@@ -4320,12 +3902,6 @@ Bu kalipta once gecersiz display kontrol edilir. Ardindan varsa current context/
 
 Bu uc senaryo birlikte degerlendirildiginde `pDpyID` parametresi icin temel kural nettir: `eglTerminate` cagrisi yalnizca gecerli bir `EGLDisplay` ile anlamlidir; initialize durumu fonksiyonun yapacagi isi degistirir, fakat gecersiz display her zaman hata sinifina girer.
 
-## Kaynaklar
-
-- Khronos EGL 1.0 Specification: `eglspec.1.0 (1).pdf`
-- Khronos EGL Registry: https://registry.khronos.org/EGL/
-- Khronos eski EGL spesifikasyonlari: https://registry.khronos.org/EGL/specs/
-
 ---
 
 # EGL 1.0: `eglGetError`
@@ -4334,335 +3910,259 @@ Bu uc senaryo birlikte degerlendirildiginde `pDpyID` parametresi icin temel kura
 EGLint eglGetError(void);
 ```
 
-## 1. Bu Fonksiyon Ne Yapar?
+`eglGetError`, calling thread için kaydedilmiş EGL hata durumunu döndürür.
+Parametre almaz. Dönen değer ya `EGL_SUCCESS` ya da EGL tarafından tanımlanan
+bir hata kodudur.
 
-`eglGetError`, çağrı yapan thread için kaydedilmiş son EGL hata kodunu
-döndürür. Parametre almadığı için senaryolar parametre değişikliğine göre
-değil, daha önce çağrılan EGL fonksiyonunun oluşturduğu duruma göre kurulur.
+Fonksiyon bir hata oluşturmaz ve başarısız işlemi düzeltmez. Daha önceki EGL
+çağrılarının calling thread üzerinde bıraktığı error state'i okur.
+
+![EGL çağrısı ile thread-local error state ilişkisi](../eglFunctions/image/eglGetError/thread-error-state.svg)
+
+## Error State Modeli
+
+EGL error state thread'e özeldir:
 
 ```text
-EGL fonksiyonu çağrılır
-        |
-        v
-Dönüş değeri kontrol edilir
-        |
-        v
-Başarısızsa hemen eglGetError() çağrılır
-        |
-        v
-EGLint hata kodu alınır
+Thread A -> EGL error state A
+Thread B -> EGL error state B
+Thread C -> EGL error state C
 ```
 
-`eglGetError()` hata kodunu döndürdükten sonra o thread'in hata durumu
-`EGL_SUCCESS` olacak biçimde sıfırlanır. Bu nedenle hata, başarısız EGL
-çağrısından hemen sonra ve yalnızca bir kez okunmalıdır.
+Thread A'da oluşan hata Thread B'nin `eglGetError()` çağrısıyla okunmaz.
+Her thread kendi EGL çağrılarının hata durumunu kendi içinde okumalıdır.
 
-![eglGetError genel akışı](../eglFunctions/image/eglGetError/error-flow.svg)
-
----
-
-# 2. EGL 1.0 Dönüş Değerleri
-
-EGL 1.0 kapsamında `eglGetError()` aşağıdaki 14 temel değerden birini
-döndürebilir. `EGL_SUCCESS` teknik olarak hata değildir.
-
-| Değer | Görülebileceği durum |
-| --- | --- |
-| `EGL_SUCCESS` | Kayıtlı hata yoktur. |
-| `EGL_NOT_INITIALIZED` | EGL ilgili display için initialize edilmemiştir veya edilememiştir. |
-| `EGL_BAD_ACCESS` | İstenen kaynağa erişim kuralı ihlal edilmiştir. |
-| `EGL_BAD_ALLOC` | İşlem için kaynak ayrılamamıştır. |
-| `EGL_BAD_ATTRIBUTE` | Attribute listesinde tanınmayan attribute/değer vardır. |
-| `EGL_BAD_CONTEXT` | Bir context argümanı geçerli `EGLContext` değildir. |
-| `EGL_BAD_CONFIG` | Bir config argümanı geçerli `EGLConfig` değildir. |
-| `EGL_BAD_CURRENT_SURFACE` | Thread'in current surface'i artık geçerli değildir. |
-| `EGL_BAD_DISPLAY` | Bir display argümanı geçerli `EGLDisplay` değildir. |
-| `EGL_BAD_SURFACE` | Bir surface argümanı geçerli `EGLSurface` değildir. |
-| `EGL_BAD_MATCH` | Argümanlar tek tek geçerli olsa da birbirleriyle uyumsuzdur. |
-| `EGL_BAD_PARAMETER` | Bir veya daha fazla parametre değeri geçersizdir. |
-| `EGL_BAD_NATIVE_PIXMAP` | Native pixmap geçersizdir ve implementation bunu algılayabilmiştir. |
-| `EGL_BAD_NATIVE_WINDOW` | Native window geçersizdir ve implementation bunu algılayabilmiştir. |
-
----
-
-# 3. Hata Senaryoları
-
-## 3.1 Senaryo A - `EGL_SUCCESS`
-
-Kayıtlı bir hata yokken:
+Bir EGL fonksiyonu hata oluşturduğunda error state hata koduna ayarlanır.
+`eglGetError()` bu kodu döndürdükten sonra state `EGL_SUCCESS` değerine
+resetlenir.
 
 ```c
-EGLint error = eglGetError();
-```
+EGLBoolean result = eglDestroySurface(dpy, invalid_surface);
 
-beklenen sonuç:
-
-```text
-error = EGL_SUCCESS
-```
-
-## 3.2 Senaryo B - `EGL_NOT_INITIALIZED`
-
-Geçerli fakat initialize edilmemiş bir display üzerinde initialize gerektiren
-bir EGL işlemi yapıldığında görülebilir.
-
-```c
-EGLBoolean result = eglDestroyContext(dpy, context);
-EGLint error = eglGetError();
+if (result == EGL_FALSE) {
+    EGLint first = eglGetError();
+    EGLint second = eglGetError();
+}
 ```
 
 ```text
-result = EGL_FALSE
-error  = EGL_NOT_INITIALIZED
+first  -> ilgili hata kodu
+second -> arada yeni hata yoksa EGL_SUCCESS
 ```
 
-## 3.3 Senaryo C - `EGL_BAD_ACCESS`
+![Hata durumunun okunması ve resetlenmesi](../eglFunctions/image/eglGetError/read-reset.svg)
 
-Bir context başka bir thread'de current iken ikinci thread aynı context'i
-current yapmaya çalışırsa kaynak erişim kuralı ihlal edilebilir.
+## Doğru Kullanım Sırası
 
-```text
-Thread A: context current
-Thread B: aynı context ile eglMakeCurrent()
-          -> EGL_FALSE
-          -> EGL_BAD_ACCESS
-```
-
-Bu senaryo iki thread ve senkronizasyon gerektirir.
-
-## 3.4 Senaryo D - `EGL_BAD_ALLOC`
-
-`eglCreateContext`, `eglCreateWindowSurface` veya benzeri bir oluşturma işlemi
-için gerekli kaynak ayrılamadığında görülebilir.
-
-```text
-Oluşturma fonksiyonu başarısız
--> EGL_NO_CONTEXT veya EGL_NO_SURFACE
--> eglGetError() = EGL_BAD_ALLOC
-```
-
-Kaynak tüketimini güvenli ve deterministik biçimde oluşturmak her ortamda
-mümkün olmadığından bu senaryo implementation ve test ortamına bağlıdır.
-
-## 3.5 Senaryo E - `EGL_BAD_ATTRIBUTE`
-
-```c
-const EGLint attributes[] = {
-    0x7FFFFFFF, 1,
-    EGL_NONE
-};
-
-EGLint num_config = 0;
-EGLBoolean result = eglChooseConfig(
-    dpy,
-    attributes,
-    NULL,
-    0,
-    &num_config
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_ATTRIBUTE
-```
-
-## 3.6 Senaryo F - `EGL_BAD_CONTEXT`
-
-```c
-EGLBoolean result = eglDestroyContext(
-    dpy,
-    (EGLContext)0
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_CONTEXT
-```
-
-## 3.7 Senaryo G - `EGL_BAD_CONFIG`
-
-```c
-EGLContext context = eglCreateContext(
-    dpy,
-    (EGLConfig)0,
-    EGL_NO_CONTEXT,
-    NULL
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-context = EGL_NO_CONTEXT
-error   = EGL_BAD_CONFIG
-```
-
-## 3.8 Senaryo H - `EGL_BAD_CURRENT_SURFACE`
-
-Calling thread'in current draw veya read surface'i artık geçerli değilse
-sonraki EGL işlemi `EGL_BAD_CURRENT_SURFACE` üretebilir. Bu durum native
-window yaşam döngüsüne ve implementation'a bağlı bir test düzeneği gerektirir.
-
-## 3.9 Senaryo I - `EGL_BAD_DISPLAY`
-
-```c
-EGLBoolean result = eglInitialize(
-    EGL_NO_DISPLAY,
-    NULL,
-    NULL
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_DISPLAY
-```
-
-## 3.10 Senaryo J - `EGL_BAD_SURFACE`
-
-```c
-EGLBoolean result = eglDestroySurface(
-    dpy,
-    (EGLSurface)0
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_SURFACE
-```
-
-## 3.11 Senaryo K - `EGL_BAD_MATCH`
-
-Geçerli context ve surface nesneleri birbirleriyle uyumlu değilse:
-
-```c
-EGLBoolean result = eglMakeCurrent(
-    dpy,
-    incompatible_surface,
-    incompatible_surface,
-    context
-);
-
-EGLint error = eglGetError();
-```
-
-```text
-result = EGL_FALSE
-error  = EGL_BAD_MATCH
-```
-
-## 3.12 Senaryo L - `EGL_BAD_PARAMETER`
-
-Bir EGL fonksiyonuna kendi sözleşmesine uymayan parametre değeri verildiğinde
-görülebilir. Örneğin zorunlu output pointer'ını `NULL` vermek:
-
-```c
-EGLBoolean result = eglChooseConfig(
-    dpy,
-    NULL,
-    NULL,
-    0,
-    NULL
-);
-
-EGLint error = eglGetError();
-```
-
-Beklenen hata `EGL_BAD_PARAMETER`'dır.
-
-## 3.13 Senaryo M - `EGL_BAD_NATIVE_PIXMAP`
-
-`eglCreatePixmapSurface` için verilen native pixmap geçersizse ve
-implementation bunu algılayabiliyorsa görülür. Bu GBM window-surface
-projesinin normal akışında native pixmap kullanılmadığı için platforma bağlı
-bir senaryodur.
-
-## 3.14 Senaryo N - `EGL_BAD_NATIVE_WINDOW`
+EGL fonksiyonları genellikle başarı/başarısızlığı kendi dönüş değerleriyle
+bildirir. `eglGetError` yalnızca başarısız sonucunun nedenini okumak için
+kullanılmalıdır.
 
 ```c
 EGLSurface surface = eglCreateWindowSurface(
     dpy,
     config,
-    (EGLNativeWindowType)0,
+    native_window,
     NULL
 );
 
+if (surface == EGL_NO_SURFACE) {
+    EGLint error = eglGetError();
+    /* Decode and handle error here. */
+}
+```
+
+Hata oluşturan çağrı ile `eglGetError` arasına başka EGL çağrıları
+yerleştirilmemelidir. Aradaki çağrı yeni bir error state oluşturabilir ve
+hangi işlemin hangi hataya ait olduğunu belirsizleştirir.
+
+```c
+/* Fragile ordering */
+EGLBoolean result = eglMakeCurrent(dpy, draw, read, context);
+eglSwapInterval(dpy, 1);
 EGLint error = eglGetError();
 ```
 
-Implementation geçersiz native handle'ı algılayabiliyorsa:
+Bu kodda okunan hata `eglMakeCurrent` veya `eglSwapInterval` ile ilişkili
+olabilir. Her başarısız sonuç hemen işlenmelidir.
+
+## EGL 1.0 Hata Kodları
+
+EGL 1.0'da `EGL_SUCCESS` dahil 14 temel sonuç vardır.
+
+| Kod | Hex | Anlam |
+| --- | ---: | --- |
+| `EGL_SUCCESS` | `0x3000` | Kayıtlı hata yoktur. |
+| `EGL_NOT_INITIALIZED` | `0x3001` | EGL ilgili display için initialize edilmemiş veya initialize edilememiştir. |
+| `EGL_BAD_ACCESS` | `0x3002` | EGL istenen kaynağa erişememiş veya erişim kuralı ihlal edilmiştir. |
+| `EGL_BAD_ALLOC` | `0x3003` | İşlem için gerekli kaynak ayrılamamıştır. |
+| `EGL_BAD_ATTRIBUTE` | `0x3004` | Attribute listesinde tanınmayan attribute/değer vardır. |
+| `EGL_BAD_CONFIG` | `0x3005` | Bir `EGLConfig` argümanı geçerli config değildir. |
+| `EGL_BAD_CONTEXT` | `0x3006` | Bir `EGLContext` argümanı geçerli context değildir. |
+| `EGL_BAD_CURRENT_SURFACE` | `0x3007` | Calling thread'in current surface'i artık geçerli değildir. |
+| `EGL_BAD_DISPLAY` | `0x3008` | Bir `EGLDisplay` argümanı geçerli display değildir. |
+| `EGL_BAD_MATCH` | `0x3009` | Argümanlar tek tek geçerli olsa da birbirleriyle uyumsuzdur. |
+| `EGL_BAD_NATIVE_PIXMAP` | `0x300A` | Native pixmap geçerli değildir ve durum algılanabilmiştir. |
+| `EGL_BAD_NATIVE_WINDOW` | `0x300B` | Native window geçerli değildir ve durum algılanabilmiştir. |
+| `EGL_BAD_PARAMETER` | `0x300C` | Bir veya daha fazla parametre değeri geçersizdir. |
+| `EGL_BAD_SURFACE` | `0x300D` | Bir `EGLSurface` argümanı geçerli surface değildir. |
+
+![EGL 1.0 hata kodlarının anlam grupları](../eglFunctions/image/eglGetError/error-taxonomy.svg)
+
+## Hata Kodlarını Yorumlama
+
+### `EGL_SUCCESS`
+
+Kayıtlı hata olmadığını bildirir. Önceki bir EGL fonksiyonunun başarılı
+olduğunu kanıtlamak için tek başına kullanılmamalıdır; önce o fonksiyonun
+kendi dönüş değeri kontrol edilmelidir.
+
+### `EGL_NOT_INITIALIZED`
+
+EGL'nin belirtilen display için kullanıma hazır olmadığını gösterir.
+Display handle'ı geçerli olabilir; sorun initialization state'idir.
 
 ```text
-surface = EGL_NO_SURFACE
-error   = EGL_BAD_NATIVE_WINDOW
+valid display handle != initialized display
 ```
 
-![eglGetError hata senaryoları](../eglFunctions/image/eglGetError/error-codes.svg)
+### `EGL_BAD_ACCESS`
 
----
+Kaynak geçerli olsa bile erişim kuralları nedeniyle kullanılamadığını
+gösterir. Başka bir thread'de current olan context'i aynı anda kullanmaya
+çalışmak tipik örnektir. Bu hata geçersiz handle hatası değildir.
 
-# 4. Hata Durumunun Okununca Sıfırlanması
+### `EGL_BAD_ALLOC`
 
-```c
-eglDestroySurface(dpy, (EGLSurface)0);
+Display, config ve diğer argümanlar geçerli olsa bile driver veya platform
+gerekli kaynakları ayıramamıştır. GPU belleği, native pencere ilişkisi veya
+implementation içi nesne allocation'ları buna neden olabilir.
 
-EGLint first_error = eglGetError();
-EGLint second_error = eglGetError();
-```
+### `EGL_BAD_ATTRIBUTE`
 
-Beklenen mantık:
+Attribute listesinde ilgili fonksiyonun tanımadığı bir isim/değer vardır.
+Bir token'ın EGL header'larında tanımlı olması, her fonksiyonun attribute
+listesinde geçerli olduğu anlamına gelmez.
+
+### `EGL_BAD_CONFIG`, `EGL_BAD_CONTEXT`, `EGL_BAD_DISPLAY`, `EGL_BAD_SURFACE`
+
+Bu kodlar opaque EGL handle kategorisini kesin olarak belirtir:
+
+| Kod | Kontrol edilmesi gereken nesne |
+| --- | --- |
+| `EGL_BAD_CONFIG` | Config hangi display'den alındı, hala geçerli mi? |
+| `EGL_BAD_CONTEXT` | Context oluşturuldu mu, destroy edilmiş mi? |
+| `EGL_BAD_DISPLAY` | Display handle geçerli mi? |
+| `EGL_BAD_SURFACE` | Surface oluşturuldu mu, destroy edilmiş mi? |
+
+`EGL_NOT_INITIALIZED` ile `EGL_BAD_DISPLAY` aynı değildir: ilki geçerli bir
+display'in state sorununu, ikincisi display handle sorununu ifade eder.
+
+### `EGL_BAD_CURRENT_SURFACE`
+
+Calling thread'e current olarak bağlanmış draw/read surface'in native veya
+EGL tarafında artık geçerli olmadığını ifade eder. Bu kod, fonksiyona doğrudan
+verilen rastgele bir surface argümanı için kullanılan `EGL_BAD_SURFACE` ile
+karıştırılmamalıdır.
+
+### `EGL_BAD_MATCH`
+
+Argümanların her biri kendi başına geçerli olabilir; fakat birlikte geçerli
+bir işlem oluşturmazlar.
 
 ```text
-first_error  = EGL_BAD_SURFACE
-second_error = EGL_SUCCESS
+valid context + valid surface + incompatible configs -> EGL_BAD_MATCH
+window config without EGL_WINDOW_BIT                  -> EGL_BAD_MATCH
 ```
 
-Araya başka bir EGL fonksiyonu sokmak hata durumunu değiştirebileceğinden
-`eglGetError()` başarısız çağrıdan hemen sonra kullanılmalıdır.
+### `EGL_BAD_PARAMETER`
 
-Hata durumu thread'e özeldir. Bir thread'de oluşan hata, başka bir thread'in
-`eglGetError()` sonucuyla okunmaz.
+Opaque nesne handle'larından bağımsız genel değer/pointer kısıtı ihlalini
+ifade eder. Zorunlu output pointer'ının `NULL` olması veya enum aralığı
+dışındaki bir değer buna örnek olabilir.
 
----
+### `EGL_BAD_NATIVE_PIXMAP` ve `EGL_BAD_NATIVE_WINDOW`
 
-# 5. Hata Adı Yardımcısı
+Bu hatalar EGL handle'ı değil platform nesnesini hedefler. EGL 1.0,
+implementation'ların geçersiz native handle'ları her durumda algılayabilmesini
+garanti etmez.
+
+## Return Değeri ile Hata Kodunu Birlikte Kullanma
+
+| Fonksiyon tipi | Başarısız return örneği | Sonraki adım |
+| --- | --- | --- |
+| `EGLBoolean` döndüren | `EGL_FALSE` | Hemen `eglGetError()`. |
+| `EGLSurface` döndüren | `EGL_NO_SURFACE` | Hemen `eglGetError()`. |
+| `EGLContext` döndüren | `EGL_NO_CONTEXT` | Hemen `eglGetError()`. |
+| `EGLDisplay` döndüren | `EGL_NO_DISPLAY` | Fonksiyon sözleşmesine göre değerlendir; gerekirse `eglGetError()`. |
+
+Getter fonksiyonlarında sentinel değer her zaman hata anlamına gelmeyebilir.
+Örneğin current context yokken `eglGetCurrentContext()` normal olarak
+`EGL_NO_CONTEXT` döndürebilir. Her fonksiyonun kendi sözleşmesi dikkate
+alınmalıdır.
+
+## Hata Adını Yazdırma
 
 ```c
-const char *egl_error_string(EGLint error)
+static const char *egl_error_name(EGLint error)
 {
     switch (error) {
-        case EGL_SUCCESS:             return "EGL_SUCCESS";
-        case EGL_NOT_INITIALIZED:     return "EGL_NOT_INITIALIZED";
-        case EGL_BAD_ACCESS:          return "EGL_BAD_ACCESS";
-        case EGL_BAD_ALLOC:           return "EGL_BAD_ALLOC";
-        case EGL_BAD_ATTRIBUTE:       return "EGL_BAD_ATTRIBUTE";
-        case EGL_BAD_CONTEXT:         return "EGL_BAD_CONTEXT";
-        case EGL_BAD_CONFIG:          return "EGL_BAD_CONFIG";
-        case EGL_BAD_CURRENT_SURFACE: return "EGL_BAD_CURRENT_SURFACE";
-        case EGL_BAD_DISPLAY:         return "EGL_BAD_DISPLAY";
-        case EGL_BAD_SURFACE:         return "EGL_BAD_SURFACE";
-        case EGL_BAD_MATCH:           return "EGL_BAD_MATCH";
-        case EGL_BAD_PARAMETER:       return "EGL_BAD_PARAMETER";
-        case EGL_BAD_NATIVE_PIXMAP:   return "EGL_BAD_NATIVE_PIXMAP";
-        case EGL_BAD_NATIVE_WINDOW:   return "EGL_BAD_NATIVE_WINDOW";
-        default:                      return "UNKNOWN_EGL_ERROR";
+    case EGL_SUCCESS:             return "EGL_SUCCESS";
+    case EGL_NOT_INITIALIZED:     return "EGL_NOT_INITIALIZED";
+    case EGL_BAD_ACCESS:          return "EGL_BAD_ACCESS";
+    case EGL_BAD_ALLOC:           return "EGL_BAD_ALLOC";
+    case EGL_BAD_ATTRIBUTE:       return "EGL_BAD_ATTRIBUTE";
+    case EGL_BAD_CONFIG:          return "EGL_BAD_CONFIG";
+    case EGL_BAD_CONTEXT:         return "EGL_BAD_CONTEXT";
+    case EGL_BAD_CURRENT_SURFACE: return "EGL_BAD_CURRENT_SURFACE";
+    case EGL_BAD_DISPLAY:         return "EGL_BAD_DISPLAY";
+    case EGL_BAD_MATCH:           return "EGL_BAD_MATCH";
+    case EGL_BAD_NATIVE_PIXMAP:   return "EGL_BAD_NATIVE_PIXMAP";
+    case EGL_BAD_NATIVE_WINDOW:   return "EGL_BAD_NATIVE_WINDOW";
+    case EGL_BAD_PARAMETER:       return "EGL_BAD_PARAMETER";
+    case EGL_BAD_SURFACE:         return "EGL_BAD_SURFACE";
+    default:                      return "UNKNOWN_EGL_ERROR";
     }
 }
 ```
+
+```c
+if (eglMakeCurrent(dpy, draw, read, context) == EGL_FALSE) {
+    EGLint error = eglGetError();
+    fprintf(stderr, "eglMakeCurrent failed: %s (0x%04x)\n",
+            egl_error_name(error), error);
+}
+```
+
+## Sık Hatalar
+
+- Her EGL çağrısından sonra koşulsuz `eglGetError` çağırmak.
+- Başarısız return değerini kontrol etmeden yalnızca error state'e bakmak.
+- Hata oluşturan çağrı ile `eglGetError` arasına başka EGL çağrısı koymak.
+- Aynı hatayı iki kez okuyabileceğini varsaymak.
+- Bir thread'in hatasını başka thread'den okumaya çalışmak.
+- `EGL_BAD_MATCH` ile geçersiz handle hatalarını aynı kabul etmek.
+
+## Bölüm Özeti
+
+- `eglGetError` calling thread'in EGL error state'ini okur.
+- Okuma sonrası state `EGL_SUCCESS` değerine resetlenir.
+- Önce EGL fonksiyonunun kendi return değeri kontrol edilmelidir.
+- Hata, başarısız çağrıdan hemen sonra okunmalıdır.
+- Handle, state, allocation, compatibility ve native platform hataları ayrı anlam taşır.
 
 ---
 
 # Kaynakça
 
-[EGL Spec 1.0](./eglspec.1.0.pdf)
+Bu dokümandaki EGL tanımları ve davranışları için temel kaynak:
+
+- [Khronos EGL 1.0 Specification](./eglspec.1.0.pdf)
+
+Özellikle genel hata modeli ve configuration, surface, context ile rendering
+işlemlerini açıklayan 2.2, 3.1, 3.4, 3.5, 3.6 ve 3.8 bölümleri esas alınmıştır.
+
+Güncel ve eski EGL specification sürümleri için:
+
+- [Khronos EGL Registry](https://registry.khronos.org/EGL/)
+- [Khronos EGL Specifications](https://registry.khronos.org/EGL/specs/)

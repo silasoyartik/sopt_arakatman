@@ -141,9 +141,3 @@ Bu kalipta once gecersiz display kontrol edilir. Ardindan varsa current context/
 `eglTerminate`, EGL yasam dongusunun kapanis fonksiyonudur. Senaryo A dogru ve tam kullanim yolunu gosterir: display alinir, initialize edilir, context/surface kurulur, cizim yapilir ve EGL oturumu kapatilir. Senaryo B hatali parametre yolunu gosterir: `EGL_NO_DISPLAY` gecerli bir EGL oturumu degildir. Senaryo C ise onemli bir sinir durumunu aciklar: display gecerli ama initialize edilmemisse render uretilemez, ancak `eglTerminate` guvenli bicimde basarili donebilir.
 
 Bu uc senaryo birlikte degerlendirildiginde `pDpyID` parametresi icin temel kural nettir: `eglTerminate` cagrisi yalnizca gecerli bir `EGLDisplay` ile anlamlidir; initialize durumu fonksiyonun yapacagi isi degistirir, fakat gecersiz display her zaman hata sinifina girer.
-
-## Kaynaklar
-
-- Khronos EGL 1.0 Specification: `eglspec.1.0 (1).pdf`
-- Khronos EGL Registry: https://registry.khronos.org/EGL/
-- Khronos eski EGL spesifikasyonlari: https://registry.khronos.org/EGL/specs/

@@ -167,7 +167,3 @@ azaltır; EGL tarafındaki destroy işleminin yerine geçmez.
 - Draw ve read binding'lerinden herhangi biri deferred destruction için yeterlidir.
 - EGLSurface ile native window/pixmap/GBM surface farklı nesnelerdir.
 - Başarılı `EGL_TRUE`, fiziksel belleğin aynı anda serbest kaldığını garanti etmez.
-
-## Kaynak
-
-- EGL 1.0 Specification, Section 3.5.4, Destroying Rendering Surfaces.

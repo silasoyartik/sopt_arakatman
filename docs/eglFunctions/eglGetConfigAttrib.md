@@ -153,8 +153,6 @@ tutulabildiğini belirler. Bir component `n` bit ise alabileceği değer sayıs�
 |                  6 bit |                    64 |           `0..63` |                          `1/63 ≈ 0,0159` |
 |                  8 bit |                   256 |          `0..255` |                        `1/255 ≈ 0,00392` |
 
-![1788181993384](image/eglGetConfigAttrib/1788181993384.png)![1788181996090](image/eglGetConfigAttrib/1788181996090.png)
-
 Örneğin kırmızı component 3 bit olduğunda yalnızca şu normalize edilmiş
 değerler temsil edilebilir:
 
@@ -168,7 +166,7 @@ bit kırmızı, yumuşak bir kırmızı gradyanda basamakların belirginleşmesi
 (`color banding`) yol açabilir. 5 bitte 32, 8 bitte 256 seviye bulunduğu için
 geçiş giderek daha pürüzsüz görünür.
 
-![1788181276849](image/eglGetConfigAttrib/1788181276849.png)![1788181317179](image/eglGetConfigAttrib/1788181317179.png)![1788181319721](image/eglGetConfigAttrib/1788181319721.png)![1788181604515](image/eglGetConfigAttrib/1788181604515.png)![1788181607763](image/eglGetConfigAttrib/1788181607763.png)
+![1788181993384](image/eglGetConfigAttrib/1788181993384.png)![1788181996090](image/eglGetConfigAttrib/1788181996090.png)
 
 #### Yaygın color format karşılaştırması
 
@@ -194,25 +192,65 @@ Bu yalnızca teorik payload hesabıdır. Satır hizalama, tiling, sıkıştırma
 driver metadata'sı ve birden fazla buffer gerçek bellek kullanımını
 değiştirebilir.
 
+![1788181276849](image/eglGetConfigAttrib/1788181276849.png)![1788181317179](image/eglGetConfigAttrib/1788181317179.png)![1788181319721](image/eglGetConfigAttrib/1788181319721.png)![1788181604515](image/eglGetConfigAttrib/1788181604515.png)![1788181607763](image/eglGetConfigAttrib/1788181607763.png)
+
 #### `EGL_ALPHA_SIZE` ne sağlar, ne sağlamaz?
 
-Alpha component genellikle saydamlık/opaklık bilgisini taşır:
+EGL 1.0 specification bu iki attribute'u farklı şeyler olarak tanımlar:
+
+- Table 3.1'de `EGL_ALPHA_SIZE`, yalnızca “color buffer'daki Alpha bitlerinin
+  sayısı”dır.
+- `EGL_TRANSPARENT_TYPE` ise bir config'in transparent pixel destekleyip
+  desteklemediğini belirtir.
+
+Dolayısıyla EGL 1.0 açısından alpha ile transparency aynı şey değildir:
+
+- **Alpha**, her pixel ile birlikte saklanabilen sayısal bir component'tir.
+  OpenGL ES gibi rendering API'leri bu değeri blending hesabında kullanabilir.
+- **Transparency (saydamlık)**, birleştirme sonucunda arka planın ne kadar
+  göründüğüdür. Alpha bu sonucu üretmek için kullanılabilir; fakat alpha
+  değerinin varlığı tek başına saydamlık oluşturmaz.
+
+Pratik bir kısa anlatımla alpha **veri**, blending bu veriyi kullanabilen
+**işlem**, saydamlık ise ekranda görülebilen **sonuç**tur. Bu üçlü açıklama
+kavramları ayırmak içindir; EGL 1.0 specification alpha değerinin blending'de
+nasıl kullanılacağını tanımlamaz.
+
+`EGL_ALPHA_SIZE`, color buffer'da pixel başına alpha component'i için kaç bit
+ayrıldığını bildirir:
 
 | `EGL_ALPHA_SIZE` | Saklanabilen alpha seviyeleri                                       |
 | -----------------: | ------------------------------------------------------------------- |
 |                  0 | Alpha component yoktur.                                             |
-|                  1 | Yalnızca tamamen saydam veya tamamen opak gibi iki değer vardır. |
-|                  8 | `0..255`, yani 256 alpha seviyesi vardır.                        |
+|                  1 | İki alpha değeri saklanabilir: `0` veya `1`.                     |
+|                  8 | `0..255`, yani 256 alpha seviyesi saklanabilir.                  |
 
-Ancak alpha buffer bulunması tek başına blending'i açmaz, pencereyi masaüstüne
-karşı saydam yapmaz ve `EGL_TRANSPARENT_RGB` anlamına gelmez. OpenGL ES
-blending ayrı bir render state'idir; native pencere kompozisyonu da platformun
-pencere sistemi/compositor kurallarına bağlıdır. EGL 1.0'ın aşağıda anlatılan
-transparent RGB özelliği ise alpha değil, exact RGB color key kullanır.
+Örneğin RGBA8888'de alpha değeri `128` olan bir pixel, standart alpha blending
+ile opak bir arka planın üzerine çizilirse kaynak renk ile arka plan yaklaşık
+yarı yarıya karışır. Blending kapalıysa aynı `128` değeri buffer'da bulunmasına
+rağmen çizilen pixel otomatik olarak yarı saydam görünmez; kaynak renk doğrudan
+yazılabilir.
+
+Benzer biçimde alpha buffer bulunması pencereyi masaüstüne karşı otomatik olarak
+saydam yapmaz. Bunun için pencere sistemi/compositor'ın surface alpha'sını
+desteklemesi ve kullanması gerekir.
+
+EGL 1.0'daki `EGL_TRANSPARENT_RGB` ise farklı bir mekanizmadır. Specification'a
+göre framebuffer'dan okunan red, green ve blue değerlerinin üç transparent
+değerle **tam eşleştiği** pixel transparent çizilir. Eşleşmede alpha değeri
+yer almadığı için bu, alpha blending değil RGB color key yöntemidir. Dolayısıyla
+kavramlar şöyle ayrılır:
+
+| Kavram | Ne tarif eder? | Kısmi saydamlık sağlar mı? |
+| --- | --- | --- |
+| `EGL_ALPHA_SIZE` | Pixel başına saklanabilen alpha bitlerini | Tek başına hayır |
+| OpenGL ES blending | Kaynak ve hedef renklerin nasıl karıştırılacağını | Seçilen blending işlemine bağlı olarak evet |
+| `EGL_TRANSPARENT_RGB` | Tam eşleşen tek bir RGB renginin saydam sayılmasını | Hayır; pixel ya eşleşir ya eşleşmez |
 
 ![1788182807715](image/eglGetConfigAttrib/1788182807715.png)
 
-Example of an RGBA image composited over a checkerboard background. alpha is 0% at the top and 100% at the bottom.
+Damalı bir arka plan üzerine birleştirilmiş RGBA görsel örneği. Alpha değeri
+üstte %0, altta %100'dür.
 
 ### Ancillary buffer'lar: depth ve stencil
 
@@ -633,9 +671,3 @@ tanımsız olduğu için örnek kod bunları yalnızca type gerçekten
 - EGL 1.0 uyumu için sadece Table 3.1 attribute'larını kullan.
 - `EGL_SURFACE_TYPE` bitmask'tir; exact integer gibi yorumlama.
 - `EGL_NATIVE_VISUAL_ID` platform-dependent olduğundan anlamı X11, GBM veya başka native platforma göre değişebilir.
-
-## Kaynak
-
-Attribute tanımları, sınırlar ve EGL 1.0'a özgü davranışlar için Khronos'un
-[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
-belgesindeki 3.4 “Configuration Management” bölümü esas alınmıştır.
