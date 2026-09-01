@@ -2,9 +2,9 @@
 #include <stdio.h>
 
 /*
- * eglTerminate(pDpyID) icin all-in-one senaryo dosyasi.
- * main, pencere kurulumu, cizim ve uzun cleanup adimlari bilerek
- * cikarilmistir; odak sadece pDpyID davranisidir.
+ * All-in-one scenario file for eglTerminate(pDpyID).
+ * main, window setup, rendering, and lengthy cleanup steps are deliberately
+ * omitted; the focus is solely on pDpyID behavior.
  */
 
 static const char *egl_error_name(EGLint error)
@@ -26,9 +26,9 @@ static const char *egl_error_name(EGLint error)
 }
 
 /*
- * SENARYO A - Gecerli ve initialize edilmis display.
- * Normal kullanimda display baslatilir, gerekli EGL kaynaklari kullanilmis
- * kabul edilir ve eglTerminate(dpy) cagrisi ile kapatma sonucu kontrol edilir.
+ * SCENARIO A - Valid, initialized display.
+ * In normal use, the display is initialized and the required EGL resources are
+ * assumed to have been used; the termination result is checked with eglTerminate(dpy).
  */
 void scenario_a_valid_initialized_display(EGLDisplay dpy)
 {
@@ -36,28 +36,28 @@ void scenario_a_valid_initialized_display(EGLDisplay dpy)
     EGLint minor = 0;
 
     if (dpy == EGL_NO_DISPLAY) {
-        printf("Senaryo A gecersiz: pDpyID EGL_NO_DISPLAY olamaz.\n");
+        printf("Scenario A invalid: pDpyID cannot be EGL_NO_DISPLAY.\n");
         return;
     }
 
     if (eglInitialize(dpy, &major, &minor) == EGL_FALSE) {
-        printf("Senaryo A baslatilamadi: eglInitialize hata=%s\n",
+        printf("Scenario A setup failed: eglInitialize error=%s\n",
                egl_error_name(eglGetError()));
         return;
     }
 
     if (eglTerminate(dpy) == EGL_TRUE) {
-        printf("Senaryo A basarili: eglTerminate EGL_TRUE dondu.\n");
+        printf("Scenario A passed: eglTerminate returned EGL_TRUE.\n");
     } else {
-        printf("Senaryo A hatali: eglTerminate hata=%s\n",
+        printf("Scenario A failed: eglTerminate error=%s\n",
                egl_error_name(eglGetError()));
     }
 }
 
 /*
- * SENARYO B - Gecersiz display / EGL_NO_DISPLAY.
- * Gecerli display alinmadan eglTerminate cagrilir ve negatif durumda
- * EGL_FALSE ile EGL_BAD_DISPLAY hatasi beklenir.
+ * SCENARIO B - Invalid display / EGL_NO_DISPLAY.
+ * eglTerminate is called without obtaining a valid display; EGL_FALSE and an
+ * EGL_BAD_DISPLAY error are expected in this negative case.
  */
 void scenario_b_invalid_display(void)
 {
@@ -67,31 +67,31 @@ void scenario_b_invalid_display(void)
         EGLint error = eglGetError();
 
         if (error == EGL_BAD_DISPLAY) {
-            printf("Senaryo B basarili: gecersiz display EGL_BAD_DISPLAY verdi.\n");
+            printf("Scenario B passed: the invalid display produced EGL_BAD_DISPLAY.\n");
         } else {
-            printf("Senaryo B farkli hata verdi: %s\n", egl_error_name(error));
+            printf("Scenario B returned a different error: %s\n", egl_error_name(error));
         }
     } else {
-        printf("Senaryo B beklenmeyen sonuc: eglTerminate EGL_TRUE dondu.\n");
+        printf("Scenario B returned an unexpected result: eglTerminate returned EGL_TRUE.\n");
     }
 }
 
 /*
- * SENARYO C - Gecerli fakat initialize edilmemis display.
- * Display handle gecerlidir ancak eglInitialize cagrilmaz; dogrudan
- * eglTerminate(dpy) ile bu durumdaki kapatma davranisi kontrol edilir.
+ * SCENARIO C - Valid but uninitialized display.
+ * The display handle is valid, but eglInitialize is not called; termination
+ * behavior in this state is checked directly with eglTerminate(dpy).
  */
 void scenario_c_valid_but_uninitialized_display(EGLDisplay dpy)
 {
     if (dpy == EGL_NO_DISPLAY) {
-        printf("Senaryo C gecersiz: once gecerli bir EGLDisplay alinmalidir.\n");
+        printf("Scenario C invalid: a valid EGLDisplay must be obtained first.\n");
         return;
     }
 
     if (eglTerminate(dpy) == EGL_TRUE) {
-        printf("Senaryo C basarili: initialize edilmemis display icin EGL_TRUE dondu.\n");
+        printf("Scenario C passed: returned EGL_TRUE for an uninitialized display.\n");
     } else {
-        printf("Senaryo C hatali: eglTerminate hata=%s\n",
+        printf("Scenario C failed: eglTerminate error=%s\n",
                egl_error_name(eglGetError()));
     }
 }
