@@ -27,8 +27,8 @@ static const char *egl_error_name(EGLint error)
 
 
 /*
- * SENARYO A - Display initialization başarılı olur, major ve minor birlikte verilir.
- * Beklenen: EGL_TRUE ve test ortamimizda version=1.5.
+ * SCENARIO A - Both major and minor are provided.
+ * Expected: EGL_TRUE and version=1.5 in our test environment.
  */
 void scenario_a_major_and_minor(EGLDisplay dpy)
 {
