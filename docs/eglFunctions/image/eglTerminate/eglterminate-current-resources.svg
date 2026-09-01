@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="500" viewBox="0 0 1120 500" role="img" aria-labelledby="title desc">
+  <title id="title">eglTerminate current kaynak durumu</title>
+  <desc id="desc">Current olan context ve surface icin eglTerminate sonrasi mark for deletion ve eglMakeCurrent ile ertelenen yok etme mantigini gosteren sema.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
+    </marker>
+    <filter id="shadow" x="-12%" y="-12%" width="124%" height="124%">
+      <feDropShadow dx="0" dy="7" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+  <rect width="1120" height="500" fill="#f8fafc"/>
+  <text x="560" y="42" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="28" font-weight="700" fill="#0f172a">Current Kaynaklarin Durumu</text>
+  <text x="560" y="72" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#475569">eglTerminate kaynaklari kullanilmaz hale getirir; current bag varsa fiziksel yok etme ertelenebilir.</text>
+
+  <rect x="70" y="130" width="270" height="152" rx="8" fill="#dbeafe" stroke="#2563eb" filter="url(#shadow)"/>
+  <text x="205" y="164" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#1e3a8a">Cagri Oncesi</text>
+  <text x="205" y="202" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#1e40af">Thread A current context</text>
+  <text x="205" y="230" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#1e40af">Surface bagli</text>
+  <text x="205" y="258" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#1e40af">EGL kaynaklari aktif</text>
+
+  <line x1="340" y1="206" x2="430" y2="206" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+
+  <rect x="430" y="130" width="260" height="152" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="560" y="188" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="18" font-weight="700" fill="#0f172a">eglTerminate(dpy)</text>
+  <text x="560" y="226" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">Kaynaklar kullanilmaz</text>
+  <text x="560" y="250" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">duruma isaretlenir</text>
+
+  <line x1="690" y1="206" x2="780" y2="206" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+
+  <rect x="780" y="130" width="270" height="152" rx="8" fill="#fff7ed" stroke="#ea580c" filter="url(#shadow)"/>
+  <text x="915" y="164" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#7c2d12">Current Bag Varsa</text>
+  <text x="915" y="202" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#9a3412">Fiziksel yok etme</text>
+  <text x="915" y="230" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#9a3412">hemen olmayabilir</text>
+  <text x="915" y="258" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#9a3412">Kullanim artik gecersizdir</text>
+
+  <rect x="304" y="350" width="512" height="78" rx="8" fill="#dcfce7" stroke="#16a34a" filter="url(#shadow)"/>
+  <text x="560" y="382" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#14532d">Sonraki uygun eglMakeCurrent cagrisi</text>
+  <text x="560" y="408" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#166534">Current bag cozuldugunde isaretli context/surface yok edilir.</text>
+</svg>

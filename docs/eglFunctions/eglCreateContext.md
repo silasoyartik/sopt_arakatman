@@ -180,7 +180,11 @@ Sonuç: `share_context = EGL_NO_CONTEXT` izolasyon sağlar. Geçerli bir context
 
 `attrib_list`, context oluşturulurken istenen ek özellikleri anahtar-değer çiftleriyle belirtir. Liste mutlaka `EGL_NONE` ile bitmelidir.
 
-![attrib_list parametresi senaryoları](image/eglCreateContext/attrib_list_senaryolari.svg)
+| `attrib_list` değeri | EGL 1.0 anlamı | Beklenen sonuç |
+|---|---|---|
+| `NULL` | Ek context attribute talebi yoktur. | Context oluşturma denenir. |
+| `{ EGL_NONE }` | Boş attribute listesi verilmiştir. | Context oluşturma denenir. |
+| Desteklenmeyen attribute/value | EGL 1.0 core tarafından tanınmayan attribute verilmiştir. | `EGL_BAD_ATTRIBUTE` beklenir. |
 
 ### Senaryo A: EGL 1.0 standart kullanım
 

@@ -1,20 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="780" height="420" viewBox="0 0 780 420" role="img" aria-labelledby="title desc">
-  <title id="title">Geçerli EGLDisplay ile başarılı sonuç</title>
-  <desc id="desc">Geçerli display, başarılı config okuma ve yeşil zemin üzerinde beyaz üçgen çizimi.</desc>
-  <style>
-    .bg{fill:#f7fafc}.panel{fill:#ffffff;stroke:#263238;stroke-width:2;rx:10}.screen{fill:#0d2e20;stroke:#111827;stroke-width:3;rx:10}
-    .title{font-family:Arial,Helvetica,sans-serif;font-size:23px;font-weight:700;fill:#111827}.text{font-family:Arial,Helvetica,sans-serif;font-size:17px;fill:#1f2937}.mono{font-family:Consolas,Menlo,monospace;font-size:15px;fill:#111827}.ok{fill:#e8f7ef;stroke:#177245;stroke-width:2;rx:8}
-  </style>
+  <title id="title">Gecerli EGLDisplay ile config sorgusu</title>
+  <desc id="desc">Initialize edilmis gecerli EGLDisplay ile eglGetConfigs cagrisi sonucunda configs dizisine handle, num_config adresine sayi yazilmasi.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#263238"/></marker>
+    <style>
+      .bg{fill:#f7fafc}.box{fill:#ffffff;stroke:#263238;stroke-width:2;rx:10}.ok{fill:#e8f7ef;stroke:#177245;stroke-width:2;rx:8}.slot{fill:#eaf2ff;stroke:#2457a6;stroke-width:1.8;rx:6}
+      .title{font-family:Arial,Helvetica,sans-serif;font-size:23px;font-weight:700;fill:#111827}.text{font-family:Arial,Helvetica,sans-serif;font-size:17px;fill:#1f2937}.mono{font-family:Consolas,Menlo,monospace;font-size:15px;fill:#111827}.line{stroke:#263238;stroke-width:2.2;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
   <rect class="bg" width="780" height="420"/>
-  <text class="title" x="34" y="44">dpy geçerli: eglGetConfigs başarılı</text>
-  <rect class="panel" x="36" y="82" width="290" height="260"/>
-  <rect class="ok" x="62" y="112" width="238" height="56"/>
-  <text class="mono" x="78" y="146">eglInitialize(dpy) OK</text>
-  <text class="text" x="62" y="205">Config listesi okunur.</text>
-  <text class="text" x="62" y="235">Uygun config seçilir.</text>
-  <text class="text" x="62" y="265">Surface + context kurulur.</text>
-  <text class="mono" x="62" y="306">EGL_TRUE, num_config = N</text>
-  <rect class="screen" x="390" y="82" width="330" height="260"/>
-  <polygon points="555,136 454,294 656,294" fill="#ffffff"/>
-  <text class="mono" x="458" y="374">Görsel çıktı: yeşil zemin + beyaz üçgen</text>
+  <text class="title" x="34" y="44">dpy gecerli: eglGetConfigs cikti alanlarini doldurur</text>
+  <rect class="box" x="42" y="92" width="230" height="190"/>
+  <text class="text" x="70" y="128">EGLDisplay dpy</text>
+  <rect class="ok" x="68" y="154" width="176" height="48"/>
+  <text class="mono" x="84" y="184">initialized + valid</text>
+  <text class="mono" x="64" y="242">eglGetConfigs(...)</text>
+  <path class="line" d="M272 188 L342 188"/>
+  <rect class="box" x="342" y="92" width="180" height="190"/>
+  <text class="text" x="382" y="128">configs[]</text>
+  <rect class="slot" x="378" y="154" width="98" height="30"/><text class="mono" x="394" y="175">handle</text>
+  <rect class="slot" x="378" y="194" width="98" height="30"/><text class="mono" x="394" y="215">handle</text>
+  <rect class="slot" x="378" y="234" width="98" height="30"/><text class="mono" x="394" y="255">handle</text>
+  <path class="line" d="M522 188 L592 188"/>
+  <rect class="box" x="592" y="92" width="146" height="190"/>
+  <text class="text" x="620" y="128">num_config</text>
+  <rect class="ok" x="620" y="164" width="90" height="54"/>
+  <text class="mono" x="644" y="197">N</text>
+  <text class="mono" x="58" y="342">Sonuc: EGL_TRUE</text>
+  <text class="mono" x="58" y="370">Bellekte: configs[0..N-1] = EGLConfig handle, num_config = N</text>
 </svg>

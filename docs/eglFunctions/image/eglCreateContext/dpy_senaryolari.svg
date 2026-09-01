@@ -1,40 +1,61 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="500" viewBox="0 0 1100 500" role="img" aria-label="dpy parametresi ana ve yedek ekran senaryoları">
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="500" viewBox="0 0 1100 500" role="img" aria-label="dpy EGLDisplay baglanti yolu senaryolari">
   <rect width="1100" height="500" fill="#f6f8fb"/>
   <style>
     .title{font:700 27px Arial,sans-serif;fill:#111827}
     .label{font:700 20px Arial,sans-serif;fill:#111827}
     .small{font:16px Arial,sans-serif;fill:#374151}
     .code{font:15px Consolas,monospace;fill:#111827}
-    .screen{stroke:#111827;stroke-width:3;rx:8}
-    .chip{fill:#fff;stroke:#cbd5e1;stroke-width:1.5;rx:6}
-    .arrow{stroke:#1f2937;stroke-width:2.5;fill:none;marker-end:url(#arrow)}
+    .box{fill:#ffffff;stroke:#111827;stroke-width:2.5;rx:8}
+    .display{fill:#e0f2fe;stroke:#0284c7;stroke-width:2.5;rx:8}
+    .context{fill:#ecfdf5;stroke:#10b981;stroke-width:2.5;rx:8}
+    .chip{fill:#f8fafc;stroke:#cbd5e1;stroke-width:1.5;rx:6}
+    .arrow{stroke:#475569;stroke-width:2.5;fill:none;marker-end:url(#arrowhead)}
+    .stand{stroke:#111827;stroke-width:3;fill:none}
   </style>
   <defs>
-    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
-      <path d="M0,0 L0,6 L9,3 z" fill="#1f2937"/>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#475569"/>
     </marker>
   </defs>
 
-  <text x="550" y="42" text-anchor="middle" class="title">dpy değişimi: context farklı display yoluna bağlanır</text>
+  <text x="550" y="42" text-anchor="middle" class="title">dpy: context'in kullanacagi EGLDisplay baglantisi</text>
 
-  <rect x="90" y="95" width="365" height="235" class="screen" fill="#051525"/>
-  <rect x="90" y="260" width="365" height="70" fill="#0088d6"/>
-  <polygon points="272,140 192,255 352,255" fill="#15d768"/>
-  <rect x="126" y="112" width="160" height="36" class="chip"/>
-  <text x="206" y="136" text-anchor="middle" class="code">display index = 0</text>
-  <text x="272" y="370" text-anchor="middle" class="label">Senaryo A: Ana ekran</text>
-  <text x="272" y="397" text-anchor="middle" class="small">koyu mavi zemin + camgöbeği bant + yeşil üçgen</text>
-  <text x="272" y="424" text-anchor="middle" class="small">context ana EGLDisplay handle'ı üzerinde oluşur</text>
+  <rect x="70" y="95" width="435" height="305" class="box"/>
+  <text x="287" y="132" text-anchor="middle" class="label">Display 0 yolu</text>
 
-  <rect x="645" y="95" width="365" height="235" class="screen" fill="#2b1705"/>
-  <rect x="645" y="95" width="365" height="70" fill="#f97316"/>
-  <polygon points="827,140 747,255 907,255" fill="#fde047"/>
-  <rect x="681" y="112" width="160" height="36" class="chip"/>
-  <text x="761" y="136" text-anchor="middle" class="code">display index = 1</text>
-  <text x="827" y="370" text-anchor="middle" class="label">Senaryo B: Yedek ekran</text>
-  <text x="827" y="397" text-anchor="middle" class="small">kahverengi zemin + turuncu bant + sarı üçgen</text>
-  <text x="827" y="424" text-anchor="middle" class="small">context yedek display/native yolunda oluşur</text>
+  <rect x="115" y="162" width="150" height="88" class="display"/>
+  <rect x="132" y="178" width="116" height="50" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <path d="M175 250 L205 250 M190 250 L190 270 M165 270 L215 270" class="stand"/>
+  <text x="190" y="300" text-anchor="middle" class="code">native display 0</text>
 
-  <path class="arrow" d="M490 214 L610 214"/>
-  <text x="550" y="196" text-anchor="middle" class="small">değişen parametre: dpy</text>
+  <path d="M270 206 L340 206" class="arrow"/>
+  <rect x="345" y="172" width="120" height="68" class="chip"/>
+  <text x="405" y="198" text-anchor="middle" class="code">dpy</text>
+  <text x="405" y="222" text-anchor="middle" class="code">EGLDisplay A</text>
+
+  <path d="M405 245 L405 305" class="arrow"/>
+  <rect x="295" y="310" width="220" height="58" class="context"/>
+  <text x="405" y="334" text-anchor="middle" class="code">eglCreateContext</text>
+  <text x="405" y="357" text-anchor="middle" class="small">context Display 0 uzerinde olusur</text>
+
+  <rect x="595" y="95" width="435" height="305" class="box"/>
+  <text x="812" y="132" text-anchor="middle" class="label">Display 1 yolu</text>
+
+  <rect x="640" y="162" width="150" height="88" class="display"/>
+  <rect x="657" y="178" width="116" height="50" fill="#ffffff" stroke="#0284c7" stroke-width="2"/>
+  <path d="M700 250 L730 250 M715 250 L715 270 M690 270 L740 270" class="stand"/>
+  <text x="715" y="300" text-anchor="middle" class="code">native display 1</text>
+
+  <path d="M795 206 L865 206" class="arrow"/>
+  <rect x="870" y="172" width="120" height="68" class="chip"/>
+  <text x="930" y="198" text-anchor="middle" class="code">dpy</text>
+  <text x="930" y="222" text-anchor="middle" class="code">EGLDisplay B</text>
+
+  <path d="M930 245 L930 305" class="arrow"/>
+  <rect x="820" y="310" width="220" height="58" class="context"/>
+  <text x="930" y="334" text-anchor="middle" class="code">eglCreateContext</text>
+  <text x="930" y="357" text-anchor="middle" class="small">context Display 1 uzerinde olusur</text>
+
+  <rect x="415" y="420" width="270" height="42" class="chip"/>
+  <text x="550" y="447" text-anchor="middle" class="small">Degisen girdi: eglCreateContext icin verilen dpy handle'i</text>
 </svg>

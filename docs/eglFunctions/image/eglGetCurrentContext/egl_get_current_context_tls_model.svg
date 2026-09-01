@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1120" height="560" viewBox="0 0 1120 560" role="img" aria-labelledby="title desc">
   <title id="title">eglGetCurrentContext thread-local model</title>
-  <desc id="desc">eglGetCurrentContext reads the current EGLContext value from the calling thread only.</desc>
+  <desc id="desc">Each eglGetCurrentContext call reads only the current EGLContext state of the calling thread.</desc>
   <defs>
     <style>
       .bg { fill: #f6f7f9; }
@@ -12,10 +12,9 @@
       .panel { fill: #ffffff; stroke: #2f3a45; stroke-width: 2; }
       .state-ok { fill: #e6f4ef; stroke: #16875a; stroke-width: 2; }
       .state-none { fill: #fff1f0; stroke: #c0362c; stroke-width: 2; }
-      .surface { fill: #eaf1ff; stroke: #3762c9; stroke-width: 2; }
       .call { fill: #fffaf0; stroke: #b7791f; stroke-width: 2; }
       .arrow { stroke: #2f3a45; stroke-width: 3; fill: none; marker-end: url(#arrowhead); }
-      .dash { stroke: #98a2b3; stroke-width: 2; stroke-dasharray: 8 8; fill: none; }
+      .divider { stroke: #98a2b3; stroke-width: 2; stroke-dasharray: 8 8; fill: none; }
     </style>
     <marker id="arrowhead" markerWidth="12" markerHeight="9" refX="11" refY="4.5" orient="auto">
       <path d="M0,0 L12,4.5 L0,9 Z" fill="#2f3a45"/>
@@ -24,40 +23,42 @@
 
   <rect class="bg" width="1120" height="560"/>
   <text class="title" x="48" y="54">eglGetCurrentContext(): sonuç çağıran thread'e aittir</text>
-  <text class="subtitle" x="48" y="83">Başka bir thread üzerinde aktif context bulunması, bu thread'in döndüreceği değeri değiştirmez.</text>
+  <text class="subtitle" x="48" y="83">Her çağrı yalnızca kendi thread'inin current EGLContext bilgisini okur.</text>
 
-  <rect class="panel" x="55" y="125" width="320" height="310" rx="8"/>
-  <text class="label" x="85" y="166">Thread A</text>
-  <rect class="state-ok" x="85" y="192" width="260" height="72" rx="8"/>
-  <text class="code" x="109" y="235">current = ctx_A</text>
-  <rect class="surface" x="85" y="292" width="260" height="92" rx="8"/>
-  <text class="small" x="109" y="330">Draw surface + read surface</text>
-  <text class="small" x="109" y="356">context'e bağlıdır</text>
+  <line class="divider" x1="560" y1="120" x2="560" y2="445"/>
 
-  <rect class="call" x="440" y="205" width="240" height="120" rx="8"/>
-  <text class="code" x="472" y="254">eglGetCurrent</text>
-  <text class="code" x="506" y="278">Context()</text>
-  <text class="small" x="486" y="306">sadece TLS state okur</text>
+  <rect class="panel" x="80" y="125" width="400" height="320" rx="8"/>
+  <text class="label" x="110" y="165">Thread A</text>
 
-  <rect class="panel" x="745" y="125" width="320" height="310" rx="8"/>
-  <text class="label" x="775" y="166">Thread B</text>
-  <rect class="state-none" x="775" y="192" width="260" height="72" rx="8"/>
-  <text class="code" x="791" y="235">current = EGL_NO_CONTEXT</text>
-  <rect class="surface" x="775" y="292" width="260" height="92" rx="8"/>
-  <text class="small" x="799" y="330">Surface bulunabilir</text>
-  <text class="small" x="799" y="356">ama current context yoktur</text>
+  <rect class="state-ok" x="130" y="190" width="300" height="64" rx="8"/>
+  <text class="code" x="166" y="230">current = ctx_A</text>
 
-  <path class="arrow" d="M375 228 L440 250"/>
-  <path class="arrow" d="M745 228 L680 250"/>
-  <path class="dash" d="M560 128 L560 424"/>
+  <path class="arrow" d="M280 254 L280 292"/>
 
-  <rect class="state-ok" x="85" y="462" width="320" height="56" rx="8"/>
-  <text class="code" x="111" y="497">Thread A sonucu: ctx_A</text>
+  <rect class="call" x="130" y="292" width="300" height="64" rx="8"/>
+  <text class="code" x="170" y="331">eglGetCurrentContext()</text>
 
-  <rect class="state-none" x="715" y="462" width="350" height="56" rx="8"/>
-  <text class="code" x="741" y="497">Thread B sonucu: EGL_NO_CONTEXT</text>
+  <path class="arrow" d="M280 356 L280 394"/>
 
-  <text class="subtitle" x="452" y="474">Aynı API çağrısı</text>
-  <text class="subtitle" x="427" y="499">farklı thread state'lerinde</text>
-  <text class="subtitle" x="466" y="524">farklı sonuç üretir.</text>
+  <rect class="state-ok" x="130" y="394" width="300" height="64" rx="8"/>
+  <text class="code" x="200" y="434">ctx_A</text>
+
+  <rect class="panel" x="640" y="125" width="400" height="320" rx="8"/>
+  <text class="label" x="670" y="165">Thread B</text>
+
+  <rect class="state-none" x="690" y="190" width="300" height="64" rx="8"/>
+  <text class="code" x="715" y="230">current = EGL_NO_CONTEXT</text>
+
+  <path class="arrow" d="M840 254 L840 292"/>
+
+  <rect class="call" x="690" y="292" width="300" height="64" rx="8"/>
+  <text class="code" x="730" y="331">eglGetCurrentContext()</text>
+
+  <path class="arrow" d="M840 356 L840 394"/>
+
+  <rect class="state-none" x="690" y="394" width="300" height="64" rx="8"/>
+  <text class="code" x="741" y="434">EGL_NO_CONTEXT</text>
+
+  <text class="subtitle" x="248" y="506">Current context varsa handle döner.</text>
+  <text class="subtitle" x="695" y="506">Current context yoksa EGL_NO_CONTEXT döner.</text>
 </svg>

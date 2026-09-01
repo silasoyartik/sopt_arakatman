@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="620" viewBox="0 0 1200 620" role="img" aria-labelledby="title desc">
-  <title id="title">eglTerminate yaşam döngüsü</title>
-  <desc id="desc">eglTerminate çağrısının geçerli display, geçersiz display ve initialize edilmemiş display durumlarında nasıl sonuçlandığını gösteren özet akış.</desc>
+  <title id="title">eglTerminate yasam dongusu</title>
+  <desc id="desc">eglTerminate cagrisi icin display gecerliligi, initialization durumu ve sonuc state haritasi.</desc>
   <defs>
     <marker id="arrow" markerWidth="12" markerHeight="12" refX="10" refY="6" orient="auto" markerUnits="strokeWidth">
       <path d="M2,2 L10,6 L2,10 Z" fill="#334155"/>
@@ -8,57 +8,55 @@
     <filter id="shadow" x="-12%" y="-12%" width="124%" height="124%">
       <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#0f172a" flood-opacity="0.12"/>
     </filter>
-    <linearGradient id="header" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#0f766e"/>
-      <stop offset="0.55" stop-color="#2563eb"/>
-      <stop offset="1" stop-color="#7c3aed"/>
-    </linearGradient>
   </defs>
   <rect width="1200" height="620" fill="#f8fafc"/>
-  <rect x="0" y="0" width="1200" height="92" fill="url(#header)"/>
-  <text x="600" y="38" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="29" font-weight="700" fill="#ffffff">eglTerminate(dpy) Karar Haritası</text>
-  <text x="600" y="66" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#e0f2fe">Display geçerli mi, initialize edilmiş mi, çağrı sonunda ne olur?</text>
+  <rect x="0" y="0" width="1200" height="92" fill="#0f172a"/>
+  <text x="600" y="38" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="29" font-weight="700" fill="#ffffff">eglTerminate(dpy) Karar Haritasi</text>
+  <text x="600" y="66" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#cbd5e1">dpy gecerli mi, display initialized mi, cagri sonunda EGL state ne olur?</text>
 
-  <rect x="72" y="144" width="252" height="108" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
-  <text x="198" y="179" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">1. Parametre</text>
-  <text x="198" y="210" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="16" fill="#0f766e">EGLDisplay dpy</text>
-  <text x="198" y="232" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#64748b">Fonksiyonun tek girdisi</text>
+  <rect x="68" y="138" width="238" height="104" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="187" y="174" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#0f172a">Girdi</text>
+  <text x="187" y="204" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="15" fill="#0f766e">EGLDisplay dpy</text>
+  <text x="187" y="226" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="12" fill="#64748b">Tek parametre</text>
 
-  <line x1="324" y1="198" x2="424" y2="198" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <line x1="306" y1="190" x2="406" y2="190" stroke="#334155" stroke-width="2.4" marker-end="url(#arrow)"/>
 
-  <rect x="424" y="128" width="270" height="140" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
-  <text x="559" y="164" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">2. Display Geçerli mi?</text>
-  <text x="559" y="198" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">EGL_NO_DISPLAY veya bozuk handle</text>
-  <text x="559" y="224" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">EGL oturumu temsil etmez.</text>
+  <rect x="406" y="122" width="286" height="136" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="549" y="160" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">dpy gecerli mi?</text>
+  <text x="549" y="195" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">EGL_NO_DISPLAY veya bozuk</text>
+  <text x="549" y="219" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">handle EGLDisplay degildir.</text>
 
-  <line x1="694" y1="166" x2="844" y2="166" stroke="#b91c1c" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="768" y="151" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#b91c1c">Hayır</text>
-  <rect x="844" y="120" width="278" height="92" rx="8" fill="#fee2e2" stroke="#dc2626" filter="url(#shadow)"/>
-  <text x="983" y="154" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#7f1d1d">EGL_FALSE</text>
-  <text x="983" y="181" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="14" fill="#991b1b">EGL_BAD_DISPLAY</text>
+  <line x1="692" y1="170" x2="842" y2="170" stroke="#b91c1c" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="766" y="153" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#b91c1c">Hayir</text>
+  <rect x="842" y="124" width="286" height="92" rx="8" fill="#fee2e2" stroke="#dc2626" filter="url(#shadow)"/>
+  <text x="985" y="158" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" fill="#7f1d1d">Donus: EGL_FALSE</text>
+  <text x="985" y="185" text-anchor="middle" font-family="Consolas, Menlo, monospace" font-size="14" fill="#991b1b">eglGetError = EGL_BAD_DISPLAY</text>
 
-  <line x1="559" y1="268" x2="559" y2="348" stroke="#15803d" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="586" y="313" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#15803d">Evet</text>
+  <line x1="549" y1="258" x2="549" y2="332" stroke="#15803d" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="576" y="302" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#15803d">Evet</text>
 
-  <rect x="424" y="348" width="270" height="124" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
-  <text x="559" y="383" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">3. Initialize Edilmiş mi?</text>
-  <text x="559" y="415" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">Render kaynaklarının varlığı</text>
-  <text x="559" y="439" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">bu adıma bağlıdır.</text>
+  <rect x="406" y="332" width="286" height="124" rx="8" fill="#ffffff" stroke="#cbd5e1" filter="url(#shadow)"/>
+  <text x="549" y="368" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" fill="#0f172a">Display initialized mi?</text>
+  <text x="549" y="400" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">EGL oturumu acik mi?</text>
+  <text x="549" y="424" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" fill="#334155">Context / surface olabilir mi?</text>
 
-  <line x1="424" y1="410" x2="254" y2="410" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="338" y="392" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#2563eb">Evet</text>
-  <rect x="72" y="352" width="182" height="116" rx="8" fill="#dbeafe" stroke="#2563eb" filter="url(#shadow)"/>
-  <text x="163" y="385" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">Aktif EGL Oturumu</text>
-  <text x="163" y="413" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#1e40af">Context / surface</text>
-  <text x="163" y="436" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#1e40af">temizlenir.</text>
+  <line x1="406" y1="394" x2="242" y2="394" stroke="#2563eb" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="324" y="376" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#2563eb">Evet</text>
+  <rect x="60" y="324" width="182" height="140" rx="8" fill="#dbeafe" stroke="#2563eb" filter="url(#shadow)"/>
+  <text x="151" y="357" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#1e3a8a">EGL_TRUE</text>
+  <text x="151" y="386" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#1e40af">EGL oturumu kapanir</text>
+  <text x="151" y="410" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#1e40af">EGL kaynaklari birakilir</text>
+  <text x="151" y="434" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#1e40af">display uninitialized olur</text>
 
-  <line x1="694" y1="410" x2="844" y2="410" stroke="#0f766e" stroke-width="2.4" marker-end="url(#arrow)"/>
-  <text x="770" y="392" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f766e">Hayır</text>
-  <rect x="844" y="352" width="278" height="116" rx="8" fill="#ccfbf1" stroke="#0f766e" filter="url(#shadow)"/>
-  <text x="983" y="385" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#134e4a">Güvenli No-op</text>
-  <text x="983" y="413" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#115e59">Kapatılacak aktif EGL</text>
-  <text x="983" y="436" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#115e59">kaynağı yoktur.</text>
+  <line x1="692" y1="394" x2="842" y2="394" stroke="#0f766e" stroke-width="2.4" marker-end="url(#arrow)"/>
+  <text x="768" y="376" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f766e">Hayir</text>
+  <rect x="842" y="324" width="286" height="140" rx="8" fill="#ccfbf1" stroke="#0f766e" filter="url(#shadow)"/>
+  <text x="985" y="357" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" fill="#134e4a">EGL_TRUE</text>
+  <text x="985" y="386" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#115e59">No-op benzeri kapanis</text>
+  <text x="985" y="410" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#115e59">Birakilacak aktif EGL</text>
+  <text x="985" y="434" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#115e59">kaynagi yoktur</text>
 
-  <rect x="384" y="526" width="432" height="52" rx="8" fill="#0f172a"/>
-  <text x="600" y="558" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff">Geçerli display ile sonuç: EGL_TRUE, display uninitialized</text>
+  <rect x="300" y="522" width="600" height="58" rx="8" fill="#ffffff" stroke="#94a3b8"/>
+  <text x="600" y="546" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#0f172a">Not</text>
+  <text x="600" y="568" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#334155">DRM fd, GBM device/surface ve native pencere kaynaklari eglTerminate tarafindan temizlenmez.</text>
 </svg>

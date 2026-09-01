@@ -1,25 +1,29 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="430" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">
   <title id="title">Yeterli config_size ile tam okuma</title>
-  <desc id="desc">Toplam config sayısı kadar bellek ayrılınca tüm config havuzunun okunması ve depth destekli config seçimi.</desc>
-  <style>
-    .bg{fill:#f7fafc}.box{fill:#ffffff;stroke:#263238;stroke-width:2;rx:10}.slot{fill:#e8f7ef;stroke:#177245;stroke-width:2;rx:8}.screen{fill:#2a2a2a;stroke:#111827;stroke-width:3;rx:10}
-    .title{font-family:Arial,Helvetica,sans-serif;font-size:23px;font-weight:700;fill:#111827}.text{font-family:Arial,Helvetica,sans-serif;font-size:17px;fill:#1f2937}.mono{font-family:Consolas,Menlo,monospace;font-size:15px;fill:#111827}
-  </style>
+  <desc id="desc">Toplam config sayisi kadar kapasite verildiginde tum EGLConfig handle'larinin configs dizisine yazilmasi.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#263238"/></marker>
+    <style>
+      .bg{fill:#f7fafc}.box{fill:#ffffff;stroke:#263238;stroke-width:2;rx:10}.slot{fill:#e8f7ef;stroke:#177245;stroke-width:2;rx:8}
+      .title{font-family:Arial,Helvetica,sans-serif;font-size:23px;font-weight:700;fill:#111827}.text{font-family:Arial,Helvetica,sans-serif;font-size:17px;fill:#1f2937}.mono{font-family:Consolas,Menlo,monospace;font-size:15px;fill:#111827}.line{stroke:#263238;stroke-width:2;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
   <rect class="bg" width="900" height="430"/>
-  <text class="title" x="38" y="45">config_size yeterliyse tüm havuz incelenir</text>
-  <text class="text" x="38" y="78">Bu yaklaşım, 3B çizim için depth buffer destekli config bulmayı güvenilir hale getirir.</text>
-  <rect class="box" x="55" y="128" width="460" height="180"/>
-  <rect class="slot" x="86" y="160" width="88" height="50"/><text class="mono" x="106" y="191">#0</text>
-  <rect class="slot" x="190" y="160" width="88" height="50"/><text class="mono" x="210" y="191">#1</text>
-  <rect class="slot" x="294" y="160" width="88" height="50"/><text class="mono" x="314" y="191">#2</text>
-  <rect class="slot" x="398" y="160" width="88" height="50"/><text class="mono" x="418" y="191">#N</text>
-  <text class="mono" x="100" y="258">config_size = toplam_config</text>
-  <text class="mono" x="100" y="284">num_config = toplam_config</text>
-  <rect class="screen" x="600" y="128" width="230" height="180"/>
-  <polygon points="690,170 622,286 758,286" fill="#e53935"/>
-  <polygon points="724,146 650,278 812,278" fill="#35c759"/>
-  <text class="mono" x="624" y="302" fill="#f7fafc">kırmızı z=0.5</text>
-  <text class="mono" x="696" y="168" fill="#f7fafc">yeşil z=0.0</text>
-  <text class="text" x="548" y="354">Depth buffer aktif:</text>
-  <text class="text" x="548" y="382">öndeki yeşil üçgen görünür kalır.</text>
+  <text class="title" x="38" y="45">config_size yeterliyse tum havuz diziye yazilir</text>
+  <text class="text" x="38" y="78">Kapasite toplam config sayisina esit oldugunda kopyalanmayan bolum kalmaz.</text>
+  <rect class="box" x="55" y="128" width="360" height="170"/>
+  <text class="text" x="92" y="160">EGLConfig havuzu</text>
+  <rect class="slot" x="86" y="188" width="68" height="48"/><text class="mono" x="108" y="218">#0</text>
+  <rect class="slot" x="170" y="188" width="68" height="48"/><text class="mono" x="192" y="218">#1</text>
+  <rect class="slot" x="254" y="188" width="68" height="48"/><text class="mono" x="276" y="218">#2</text>
+  <rect class="slot" x="338" y="188" width="52" height="48"/><text class="mono" x="352" y="218">#3</text>
+  <path class="line" d="M415 210 L505 210"/>
+  <rect class="box" x="505" y="128" width="340" height="170"/>
+  <text class="text" x="616" y="160">configs[]</text>
+  <rect class="slot" x="540" y="188" width="68" height="48"/><text class="mono" x="558" y="218">[0]</text>
+  <rect class="slot" x="624" y="188" width="68" height="48"/><text class="mono" x="642" y="218">[1]</text>
+  <rect class="slot" x="708" y="188" width="68" height="48"/><text class="mono" x="726" y="218">[2]</text>
+  <rect class="slot" x="792" y="188" width="38" height="48"/><text class="mono" x="800" y="218">[3]</text>
+  <text class="mono" x="96" y="352">config_size = toplam_config = 4</text>
+  <text class="mono" x="520" y="352">num_config = 4, tum handle'lar alindi</text>
 </svg>
