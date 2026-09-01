@@ -1,9 +1,10 @@
 #include <EGL/egl.h>
 #include <stddef.h>
+#include <stdio.h>
 
 /*
- * eglChooseConfig(...) icin all-in-one senaryo dosyasi.
- * dpy parametresinin onceden initialize edilmis oldugu varsayilir.
+ * All-in-one scenario file for eglChooseConfig(...).
+ * The dpy parameter is assumed to have been initialized beforehand.
  */
 
 static const char *egl_error_name(EGLint error)
@@ -26,25 +27,25 @@ static const char *egl_error_name(EGLint error)
 
 
 /*
- * SENARYO A - attrib_list=NULL.
- * Beklenen: EGL_TRUE ve num_config >= 0.
+ * SCENARIO A - attrib_list=NULL.
+ * Expected: EGL_TRUE and num_config >= 0.
  */
 void scenario_a_null_attribute_list(EGLDisplay dpy)
 {
     EGLint num_config = -1;
 
     if (eglChooseConfig(dpy, NULL, NULL, 0, &num_config) == EGL_TRUE) {
-        printf("Senaryo A basarili: num_config=%d\n", num_config);
+        printf("Scenario A passed: num_config=%d\n", num_config);
     } else {
-        printf("Senaryo A hatali: %s\n",
+        printf("Scenario A failed: %s\n",
                egl_error_name(eglGetError()));
     }
 }
 
 
 /*
- * SENARYO B - RGB888 kriterleri.
- * Beklenen: EGL_TRUE; eslesen config sayisi num_config'a yazilir.
+ * SCENARIO B - RGB888 criteria.
+ * Expected: EGL_TRUE; the number of matching configs is written to num_config.
  */
 void scenario_b_rgb888(EGLDisplay dpy)
 {
@@ -58,17 +59,17 @@ void scenario_b_rgb888(EGLDisplay dpy)
     EGLint num_config = -1;
 
     if (eglChooseConfig(dpy, attrs, NULL, 0, &num_config) == EGL_TRUE) {
-        printf("Senaryo B basarili: num_config=%d\n", num_config);
+        printf("Scenario B passed: num_config=%d\n", num_config);
     } else {
-        printf("Senaryo B hatali: %s\n",
+        printf("Scenario B failed: %s\n",
                egl_error_name(eglGetError()));
     }
 }
 
 
 /*
- * SENARYO C - Eslesmeyen cok yuksek kriterler.
- * Beklenen: EGL_TRUE ve num_config=0.
+ * SCENARIO C - Excessively high criteria with no match.
+ * Expected: EGL_TRUE and num_config=0.
  */
 void scenario_c_no_matching_config(EGLDisplay dpy)
 {
@@ -84,22 +85,22 @@ void scenario_c_no_matching_config(EGLDisplay dpy)
     EGLint num_config = -1;
 
     if (eglChooseConfig(dpy, attrs, NULL, 0, &num_config) == EGL_FALSE) {
-        printf("Senaryo C hatali: %s\n",
+        printf("Scenario C failed: %s\n",
                egl_error_name(eglGetError()));
         return;
     }
 
     if (num_config == 0) {
-        printf("Senaryo C basarili: EGL_TRUE, num_config=0.\n");
+        printf("Scenario C passed: EGL_TRUE, num_config=0.\n");
     } else {
-        printf("Senaryo C farkli sonuc: num_config=%d\n", num_config);
+        printf("Scenario C returned a different result: num_config=%d\n", num_config);
     }
 }
 
 
 /*
- * SENARYO D - config_size=1.
- * Beklenen: buffer'a en fazla bir EGLConfig yazilir.
+ * SCENARIO D - config_size=1.
+ * Expected: at most one EGLConfig is written to the buffer.
  */
 void scenario_d_limited_output_buffer(EGLDisplay dpy)
 {
@@ -114,17 +115,17 @@ void scenario_d_limited_output_buffer(EGLDisplay dpy)
     EGLint num_config = -1;
 
     if (eglChooseConfig(dpy, attrs, configs, 1, &num_config) == EGL_TRUE) {
-        printf("Senaryo D basarili: num_config=%d\n", num_config);
+        printf("Scenario D passed: num_config=%d\n", num_config);
     } else {
-        printf("Senaryo D hatali: %s\n",
+        printf("Scenario D failed: %s\n",
                egl_error_name(eglGetError()));
     }
 }
 
 
 /*
- * SENARYO E - dpy=EGL_NO_DISPLAY.
- * Beklenen: EGL_FALSE ve EGL_BAD_DISPLAY.
+ * SCENARIO E - dpy=EGL_NO_DISPLAY.
+ * Expected: EGL_FALSE and EGL_BAD_DISPLAY.
  */
 void scenario_e_invalid_display(void)
 {
@@ -140,20 +141,20 @@ void scenario_e_invalid_display(void)
         EGLint error = eglGetError();
 
         if (error == EGL_BAD_DISPLAY) {
-            printf("Senaryo E basarili: EGL_BAD_DISPLAY alindi.\n");
+            printf("Scenario E passed: received EGL_BAD_DISPLAY.\n");
         } else {
-            printf("Senaryo E farkli hata: %s\n",
+            printf("Scenario E returned a different error: %s\n",
                    egl_error_name(error));
         }
     } else {
-        printf("Senaryo E beklenmeyen sonuc: EGL_TRUE dondu.\n");
+        printf("Scenario E returned an unexpected result: EGL_TRUE.\n");
     }
 }
 
 
 /*
- * SENARYO F - Taninmayan attribute.
- * Beklenen: EGL_FALSE ve EGL_BAD_ATTRIBUTE.
+ * SCENARIO F - Unrecognized attribute.
+ * Expected: EGL_FALSE and EGL_BAD_ATTRIBUTE.
  */
 void scenario_f_invalid_attribute(EGLDisplay dpy)
 {
@@ -168,20 +169,20 @@ void scenario_f_invalid_attribute(EGLDisplay dpy)
         EGLint error = eglGetError();
 
         if (error == EGL_BAD_ATTRIBUTE) {
-            printf("Senaryo F basarili: EGL_BAD_ATTRIBUTE alindi.\n");
+            printf("Scenario F passed: received EGL_BAD_ATTRIBUTE.\n");
         } else {
-            printf("Senaryo F farkli hata: %s\n",
+            printf("Scenario F returned a different error: %s\n",
                    egl_error_name(error));
         }
     } else {
-        printf("Senaryo F beklenmeyen sonuc: EGL_TRUE dondu.\n");
+        printf("Scenario F returned an unexpected result: EGL_TRUE.\n");
     }
 }
 
 
 /*
- * SENARYO G - num_config=NULL.
- * Beklenen: EGL_FALSE ve EGL_BAD_PARAMETER.
+ * SCENARIO G - num_config=NULL.
+ * Expected: EGL_FALSE and EGL_BAD_PARAMETER.
  */
 void scenario_g_null_num_config(EGLDisplay dpy)
 {
@@ -189,12 +190,12 @@ void scenario_g_null_num_config(EGLDisplay dpy)
         EGLint error = eglGetError();
 
         if (error == EGL_BAD_PARAMETER) {
-            printf("Senaryo G basarili: EGL_BAD_PARAMETER alindi.\n");
+            printf("Scenario G passed: received EGL_BAD_PARAMETER.\n");
         } else {
-            printf("Senaryo G farkli hata: %s\n",
+            printf("Scenario G returned a different error: %s\n",
                    egl_error_name(error));
         }
     } else {
-        printf("Senaryo G beklenmeyen sonuc: EGL_TRUE dondu.\n");
+        printf("Scenario G returned an unexpected result: EGL_TRUE.\n");
     }
 }

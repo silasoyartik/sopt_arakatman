@@ -3,9 +3,9 @@
 #include <stdio.h>
 
 /*
- * eglGetConfigAttrib(dpy, config, attribute, value) icin senaryolar.
- * dpy initialized, config ise ayni display'dan eglGetConfigs veya
- * eglChooseConfig ile alinmis olmalidir (negatif senaryolar haric).
+ * Scenarios for eglGetConfigAttrib(dpy, config, attribute, value).
+ * dpy must be initialized, and config must have been obtained from the same
+ * display with eglGetConfigs or eglChooseConfig (except in negative scenarios).
  */
 
 struct config_attribute {
@@ -75,7 +75,7 @@ static void report_query(const char *name, EGLBoolean result, EGLint error,
            egl_error_name(error), value);
 }
 
-/* SENARYO 1 - Gecerli tek bir attribute sorgusu. */
+/* SCENARIO 1 - Query a single valid attribute. */
 void scenario_get_config_attrib_valid(EGLDisplay dpy,
                                       EGLConfig config,
                                       EGLint attribute)
@@ -87,14 +87,14 @@ void scenario_get_config_attrib_valid(EGLDisplay dpy,
     (void)eglGetError();
     result = eglGetConfigAttrib(dpy, config, attribute, &value);
     error = eglGetError();
-    report_query("Senaryo 1 - valid attribute", result, error,
+    report_query("Scenario 1 - valid attribute", result, error,
                  EGL_SUCCESS, value);
 }
 
 /*
- * SENARYO 2 - EGL 1.0 Table 3.1'deki tum attribute'lari tek tek sorgulama.
- * Transparent RGB component degerleri EGL_TRANSPARENT_TYPE == EGL_NONE iken
- * tanimsizdir; fonksiyon basarili olsa bile bu degerler kullanilmamalidir.
+ * SCENARIO 2 - Query every attribute in EGL 1.0 Table 3.1 individually.
+ * Transparent RGB component values are undefined when EGL_TRANSPARENT_TYPE ==
+ * EGL_NONE; these values must not be used even if the function succeeds.
  */
 void scenario_get_config_attrib_all_egl10_attributes(EGLDisplay dpy,
                                                      EGLConfig config)
@@ -116,7 +116,7 @@ void scenario_get_config_attrib_all_egl10_attributes(EGLDisplay dpy,
     }
 }
 
-/* SENARYO 3 - EGL_SURFACE_TYPE sonucunu integer esitligiyle degil bitmask ile kullanma. */
+/* SCENARIO 3 - Treat EGL_SURFACE_TYPE as a bitmask rather than an integer value. */
 void scenario_get_config_attrib_surface_type_bits(EGLDisplay dpy,
                                                   EGLConfig config)
 {
@@ -127,7 +127,7 @@ void scenario_get_config_attrib_surface_type_bits(EGLDisplay dpy,
     (void)eglGetError();
     result = eglGetConfigAttrib(dpy, config, EGL_SURFACE_TYPE, &value);
     error = eglGetError();
-    report_query("Senaryo 3 - EGL_SURFACE_TYPE", result, error,
+    report_query("Scenario 3 - EGL_SURFACE_TYPE", result, error,
                  EGL_SUCCESS, value);
 
     if (result == EGL_TRUE) {
@@ -139,8 +139,8 @@ void scenario_get_config_attrib_surface_type_bits(EGLDisplay dpy,
 }
 
 /*
- * SENARYO 4 - Transparent RGB degerlerini yalnizca type uygunken okuma.
- * EGL_NONE durumunda component degerleri tanimsiz oldugundan sorgulanmaz.
+ * SCENARIO 4 - Read transparent RGB values only when the type is appropriate.
+ * Component values are undefined for EGL_NONE, so they are not queried.
  */
 void scenario_get_config_attrib_transparency(EGLDisplay dpy, EGLConfig config)
 {
@@ -151,33 +151,33 @@ void scenario_get_config_attrib_transparency(EGLDisplay dpy, EGLConfig config)
 
     (void)eglGetError();
     if (eglGetConfigAttrib(dpy, config, EGL_TRANSPARENT_TYPE, &type) == EGL_FALSE) {
-        printf("Senaryo 4 FAIL: type error=%s\n",
+        printf("Scenario 4 FAIL: type error=%s\n",
                egl_error_name(eglGetError()));
         return;
     }
 
     if (type == EGL_NONE) {
-        printf("Senaryo 4 PASS: EGL_TRANSPARENT_TYPE=EGL_NONE\n");
+        printf("Scenario 4 PASS: EGL_TRANSPARENT_TYPE=EGL_NONE\n");
         return;
     }
 
     if (type != EGL_TRANSPARENT_RGB) {
-        printf("Senaryo 4 FAIL: bilinmeyen transparent type=%d\n", type);
+        printf("Scenario 4 FAIL: unknown transparent type=%d\n", type);
         return;
     }
 
     if (eglGetConfigAttrib(dpy, config, EGL_TRANSPARENT_RED_VALUE, &red) &&
         eglGetConfigAttrib(dpy, config, EGL_TRANSPARENT_GREEN_VALUE, &green) &&
         eglGetConfigAttrib(dpy, config, EGL_TRANSPARENT_BLUE_VALUE, &blue)) {
-        printf("Senaryo 4 PASS: transparent RGB=(%d, %d, %d)\n",
+        printf("Scenario 4 PASS: transparent RGB=(%d, %d, %d)\n",
                red, green, blue);
     } else {
-        printf("Senaryo 4 FAIL: component error=%s\n",
+        printf("Scenario 4 FAIL: component error=%s\n",
                egl_error_name(eglGetError()));
     }
 }
 
-/* SENARYO 5 - dpy == EGL_NO_DISPLAY. */
+/* SCENARIO 5 - dpy == EGL_NO_DISPLAY. */
 void scenario_get_config_attrib_no_display(EGLConfig config)
 {
     EGLint value = 12345;
@@ -187,11 +187,11 @@ void scenario_get_config_attrib_no_display(EGLConfig config)
     (void)eglGetError();
     result = eglGetConfigAttrib(EGL_NO_DISPLAY, config, EGL_RED_SIZE, &value);
     error = eglGetError();
-    report_query("Senaryo 5 - EGL_NO_DISPLAY", result, error,
+    report_query("Scenario 5 - EGL_NO_DISPLAY", result, error,
                  EGL_BAD_DISPLAY, value);
 }
 
-/* SENARYO 6 - EGL tarafindan uretilmemis, gecersiz display handle'i. */
+/* SCENARIO 6 - An invalid display handle not created by EGL. */
 void scenario_get_config_attrib_invalid_display(EGLConfig config)
 {
     EGLDisplay invalid_dpy = (EGLDisplay)(uintptr_t)1;
@@ -202,11 +202,11 @@ void scenario_get_config_attrib_invalid_display(EGLConfig config)
     (void)eglGetError();
     result = eglGetConfigAttrib(invalid_dpy, config, EGL_RED_SIZE, &value);
     error = eglGetError();
-    report_query("Senaryo 6 - invalid display", result, error,
+    report_query("Scenario 6 - invalid display", result, error,
                  EGL_BAD_DISPLAY, value);
 }
 
-/* SENARYO 7 - Gecerli fakat initialize edilmemis display. */
+/* SCENARIO 7 - A valid but uninitialized display. */
 void scenario_get_config_attrib_uninitialized_display(
     EGLDisplay uninitialized_dpy,
     EGLConfig config)
@@ -219,11 +219,11 @@ void scenario_get_config_attrib_uninitialized_display(
     result = eglGetConfigAttrib(uninitialized_dpy, config,
                                 EGL_RED_SIZE, &value);
     error = eglGetError();
-    report_query("Senaryo 7 - uninitialized display", result, error,
+    report_query("Scenario 7 - uninitialized display", result, error,
                  EGL_NOT_INITIALIZED, value);
 }
 
-/* SENARYO 8 - EGL tarafindan uretilmemis, gecersiz config handle'i. */
+/* SCENARIO 8 - An invalid config handle not created by EGL. */
 void scenario_get_config_attrib_invalid_config(EGLDisplay dpy)
 {
     EGLConfig invalid_config = (EGLConfig)(uintptr_t)1;
@@ -234,11 +234,11 @@ void scenario_get_config_attrib_invalid_config(EGLDisplay dpy)
     (void)eglGetError();
     result = eglGetConfigAttrib(dpy, invalid_config, EGL_RED_SIZE, &value);
     error = eglGetError();
-    report_query("Senaryo 8 - invalid config", result, error,
+    report_query("Scenario 8 - invalid config", result, error,
                  EGL_BAD_CONFIG, value);
 }
 
-/* SENARYO 9 - Config baska bir EGLDisplay'a ait. */
+/* SCENARIO 9 - The config belongs to another EGLDisplay. */
 void scenario_get_config_attrib_config_from_another_display(
     EGLDisplay dpy,
     EGLConfig foreign_config)
@@ -250,11 +250,11 @@ void scenario_get_config_attrib_config_from_another_display(
     (void)eglGetError();
     result = eglGetConfigAttrib(dpy, foreign_config, EGL_RED_SIZE, &value);
     error = eglGetError();
-    report_query("Senaryo 9 - config from another display", result, error,
+    report_query("Scenario 9 - config from another display", result, error,
                  EGL_BAD_CONFIG, value);
 }
 
-/* SENARYO 10 - EGL 1.0 Table 3.1'de olmayan attribute. */
+/* SCENARIO 10 - An attribute not listed in EGL 1.0 Table 3.1. */
 void scenario_get_config_attrib_invalid_attribute(EGLDisplay dpy,
                                                   EGLConfig config)
 {
@@ -266,14 +266,14 @@ void scenario_get_config_attrib_invalid_attribute(EGLDisplay dpy,
     (void)eglGetError();
     result = eglGetConfigAttrib(dpy, config, invalid_attribute, &value);
     error = eglGetError();
-    report_query("Senaryo 10 - invalid attribute", result, error,
+    report_query("Scenario 10 - invalid attribute", result, error,
                  EGL_BAD_ATTRIBUTE, value);
 }
 
 /*
- * SENARYO 11 - Terminate edilmis display ile eski config handle'ini sorgulama.
- * eglTerminate sonrasi config handle'larinin omru biter. dpy daha sonra tekrar
- * initialize edilirse eski config yine kullanilmamali, config yeniden alinmalidir.
+ * SCENARIO 11 - Query a stale config handle with a terminated display.
+ * Config handles expire after eglTerminate. If dpy is initialized again later,
+ * the stale config must not be reused; a new config must be obtained.
  */
 void scenario_get_config_attrib_after_terminate(EGLDisplay dpy,
                                                EGLConfig stale_config)
@@ -283,7 +283,7 @@ void scenario_get_config_attrib_after_terminate(EGLDisplay dpy,
     EGLint error;
 
     if (eglTerminate(dpy) == EGL_FALSE) {
-        printf("Senaryo 11 kurulamadı: eglTerminate error=%s\n",
+        printf("Scenario 11 setup failed: eglTerminate error=%s\n",
                egl_error_name(eglGetError()));
         return;
     }
@@ -291,15 +291,15 @@ void scenario_get_config_attrib_after_terminate(EGLDisplay dpy,
     (void)eglGetError();
     result = eglGetConfigAttrib(dpy, stale_config, EGL_RED_SIZE, &value);
     error = eglGetError();
-    report_query("Senaryo 11 - after terminate", result, error,
+    report_query("Scenario 11 - after terminate", result, error,
                  EGL_NOT_INITIALIZED, value);
 }
 
 /*
- * SENARYO 12 - value == NULL.
- * EGL 1.0 NULL output pointer icin bir hata sonucu tanimlamaz. Gercek cagrinin
- * davranisi tanimsizdir ve process crash olabilir; bu nedenle guvenli senaryo
- * cagrinin bilerek yapilmadigini gosterir.
+ * SCENARIO 12 - value == NULL.
+ * EGL 1.0 does not define an error result for a NULL output pointer. The actual
+ * call has undefined behavior and may crash the process, so this safe scenario
+ * demonstrates that the call is deliberately omitted.
  */
 void scenario_get_config_attrib_null_value_is_invalid_usage(EGLDisplay dpy,
                                                             EGLConfig config)
@@ -309,13 +309,13 @@ void scenario_get_config_attrib_null_value_is_invalid_usage(EGLDisplay dpy,
     (void)dpy;
     (void)config;
     (void)value;
-    printf("Senaryo 12 SKIP: value=NULL ile eglGetConfigAttrib cagrilmaz.\n");
+    printf("Scenario 12 SKIP: eglGetConfigAttrib is not called with value=NULL.\n");
 }
 
 /*
- * SENARYO 13 - Terminate edilip yeniden initialize edilmis display'da eski
- * config handle'ini kullanma. Reinitialize eski handle'i diriltmez; fixture
- * stale_config'i terminate oncesinde alip dpy'yi yeniden initialize etmelidir.
+ * SCENARIO 13 - Use a stale config handle with a terminated and reinitialized
+ * display. Reinitialization does not revive the stale handle; the fixture must
+ * obtain stale_config before termination and then reinitialize dpy.
  */
 void scenario_get_config_attrib_stale_config_after_reinitialize(
     EGLDisplay reinitialized_dpy,
@@ -329,6 +329,6 @@ void scenario_get_config_attrib_stale_config_after_reinitialize(
     result = eglGetConfigAttrib(reinitialized_dpy, stale_config,
                                 EGL_RED_SIZE, &value);
     error = eglGetError();
-    report_query("Senaryo 13 - stale config after reinitialize", result,
+    report_query("Scenario 13 - stale config after reinitialize", result,
                  error, EGL_BAD_CONFIG, value);
 }
