@@ -1,19 +1,28 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="430" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">
-  <title id="title">Terminal kanıtı akışı</title>
-  <desc id="desc">Çizim üretmeyen senaryolarda hata veya güvenli reddetme bilgisinin terminal çıktısıyla gösterilmesi.</desc>
-  <style>
-    .bg{fill:#f7fafc}.term{fill:#111827;stroke:#263238;stroke-width:3;rx:12}.bar{fill:#243044}.green{fill:#38d996}.yellow{fill:#ffd166}.red{fill:#ff6b6b}
-    .title{font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;fill:#111827}.text{font-family:Arial,Helvetica,sans-serif;font-size:17px;fill:#1f2937}.mono{font-family:Consolas,Menlo,monospace;font-size:17px;fill:#e5e7eb}.muted{font-family:Consolas,Menlo,monospace;font-size:15px;fill:#a7b0bf}
-  </style>
+  <title id="title">Hata akisi</title>
+  <desc id="desc">Gecersiz parametre veya gecersiz display durumunda eglGetConfigs cagrisi icin hata kodunun kontrol edilmesi.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L0,6 L9,3 z" fill="#263238"/></marker>
+    <style>
+      .bg{fill:#f7fafc}.box{fill:#ffffff;stroke:#263238;stroke-width:2;rx:10}.bad{fill:#fdecec;stroke:#b42318;stroke-width:2;rx:8}.err{fill:#fff6df;stroke:#b7791f;stroke-width:2;rx:8}
+      .title{font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:700;fill:#111827}.text{font-family:Arial,Helvetica,sans-serif;font-size:17px;fill:#1f2937}.mono{font-family:Consolas,Menlo,monospace;font-size:16px;fill:#111827}.line{stroke:#263238;stroke-width:2.2;fill:none;marker-end:url(#arrow)}
+    </style>
+  </defs>
   <rect class="bg" width="900" height="430"/>
-  <text class="title" x="40" y="48">Çizim yoksa kanıt terminal çıktısıdır</text>
-  <text class="text" x="40" y="78">Geçersiz display veya güvenli reddetme senaryosunda amaç hata yolunu göstermek.</text>
-  <rect class="term" x="70" y="118" width="760" height="230"/>
-  <rect class="bar" x="70" y="118" width="760" height="34"/>
-  <circle class="red" cx="95" cy="135" r="6"/><circle class="yellow" cx="116" cy="135" r="6"/><circle class="green" cx="137" cy="135" r="6"/>
-  <text class="mono" x="100" y="190">BEKLENEN HATA: eglGetConfigs başarısız oldu.</text>
-  <text class="mono" x="100" y="225">EGL hata kodu: EGL_BAD_DISPLAY (0x3008)</text>
-  <text class="muted" x="100" y="262">Surface/context kurulmaz; çizim aşamasına geçilmez.</text>
-  <text class="muted" x="100" y="296">Program kontrollü şekilde kapanır.</text>
-  <text class="text" x="128" y="386">Bu görsel, hata senaryolarında “neden ekran görüntüsü yok?” sorusunu açıklar.</text>
+  <text class="title" x="40" y="48">Basarisiz eglGetConfigs cagrisi hata koduyla kanitlanir</text>
+  <text class="text" x="40" y="78">Gorsel sonuc, cizim degil; return value ve eglGetError() ciktisidir.</text>
+  <rect class="box" x="70" y="128" width="210" height="150"/>
+  <text class="mono" x="102" y="178">EGL_NO_DISPLAY</text>
+  <text class="mono" x="112" y="214">veya NULL</text>
+  <path class="line" d="M280 202 L380 202"/>
+  <rect class="box" x="380" y="128" width="210" height="150"/>
+  <text class="mono" x="420" y="190">eglGetConfigs</text>
+  <text class="mono" x="432" y="222">(...)</text>
+  <path class="line" d="M590 202 L690 202"/>
+  <rect class="bad" x="690" y="128" width="150" height="62"/>
+  <text class="mono" x="720" y="166">EGL_FALSE</text>
+  <rect class="err" x="690" y="216" width="150" height="62"/>
+  <text class="mono" x="708" y="254">eglGetError()</text>
+  <text class="mono" x="108" y="348">Ornek: EGL_NO_DISPLAY -&gt; EGL_BAD_DISPLAY</text>
+  <text class="mono" x="108" y="376">Ornek: num_config NULL -&gt; EGL_BAD_PARAMETER</text>
 </svg>

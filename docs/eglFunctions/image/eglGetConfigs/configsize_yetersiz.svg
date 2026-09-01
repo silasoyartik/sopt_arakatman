@@ -1,19 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="900" height="430" viewBox="0 0 900 430" role="img" aria-labelledby="title desc">
   <title id="title">Yetersiz config_size etkisi</title>
-  <desc id="desc">Toplam config sayısı yüksekken config_size küçük verilirse yalnızca ilk elemanların okunması ve uygun config'in dışarıda kalabilmesi.</desc>
+  <desc id="desc">Toplam config sayisi daha yuksekken config_size kucuk verilirse sadece kapasite kadar handle kopyalanir.</desc>
   <style>
     .bg{fill:#f7fafc}.box{fill:#ffffff;stroke:#263238;stroke-width:2;rx:10}.read{fill:#fff6df;stroke:#b7791f;stroke-width:2;rx:8}.miss{fill:#fdecec;stroke:#b42318;stroke-width:2;rx:8}
     .title{font-family:Arial,Helvetica,sans-serif;font-size:23px;font-weight:700;fill:#111827}.text{font-family:Arial,Helvetica,sans-serif;font-size:17px;fill:#1f2937}.mono{font-family:Consolas,Menlo,monospace;font-size:15px;fill:#111827}
   </style>
   <rect class="bg" width="900" height="430"/>
-  <text class="title" x="38" y="45">config_size küçükse sonuç eksik havuzdur</text>
-  <text class="text" x="38" y="78">Fonksiyon hata vermez; sadece dizinin alabileceği kadar config kopyalar.</text>
+  <text class="title" x="38" y="45">config_size kucukse sonuc sinirli listedir</text>
+  <text class="text" x="38" y="78">Fonksiyon hata vermez; sadece dizinin alabilecegi kadar config handle'i kopyalar.</text>
   <rect class="box" x="62" y="130" width="776" height="120"/>
-  <rect class="read" x="92" y="158" width="118" height="62"/><text class="mono" x="120" y="194">#0 okundu</text>
-  <rect class="read" x="228" y="158" width="118" height="62"/><text class="mono" x="256" y="194">#1 okundu</text>
-  <rect class="miss" x="364" y="158" width="118" height="62"/><text class="mono" x="387" y="194">#2 dışarıda</text>
-  <rect class="miss" x="500" y="158" width="118" height="62"/><text class="mono" x="523" y="194">#3 dışarıda</text>
-  <rect class="miss" x="636" y="158" width="168" height="62"/><text class="mono" x="672" y="194">uygun config?</text>
-  <text class="mono" x="92" y="300">config_size = 2  ->  num_config = 2</text>
-  <text class="text" x="92" y="336">Risk: depth buffer veya EGL_WINDOW_BIT destekleyen config okunmayan tarafta kalabilir.</text>
+  <rect class="read" x="92" y="158" width="118" height="62"/><text class="mono" x="120" y="194">#0 yazildi</text>
+  <rect class="read" x="228" y="158" width="118" height="62"/><text class="mono" x="256" y="194">#1 yazildi</text>
+  <rect class="miss" x="364" y="158" width="118" height="62"/><text class="mono" x="386" y="194">#2 kaldi</text>
+  <rect class="miss" x="500" y="158" width="118" height="62"/><text class="mono" x="522" y="194">#3 kaldi</text>
+  <rect class="miss" x="636" y="158" width="168" height="62"/><text class="mono" x="664" y="194">kopyalanmadi</text>
+  <text class="mono" x="92" y="300">config_size = 2  -&gt;  num_config = 2</text>
+  <text class="text" x="92" y="336">Risk: ihtiyac duyulan ozelliklere sahip config kopyalanmayan bolumde kalabilir.</text>
 </svg>
