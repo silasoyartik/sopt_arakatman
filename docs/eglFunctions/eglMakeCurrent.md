@@ -33,8 +33,7 @@ Thread
 
 `eglMakeCurrent` bu dörtlüyü değiştirir. OpenGL ES komutları doğrudan `EGLContext` handle'ına parametre olarak verilmez; komutlar çağıran thread'in current context'i üzerinden çalışır.
 
-Context'i bir “OpenGL ES makinesinin durumu”, surface'i ise bu makinenin
-okuduğu/yazdığı pixel depoları gibi düşünmek yararlıdır:
+Context ve surface sorumlulukları aşağıdaki modelle ayrıştırılabilir:
 
 ```text
 EGLContext -> renk, depth test, blending, texture binding gibi GL state
@@ -60,14 +59,14 @@ bu surface buffer'larını paylaşırlar; her context'in GL state'i ise kendisin
 | Geçersiz display handle              | Başarısız. Genel EGL hata modeliyle`EGL_BAD_DISPLAY` beklenir.     |
 | Initialize edilmemiş display         | Başarısız. Genel EGL hata modeliyle`EGL_NOT_INITIALIZED` beklenir. |
 
-Pratik kural:
+Initialization gereksinimi:
 
 ```c
 EGLDisplay dpy = eglGetDisplay(native_display);
 eglInitialize(dpy, &major, &minor);
 ```
 
-`eglInitialize` başarılı olmadan `eglMakeCurrent` çağırma.
+`eglMakeCurrent`, `eglInitialize` başarıyla tamamlanmadan çağrılmamalıdır.
 
 ### `draw`
 
@@ -118,7 +117,7 @@ eglInitialize(dpy, &major, &minor);
 
 ## Geçerli Kombinasyonlar
 
-### 1. Normal bind
+### 1. Standart Binding
 
 ```c
 eglMakeCurrent(dpy, surface, surface, ctx);
@@ -132,7 +131,7 @@ Thread draw surface    = surface
 Thread read surface    = surface
 ```
 
-### 2. Ayrı draw/read surface
+### 2. Ayrı Draw/Read Surface Binding
 
 ```c
 eglMakeCurrent(dpy, draw_surface, read_surface, ctx);
@@ -145,17 +144,17 @@ Draw commands -> draw_surface
 Read commands -> read_surface
 ```
 
-Bu kullanım daha nadirdir ama EGL 1.0 tarafından desteklenir.
+Bu kullanım EGL 1.0 tarafından desteklenmekle birlikte standart binding'e göre daha sınırlı kullanım alanına sahiptir.
 
-### 3. Current context'i bırakma
+### 3. Current Context'i Serbest Bırakma
 
 ```c
 eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 ```
 
-Bu, EGL 1.0'da current context'i release etmenin doğru biçimidir.
+Bu çağrı, EGL 1.0'da current context'i serbest bırakmak için tanımlanan yöntemdir.
 
-## “Context ile surface uyumlu” ne demektir?
+## Context ve Surface Uyumluluğu
 
 EGL 1.0'da yalnızca handle'ların geçerli olması yetmez. Context ve surface:
 
@@ -178,7 +177,7 @@ oluşturulan nesneler uyumlu değildir.
 | RGBA8, D24, S8 | RGB565, D16, S0 | Aynı | `EGL_BAD_MATCH` |
 | RGBA8, D24, S8 | RGBA8, D24, S8 | Farklı | `EGL_BAD_MATCH` |
 
-## Ayrı draw/read surface için somut örnek
+## Ayrı Draw/Read Surface Kullanım Örneği
 
 İki surface de context ile uyumluysa çizim ve okuma hedefleri ayrılabilir:
 
@@ -195,11 +194,11 @@ glReadPixels(0, 0, width, height, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 Bu çağrı pbuffer içeriğini window'a kopyalamaz. Yalnızca aynı context için draw
 ve read yönlerinin hangi surface'i kullandığını belirler.
 
-## İki thread arasında context devretme
+## Thread'ler Arasında Context Aktarımı
 
 Bir context aynı anda yalnızca bir thread'de current olabilir. Thread A'da
 current olan `ctx` doğrudan Thread B'de bağlanırsa `EGL_BAD_ACCESS` oluşur.
-Güvenli mantıksal sıra şöyledir:
+Önerilen aktarım sırası şöyledir:
 
 ```text
 Thread A: GL işini bitir
@@ -230,7 +229,7 @@ almaz; aynı context'e erişimi uygulama ayrıca senkronize etmelidir.
 
 ## Hata Kodları
 
-| Hata                        | Ne zaman                                                                                                                               |
+| Hata                        | Oluşma koşulu                                                                                                                          |
 | --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
 | `EGL_BAD_MATCH`           | Surface/context uyumsuzsa;`EGL_NO_CONTEXT`/`EGL_NO_SURFACE` kombinasyonu yanlışsa; draw/read aynı anda belleğe sığamıyorsa. |
 | `EGL_BAD_ACCESS`          | `ctx` başka thread'de current ise; `draw` veya `read` başka thread'de bir context'e bağlıysa.                                |
@@ -280,7 +279,7 @@ glViewport(0, 0, draw_width, draw_height)
 glScissor(0, 0, draw_width, draw_height)
 ```
 
-Bu yalnızca context'in ilk current yapılma anı için önemlidir. Sonraki bind işlemlerinde viewport/scissor'ın otomatik güncelleneceğini varsayma.
+Bu davranış yalnızca context'in ilk kez current yapıldığı an için geçerlidir. Sonraki binding işlemlerinde viewport ve scissor değerlerinin otomatik olarak güncellenmesi garanti edilmez.
 
 ## Yok Etme Sonrası Davranış
 
@@ -290,7 +289,7 @@ Bu yalnızca context'in ilk current yapılma anı için önemlidir. Sonraki bind
 - `read` destroy edilirse `glReadPixels` gibi okuma sonuçları tanımsız olur.
 - Native window/pixmap destroy edilirse de ilgili surface için aynı mantık geçerlidir.
 
-Bu yüzden güvenli kapanış sırası genelde şudur:
+Önerilen kapanış sırası şöyledir:
 
 ```c
 eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
