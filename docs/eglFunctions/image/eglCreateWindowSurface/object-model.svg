@@ -1,1 +1,52 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520" role="img" aria-labelledby="t d"><title id="t">Native window ve EGLSurface nesne modeli</title><desc id="d">Platform nesnesi, EGL display, config, surface ve context arasındaki ilişki.</desc><defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0 0v6l9-3z" fill="#475569"/></marker><style>text{font-family:Arial,sans-serif;fill:#172033}.h{font-size:21px;font-weight:700}.s{font-size:16px}.n{fill:#fff;stroke:#64748b;stroke-width:2;rx:6}.p{fill:#ecfeff;stroke:#0e7490}.e{fill:#eff6ff;stroke:#2563eb}.g{fill:#ecfdf5;stroke:#15803d}.l{fill:none;stroke:#475569;stroke-width:2.5;marker-end:url(#a)}</style></defs><rect width="1100" height="520" fill="#f8fafc"/><text class="h" x="550" y="38" text-anchor="middle">Native Window ile EGL Rendering Surface</text><rect class="n p" x="55" y="105" width="260" height="250"/><text class="h" x="185" y="140" text-anchor="middle">Native platform</text><text class="s" x="185" y="188" text-anchor="middle">X11 Window</text><text class="s" x="185" y="225" text-anchor="middle">wl_egl_window</text><text class="s" x="185" y="262" text-anchor="middle">Win32 HWND</text><text class="s" x="185" y="299" text-anchor="middle">GBM surface</text><rect class="n e" x="420" y="82" width="260" height="82"/><text class="h" x="550" y="116" text-anchor="middle">EGLDisplay</text><text class="s" x="550" y="144" text-anchor="middle">platform connection</text><rect class="n e" x="420" y="215" width="260" height="82"/><text class="h" x="550" y="249" text-anchor="middle">EGLConfig</text><text class="s" x="550" y="277" text-anchor="middle">framebuffer contract</text><rect class="n g" x="790" y="148" width="255" height="110"/><text class="h" x="918" y="188" text-anchor="middle">EGLSurface</text><text class="s" x="918" y="219" text-anchor="middle">rendering target</text><rect class="n e" x="790" y="340" width="255" height="82"/><text class="h" x="918" y="374" text-anchor="middle">EGLContext</text><text class="s" x="918" y="402" text-anchor="middle">OpenGL ES state</text><path class="l" d="M315 230h475"/><path class="l" d="M680 123h110v56"/><path class="l" d="M680 256h110v-37"/><path class="l" d="M918 258v82"/><text class="s" x="550" y="458" text-anchor="middle">eglCreateWindowSurface binds an existing native window to an EGLConfig on one EGLDisplay.</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="520" viewBox="0 0 1100 520" role="img" aria-labelledby="title description">
+  <title id="title">Native window ve EGLSurface nesne modeli</title>
+  <desc id="description">Native platform nesnesi, EGLDisplay ve EGLConfig kullanılarak bir EGLSurface oluşturulmasını; EGLContext'in bu surface'e bağlanmasını gösterir.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+      <path d="M0 0v6l9-3z" fill="#475569"/>
+    </marker>
+    <style>
+      text { font-family: Arial, sans-serif; fill: #172033; }
+      .heading { font-size: 21px; font-weight: 700; }
+      .body { font-size: 16px; }
+      .label { font-size: 14px; font-weight: 700; fill: #475569; }
+      .node { fill: #fff; stroke: #64748b; stroke-width: 2; rx: 6; }
+      .platform { fill: #ecfeff; stroke: #0e7490; }
+      .egl { fill: #eff6ff; stroke: #2563eb; }
+      .surface { fill: #ecfdf5; stroke: #15803d; }
+      .arrow { fill: none; stroke: #475569; stroke-width: 2.5; marker-end: url(#arrow); }
+      .label-bg { fill: #f8fafc; }
+    </style>
+  </defs>
+  <rect width="1100" height="520" fill="#f8fafc"/>
+  <text class="heading" x="550" y="38" text-anchor="middle">Native Window ile EGL Rendering Surface</text>
+  <rect class="node platform" x="55" y="105" width="260" height="250"/>
+  <text class="heading" x="185" y="140" text-anchor="middle">Native platform</text>
+  <text class="body" x="185" y="188" text-anchor="middle">X11 Window</text>
+  <text class="body" x="185" y="225" text-anchor="middle">wl_egl_window</text>
+  <text class="body" x="185" y="262" text-anchor="middle">Win32 HWND</text>
+  <text class="body" x="185" y="299" text-anchor="middle">GBM surface</text>
+  <rect class="node egl" x="420" y="82" width="260" height="82"/>
+  <text class="heading" x="550" y="116" text-anchor="middle">EGLDisplay</text>
+  <text class="body" x="550" y="144" text-anchor="middle">platform connection</text>
+  <rect class="node egl" x="420" y="215" width="260" height="82"/>
+  <text class="heading" x="550" y="249" text-anchor="middle">EGLConfig</text>
+  <text class="body" x="550" y="277" text-anchor="middle">framebuffer contract</text>
+  <rect class="node surface" x="790" y="148" width="255" height="110"/>
+  <text class="heading" x="918" y="188" text-anchor="middle">EGLSurface</text>
+  <text class="body" x="918" y="219" text-anchor="middle">rendering target</text>
+  <rect class="node egl" x="790" y="340" width="255" height="82"/>
+  <text class="heading" x="918" y="374" text-anchor="middle">EGLContext</text>
+  <text class="body" x="918" y="402" text-anchor="middle">OpenGL ES state</text>
+  <!-- Bağlantılar kutuların ve metinlerin içinden geçmeyecek biçimde boşluklardan yönlendirilir. -->
+  <path class="arrow" d="M315 315 H735 V238 H790"/>
+  <path class="arrow" d="M680 123 H735 V168 H790"/>
+  <path class="arrow" d="M680 256 H735 V218 H790"/>
+  <path class="arrow" d="M918 340 V258"/>
+  <rect class="label-bg" x="334" y="301" width="69" height="22" rx="3"/>
+  <text class="label" x="368" y="317" text-anchor="middle">window</text>
+  <text class="label" x="706" y="113" text-anchor="middle">display</text>
+  <text class="label" x="708" y="275" text-anchor="middle">config</text>
+  <text class="label" x="932" y="305">current</text>
+  <text class="body" x="550" y="458" text-anchor="middle">eglCreateWindowSurface binds an existing native window to an EGLConfig on one EGLDisplay.</text>
+</svg>

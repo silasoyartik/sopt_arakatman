@@ -34,22 +34,22 @@ destroy etmez.
 
 `dpy`, surface'in oluşturulduğu initialize edilmiş EGL display'dir.
 
-| Durum | Sonuç |
-| --- | --- |
+| Durum                                                      | Sonuç                                        |
+| ---------------------------------------------------------- | --------------------------------------------- |
 | Geçerli, initialize edilmiş ve surface'in sahibi display | `surface` geçerliyse işlem yürütülür. |
-| `EGL_NO_DISPLAY` veya geçersiz handle | `EGL_FALSE`, `EGL_BAD_DISPLAY`. |
-| Initialize edilmemiş display | `EGL_FALSE`, `EGL_NOT_INITIALIZED`. |
+| `EGL_NO_DISPLAY` veya geçersiz handle                   | `EGL_FALSE`, `EGL_BAD_DISPLAY`.           |
+| Initialize edilmemiş display                              | `EGL_FALSE`, `EGL_NOT_INITIALIZED`.       |
 
 ### `surface`
 
 `surface`, `dpy` üzerinde bir EGL surface creation fonksiyonuyla oluşturulmuş
 geçerli handle olmalıdır.
 
-| Durum | Davranış |
-| --- | --- |
+| Durum                            | Davranış                                                              |
+| -------------------------------- | ----------------------------------------------------------------------- |
 | Hiçbir thread'de current değil | Silme işaretlenir; kaynaklar en kısa sürede serbest bırakılabilir. |
-| Current draw veya read surface | `EGL_TRUE`; gerçek silme ertelenir. |
-| Geçersiz handle | `EGL_FALSE`, `EGL_BAD_SURFACE`. |
+| Current draw veya read surface   | `EGL_TRUE`; gerçek silme ertelenir.                                  |
+| Geçersiz handle                 | `EGL_FALSE`, `EGL_BAD_SURFACE`.                                     |
 
 ## Draw Surface ve Read Surface
 
@@ -79,7 +79,7 @@ Current surface destroy edildiğinde:
 5. İlgili thread'in sonraki geçerli `eglMakeCurrent` çağrısı eski binding'i kaldırır.
 6. Artık current olmayan surface'in gerçek silinmesi tamamlanabilir.
 
-Release için yaygın çağrı:
+**Release için yaygın çağrı:**
 
 ```c
 eglMakeCurrent(dpy,
@@ -123,27 +123,27 @@ Kesin sıralama platform entegrasyonunun kurallarına da bağlıdır.
 
 ## Window, Pixmap ve Pbuffer Farkı
 
-| Surface türü | Native nesne | Destroy sonrası ayrı cleanup |
-| --- | --- | --- |
-| Window | Native window vardır | Native window platform API'siyle yok edilir. |
-| Pixmap | Native pixmap vardır | Native pixmap platform API'siyle yok edilir. |
-| Pbuffer | Ayrı native pencere yoktur | EGL pbuffer kaynaklarını EGL yönetir. |
+| Surface türü | Native nesne                | Destroy sonrası ayrı cleanup               |
+| -------------- | --------------------------- | -------------------------------------------- |
+| Window         | Native window vardır       | Native window platform API'siyle yok edilir. |
+| Pixmap         | Native pixmap vardır       | Native pixmap platform API'siyle yok edilir. |
+| Pbuffer        | Ayrı native pencere yoktur | EGL pbuffer kaynaklarını EGL yönetir.     |
 
 `eglDestroySurface` üç surface türü için de aynı API'dir; fark,
 surface'in oluşturulma kaynağı ve native nesne sahipliğindedir.
 
 ## Dönüş Değeri ve Hatalar
 
-| Sonuç | Anlam |
-| --- | --- |
-| `EGL_TRUE` | Silme isteği kabul edildi; release ertelenmiş olabilir. |
-| `EGL_FALSE` | İşlem başarısız; `eglGetError` ile hata okunur. |
+| Sonuç        | Anlam                                                     |
+| ------------- | --------------------------------------------------------- |
+| `EGL_TRUE`  | Silme isteği kabul edildi; release ertelenmiş olabilir. |
+| `EGL_FALSE` | İşlem başarısız;`eglGetError` ile hata okunur.     |
 
-| Koşul | Hata |
-| --- | --- |
-| EGL `dpy` için initialize edilmemiş | `EGL_NOT_INITIALIZED` |
-| `dpy` geçerli display değil | `EGL_BAD_DISPLAY` |
-| `surface` geçerli rendering surface değil | `EGL_BAD_SURFACE` |
+| Koşul                                        | Hata                    |
+| --------------------------------------------- | ----------------------- |
+| EGL`dpy` için initialize edilmemiş        | `EGL_NOT_INITIALIZED` |
+| `dpy` geçerli display değil               | `EGL_BAD_DISPLAY`     |
+| `surface` geçerli rendering surface değil | `EGL_BAD_SURFACE`     |
 
 ## Temel Kullanım
 
