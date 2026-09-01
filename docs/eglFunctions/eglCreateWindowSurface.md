@@ -437,7 +437,3 @@ edilmelidir.
 - Native window türü EGL platformuna bağlıdır.
 - EGL 1.0 core'da `attrib_list` için tanımlı window attribute'u yoktur.
 - Surface oluşturmak context'i current yapmaz ve fiziksel sunumu tek başına gerçekleştirmez.
-
-## Kaynak
-
-- EGL 1.0 Specification, Section 3.5.1, Creating On-Screen Rendering Surfaces.

@@ -179,7 +179,3 @@ kullanılmasını önleyebilir.
 - Current context'in gerçek silinmesi sonraki geçerli `eglMakeCurrent` çağrısına ertelenir.
 - Release ve destroy farklı işlemlerdir.
 - Context, oluşturulduğu EGLDisplay ile birlikte kullanılmalıdır.
-
-## Kaynak
-
-- EGL 1.0 Specification, Section 3.6.2, Destroying Rendering Contexts.

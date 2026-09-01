@@ -328,9 +328,3 @@ eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
 - `EGL_NO_CONTEXT` sadece iki surface de `EGL_NO_SURFACE` ise geçerlidir.
 - Context veya surface başka thread'de bağlıysa `EGL_BAD_ACCESS` beklenir.
 - Surface/context format ve display açısından uyumsuzsa `EGL_BAD_MATCH` beklenir.
-
-## Kaynak
-
-Bağlama, uyumluluk, thread ve hata kuralları için Khronos'un
-[EGL 1.0 Specification](https://registry.khronos.org/EGL/specs/eglspec.1.0.pdf)
-belgesindeki 2.2 ve 3.6.3 bölümleri esas alınmıştır.
