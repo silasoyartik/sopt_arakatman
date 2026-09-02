@@ -89,7 +89,7 @@ void GS_EGL10_IN_INI_TP_002_init(void)
     }
     else
     {
-        /* The non-NULL output pointer shall still be updated. */
+        
         if (minor == -1)
         {
             TEST_LOG_FAIL(
@@ -142,7 +142,7 @@ void GS_EGL10_IN_INI_TP_002_init(void)
     }
     else
     {
-        /*  The non-NULL output pointer shall still be updated. */
+        
         if (major == -1)
         {
             TEST_LOG_FAIL(
