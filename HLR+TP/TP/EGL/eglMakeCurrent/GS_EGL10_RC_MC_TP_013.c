@@ -1,5 +1,5 @@
 #include <EGL/egl.h>
-#include "../../helper.h"
+#include "../../helpers.h"
 
 /* EGL10 - RenderingContexts - eglMakeCurrent
  * Covered requirement: GS-EGL10-RC-MC-013

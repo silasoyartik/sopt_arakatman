@@ -1,5 +1,5 @@
-#ifndef GS_EGL10_TEST_HELPER_H
-#define GS_EGL10_TEST_HELPER_H
+#ifndef GS_EGL10_TEST_HELPERS_H
+#define GS_EGL10_TEST_HELPERS_H
 
 #include <EGL/egl.h>
 #include "macros.h"

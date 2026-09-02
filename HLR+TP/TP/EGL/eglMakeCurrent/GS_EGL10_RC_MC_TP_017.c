@@ -1,6 +1,6 @@
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
-#include "../../helper.h"
+#include "../../helpers.h"
 
 /* EGL10 - RenderingContexts - eglMakeCurrent
  * Covered requirement: GS-EGL10-RC-MC-017

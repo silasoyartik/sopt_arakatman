@@ -1,5 +1,5 @@
 #include <EGL/egl.h>
-#include "../../helper.h"
+#include "../../helpers.h"
 
 /* EGL10 - BufferPosting - eglSwapBuffers
  * Covered requirement: GS-EGL10-BP-SB-004

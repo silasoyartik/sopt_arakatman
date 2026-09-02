@@ -1,5 +1,5 @@
 #include <EGL/egl.h>
-#include "../../helper.h"
+#include "../../helpers.h"
 
 #ifdef GS_EGL_USE_PTHREAD
 #include <pthread.h>
