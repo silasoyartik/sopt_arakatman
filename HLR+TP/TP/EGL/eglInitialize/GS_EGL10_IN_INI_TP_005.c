@@ -7,7 +7,8 @@ EGL10 - Initialization - Initialize
 
 The eglInitialize function shall return EGL_TRUE when dpy is
 already initialized, and the only effect of the call shall be
-to update each non-NULL EGL version output.
+to update the EGL version numbers through the provided version
+output parameters.
 
 Covered requirements:
     - GS-EGL10-IN-INI-008
@@ -131,7 +132,7 @@ void GS_EGL10_IN_INI_TP_005_init(void)
     }
 
 
-    /* The non-NULL version outputs shall be updated. */
+    /* The provided version outputs shall be updated. */
     if (second_major == -1)
     {
         TEST_LOG_FAIL(

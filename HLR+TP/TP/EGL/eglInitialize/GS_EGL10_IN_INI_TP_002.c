@@ -5,11 +5,13 @@
 /*
 EGL10 - Initialization - Initialize
 
-The eglInitialize function shall allow major and/or minor
-to be NULL and shall not write the corresponding EGL version
-number when an output pointer is NULL.
+The eglInitialize function shall allow major, minor, or both
+to be NULL without causing initialization to fail solely
+because an output pointer is NULL.
 
-Either output pointer may independently be NULL.
+A NULL output pointer is not updated. Each non-NULL output
+pointer shall receive the corresponding EGL version number
+on successful initialization.
 
 Covered requirements:
     - GS-EGL10-IN-INI-004
@@ -24,6 +26,7 @@ static const char* test_procedure =
 static EGLBoolean test_success = EGL_TRUE;
 
 static EGLDisplay display = EGL_NO_DISPLAY;
+static EGLBoolean initialized = EGL_FALSE;
 
 
 /* Initialization */
@@ -36,7 +39,7 @@ void GS_EGL10_IN_INI_TP_002_init(void)
     EGLint minor;
 
 
-    /* Obtain the EGLDisplay required by eglInitialize. */
+    /* Obtain an EGLDisplay required by eglInitialize. */
     display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
 
     if (display == EGL_NO_DISPLAY)
@@ -56,11 +59,13 @@ void GS_EGL10_IN_INI_TP_002_init(void)
         return;
     }
 
-    // Test Case 004
 
-    /* Case 1:
+    /* Case 1
      * major = NULL
      * minor = valid output pointer
+     * Expected:
+     *     - eglInitialize returns EGL_TRUE
+     *     - minor is updated
      */
 
     minor = -1;
@@ -89,14 +94,15 @@ void GS_EGL10_IN_INI_TP_002_init(void)
     }
     else
     {
-        
+        initialized = EGL_TRUE;
+
         if (minor == -1)
         {
             TEST_LOG_FAIL(
                 test_case,
                 test_procedure,
-                "Minor version was not updated when "
-                "major was NULL"
+                "Minor version was not updated when major "
+                "was NULL"
             );
 
             test_success = EGL_FALSE;
@@ -104,16 +110,20 @@ void GS_EGL10_IN_INI_TP_002_init(void)
     }
 
 
-    /* Return the display to the uninitialized state before testing the next input combination. */
-    if (result == EGL_TRUE)
+    /* Return the display to the uninitialized state before testing the next combination. */
+    if (initialized == EGL_TRUE)
     {
         eglTerminate(display);
+        initialized = EGL_FALSE;
     }
 
 
-    /* Case 2:
+    /* Case 2
      * major = valid output pointer
      * minor = NULL
+     * Expected:
+     *     - eglInitialize returns EGL_TRUE
+     *     - major is updated
      */
 
     major = -1;
@@ -142,14 +152,15 @@ void GS_EGL10_IN_INI_TP_002_init(void)
     }
     else
     {
-        
+        initialized = EGL_TRUE;
+
         if (major == -1)
         {
             TEST_LOG_FAIL(
                 test_case,
                 test_procedure,
-                "Major version was not updated when "
-                "minor was NULL"
+                "Major version was not updated when minor "
+                "was NULL"
             );
 
             test_success = EGL_FALSE;
@@ -157,15 +168,20 @@ void GS_EGL10_IN_INI_TP_002_init(void)
     }
 
 
-    if (result == EGL_TRUE)
+    /* Return the display to the uninitialized state before testing the next combination. */
+    if (initialized == EGL_TRUE)
     {
         eglTerminate(display);
+        initialized = EGL_FALSE;
     }
 
 
-    /* Case 3:
+    /* Case 3
      * major = NULL
      * minor = NULL
+     * Expected:
+     *     - eglInitialize returns EGL_TRUE
+     *     - no version output is requested
      */
 
     (void)eglGetError();
@@ -190,14 +206,19 @@ void GS_EGL10_IN_INI_TP_002_init(void)
 
         test_success = EGL_FALSE;
     }
+    else
+    {
+        initialized = EGL_TRUE;
+    }
 
 
-    /* Final result of TC_004. */
+    /* Final Test Result */
     if (test_success)
     {
         TEST_LOG_INFO(
             "eglInitialize accepted all required NULL "
-            "major/minor output combinations"
+            "major/minor combinations and updated each "
+            "provided version output"
         );
 
         TEST_LOG_SUCCESS(
@@ -212,10 +233,12 @@ void GS_EGL10_IN_INI_TP_002_draw(void) {
 }
 
 void GS_EGL10_IN_INI_TP_002_close(void) {
-    if (display != EGL_NO_DISPLAY)
+    if (initialized == EGL_TRUE &&
+        display != EGL_NO_DISPLAY)
     {
         eglTerminate(display);
     }
 
+    initialized = EGL_FALSE;
     display = EGL_NO_DISPLAY;
 }
