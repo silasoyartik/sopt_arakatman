@@ -1,7 +1,66 @@
 #include <stdio.h>
 #include <EGL/egl.h>
-#include <wayland-client.h>
 #include "macros.h"
+
+/* OPTIONAL PLATFORM ADAPTATION - WAYLAND EXAMPLE
+ *
+ * Define GS_EGL_USE_WAYLAND only if this test is executed
+ * on a Wayland-based platform.
+ *
+ * If the target system does not use Wayland, this section is
+ * not compiled. The target platform shall provide its own
+ * implementation of:
+ *
+ *     GS_EGL10_get_valid_native_display()
+ *     GS_EGL10_release_valid_native_display()
+ * 
+ */
+
+#ifdef GS_EGL_USE_WAYLAND
+
+#include <wayland-client.h>
+
+static struct wl_display *wayland_display = NULL;
+
+static EGLNativeDisplayType GS_EGL10_get_valid_native_display(void)
+{
+    wayland_display = wl_display_connect(NULL);
+
+    return (EGLNativeDisplayType)wayland_display;
+}
+
+static void GS_EGL10_release_valid_native_display(
+    EGLNativeDisplayType native_display)
+{
+    (void)native_display;
+
+    if (wayland_display != NULL)
+    {
+        wl_display_disconnect(wayland_display);
+        wayland_display = NULL;
+    }
+}
+
+#else
+
+/* PLATFORM-SPECIFIC IMPLEMENTATION REQUIRED
+ *
+ * The target platform shall provide a valid native display
+ * identifier that can be passed to eglGetDisplay().
+ *
+ * Example implementations may use the native display mechanism
+ * provided by the target operating system / window system.
+ */
+
+extern EGLNativeDisplayType
+GS_EGL10_get_valid_native_display(void);
+
+extern void
+GS_EGL10_release_valid_native_display(
+    EGLNativeDisplayType native_display);
+
+#endif
+
 
 /*
 EGL10 - Initialization - GetDisplay
@@ -14,46 +73,34 @@ Covered requirements:
     - GS-EGL10-IN-GD-002
 */
 
-static const char* test_case = "GS_EGL10_IN_GD_TC_002";
-static const char* test_procedure = "GS_EGL10_IN_GD_TP_002";
+static const char* test_case =
+    "GS_EGL10_IN_GD_TC_002";
+
+static const char* test_procedure =
+    "GS_EGL10_IN_GD_TP_002";
 
 static EGLBoolean test_success = EGL_TRUE;
 
-static struct wl_display* native_display = NULL;
+static EGLNativeDisplayType native_display;
 static EGLDisplay egl_display = EGL_NO_DISPLAY;
 
 
 /* Initialization */
 void GS_EGL10_IN_GD_TP_002_init(void)
 {
-    /* Obtain a valid native Wayland display. */
-    native_display = wl_display_connect(NULL);
-
-    if (native_display == NULL)
-    {
-        TEST_LOG_FAIL(
-            test_case,
-            test_procedure,
-            "wl_display_connect(NULL) failed; a valid native "
-            "Wayland display could not be obtained"
-        );
-
-        test_success = EGL_FALSE;
-        return;
-    }
-
-    TEST_LOG_INFO(
-        "Native Wayland display obtained: %p",
-        (void*)native_display
-    );
-
-
-    /* Request an EGLDisplay associated with the explicit native Wayland display. */
-    egl_display =
-        eglGetDisplay((EGLNativeDisplayType)native_display);
+    /* Obtain a valid native display from the target platform. */
+    native_display =
+        GS_EGL10_get_valid_native_display();
 
 
     // Test Case 002
+    
+    /* Pass the explicit native display identifier to eglGetDisplay(). */
+    egl_display =
+        eglGetDisplay(native_display);
+
+
+    /* A matching native display shall result in a valid EGLDisplay handle. */
     if (egl_display == EGL_NO_DISPLAY)
     {
         EGLint error = eglGetError();
@@ -84,17 +131,13 @@ void GS_EGL10_IN_GD_TP_002_init(void)
     }
 }
 
-
 void GS_EGL10_IN_GD_TP_002_draw(void) {
 
 }
 
-void GS_EGL10_IN_GD_TP_002_close(void) {
+void GS_EGL10_IN_GD_TP_002_close(void)
+{
     egl_display = EGL_NO_DISPLAY;
 
-    if (native_display != NULL)
-    {
-        wl_display_disconnect(native_display);
-        native_display = NULL;
-    }
+    GS_EGL10_release_valid_native_display(native_display);
 }
