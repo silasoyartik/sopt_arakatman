@@ -1,6 +1,6 @@
+#include <EGL/egl.h>
 #include <pthread.h>
 #include "../../macros.h"
-#include <EGL/egl.h>
 
 /*
 EGL10 - Errors - eglGetError
@@ -12,12 +12,62 @@ Covered requirement:
 static const char* test_case = "GS_EGL10_ER_GE_TC_004";
 static const char* test_procedure = "GS_EGL10_ER_GE_TP_004";
 
-static EGLDisplay display;
-static EGLSurface draw_surface;
-static EGLSurface read_surface;
-static EGLContext context;
-static EGLBoolean make_current_result;
-static EGLint worker_error;
+static EGLDisplay display = EGL_NO_DISPLAY;
+static EGLSurface surface = EGL_NO_SURFACE;
+static EGLContext context = EGL_NO_CONTEXT;
+static EGLBoolean make_current_result = EGL_FALSE;
+static EGLint worker_error = EGL_SUCCESS;
+
+static EGLBoolean create_test_objects(void) {
+    const EGLint config_attributes[] = {
+        EGL_SURFACE_TYPE, EGL_PBUFFER_BIT,
+        EGL_NONE
+    };
+    const EGLint surface_attributes[] = {
+        EGL_WIDTH, 1,
+        EGL_HEIGHT, 1,
+        EGL_NONE
+    };
+    EGLConfig config;
+    EGLint config_count = 0;
+
+    /*
+     * Create and initialize the display used only by this test procedure.
+     * No display, config, surface or context is expected from main.
+     */
+    display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if ((display == EGL_NO_DISPLAY) ||
+        (eglInitialize(display, NULL, NULL) == EGL_FALSE)) {
+        return EGL_FALSE;
+    }
+
+    /*
+     * Select a pbuffer-capable configuration and create a one-pixel surface.
+     * The small surface keeps the test fixture independent of a native window.
+     */
+    if ((eglChooseConfig(display, config_attributes, &config, 1,
+                         &config_count) == EGL_FALSE) ||
+        (config_count != 1)) {
+        return EGL_FALSE;
+    }
+
+    surface = eglCreatePbufferSurface(
+        display, config, surface_attributes);
+    if (surface == EGL_NO_SURFACE) {
+        return EGL_FALSE;
+    }
+
+    /*
+     * Create the context and keep it current in the test thread. The worker
+     * thread will attempt to access these same EGL objects.
+     */
+    context = eglCreateContext(display, config, EGL_NO_CONTEXT, NULL);
+    if (context == EGL_NO_CONTEXT) {
+        return EGL_FALSE;
+    }
+
+    return eglMakeCurrent(display, surface, surface, context);
+}
 
 static void* access_context_from_worker(void* argument) {
     (void)argument;
@@ -33,7 +83,7 @@ static void* access_context_from_worker(void* argument) {
      * The worker cannot access them and shall receive EGL_BAD_ACCESS.
      */
     make_current_result = eglMakeCurrent(
-        display, draw_surface, read_surface, context);
+        display, surface, surface, context);
     worker_error = eglGetError();
 
     return NULL;
@@ -44,20 +94,13 @@ void GS_EGL10_ER_GE_TP_004_init(void) {
     int thread_result;
 
     /*
-     * Obtain the EGL objects currently bound by the test framework. They must
-     * stay current in this thread while the worker attempts to bind them.
+     * Build every EGL object required by the test in this source file. The
+     * test does not depend on EGL initialization performed by main.
      */
-    display = eglGetCurrentDisplay();
-    draw_surface = eglGetCurrentSurface(EGL_DRAW);
-    read_surface = eglGetCurrentSurface(EGL_READ);
-    context = eglGetCurrentContext();
-
-    if ((display == EGL_NO_DISPLAY) ||
-        (draw_surface == EGL_NO_SURFACE) ||
-        (read_surface == EGL_NO_SURFACE) ||
-        (context == EGL_NO_CONTEXT)) {
+    if (create_test_objects() == EGL_FALSE) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "A current EGL display, surface and context are required");
+            "Could not create the EGL test objects, error: 0x%x",
+            eglGetError());
         return;
     }
 
@@ -100,5 +143,26 @@ void GS_EGL10_ER_GE_TP_004_draw(void) {
 }
 
 void GS_EGL10_ER_GE_TP_004_close(void) {
+    /*
+     * Release and destroy every EGL object created by this test procedure.
+     * Each handle is checked so partial initialization can also be cleaned up.
+     */
+    if (display != EGL_NO_DISPLAY) {
+        (void)eglMakeCurrent(
+            display, EGL_NO_SURFACE, EGL_NO_SURFACE, EGL_NO_CONTEXT);
+
+        if (context != EGL_NO_CONTEXT) {
+            (void)eglDestroyContext(display, context);
+            context = EGL_NO_CONTEXT;
+        }
+
+        if (surface != EGL_NO_SURFACE) {
+            (void)eglDestroySurface(display, surface);
+            surface = EGL_NO_SURFACE;
+        }
+
+        (void)eglTerminate(display);
+        display = EGL_NO_DISPLAY;
+    }
 
 }
