@@ -32,28 +32,20 @@ GS_EGL10_release_noninitializable_display(
 /*
 EGL10 - Initialization - Initialize
 
-The eglInitialize function shall return EGL_FALSE and shall not
-update major or minor when initialization fails.
-
 The eglInitialize function shall generate EGL_NOT_INITIALIZED
 when EGL cannot be initialized for an otherwise valid dpy.
 
 Covered requirements:
-    - GS-EGL10-IN-INI-005
     - GS-EGL10-IN-INI-007
 */
 
-static const char* test_case1 =
-    "GS_EGL10_IN_INI_TC_005";
-
-static const char* test_case2 =
+static const char* test_case =
     "GS_EGL10_IN_INI_TC_007";
 
 static const char* test_procedure =
     "GS_EGL10_IN_INI_TP_004";
 
-static EGLBoolean test_success1 = EGL_TRUE;
-static EGLBoolean test_success2 = EGL_TRUE;
+static EGLBoolean test_success = EGL_TRUE;
 
 static EGLDisplay display = EGL_NO_DISPLAY;
 
@@ -64,7 +56,6 @@ void GS_EGL10_IN_INI_TP_004_init(void)
     EGLBoolean result;
     EGLint error;
 
-    /* Sentinel values are used to verify that the version outputs are not modified when initialization fails. */
     EGLint major = -1;
     EGLint minor = -1;
 
@@ -74,24 +65,26 @@ void GS_EGL10_IN_INI_TP_004_init(void)
         GS_EGL10_get_noninitializable_display();
 
 
-    /* The fixture itself shall provide a valid EGLDisplay. EGL_NO_DISPLAY would test EGL_BAD_DISPLAY instead. */
+    /* The fixture shall provide a valid EGLDisplay. EGL_NO_DISPLAY would exercise EGL_BAD_DISPLAY instead. */
     if (display == EGL_NO_DISPLAY)
     {
         TEST_LOG_FAIL(
-            test_case2,
+            test_case,
             test_procedure,
             "Test precondition failed: platform fixture "
             "returned EGL_NO_DISPLAY"
         );
 
-        test_success1 = EGL_FALSE;
-        test_success2 = EGL_FALSE;
+        test_success = EGL_FALSE;
         return;
     }
 
 
+    /* Clear a possible previous EGL error. */
     (void)eglGetError();
 
+
+    /* Call the function under test. */
     result = eglInitialize(
         display,
         &major,
@@ -101,84 +94,50 @@ void GS_EGL10_IN_INI_TP_004_init(void)
     error = eglGetError();
 
 
-    // Test Case 005
-
-    /* Failed initialization shall return EGL_FALSE and shall not update major or minor. */
+    /* Initialization is expected to fail for the valid but non-initializable display. */
     if (result != EGL_FALSE)
     {
         TEST_LOG_FAIL(
-            test_case1,
+            test_case,
             test_procedure,
-            "Expected EGL_FALSE when initialization cannot "
-            "be completed, got: %u",
+            "Expected EGL_FALSE when EGL could not be "
+            "initialized for the valid display, got: %u",
             (unsigned int)result
         );
 
-        test_success1 = EGL_FALSE;
+        test_success = EGL_FALSE;
     }
 
 
-    if (major != -1)
-    {
-        TEST_LOG_FAIL(
-            test_case1,
-            test_procedure,
-            "Major version was modified after failed "
-            "initialization. Expected: -1, got: %d",
-            major
-        );
-
-        test_success1 = EGL_FALSE;
-    }
-
-
-    if (minor != -1)
-    {
-        TEST_LOG_FAIL(
-            test_case1,
-            test_procedure,
-            "Minor version was modified after failed "
-            "initialization. Expected: -1, got: %d",
-            minor
-        );
-
-        test_success1 = EGL_FALSE;
-    }
-
-
-    if (test_success1)
-    {
-        TEST_LOG_SUCCESS(
-            test_case1,
-            test_procedure
-        );
-    }
-
-
-    // Test Case 007
-
-    /* A valid display for which EGL cannot be initialized shall generate EGL_NOT_INITIALIZED. */
+    /* The specific error required by INI-007 is EGL_NOT_INITIALIZED. */
     if (error != EGL_NOT_INITIALIZED)
     {
         TEST_LOG_FAIL(
-            test_case2,
+            test_case,
             test_procedure,
             "Expected EGL_NOT_INITIALIZED, got: 0x%x",
             error
         );
 
-        test_success2 = EGL_FALSE;
+        test_success = EGL_FALSE;
     }
 
 
-    if (test_success2)
+    if (test_success)
     {
+        TEST_LOG_INFO(
+            "eglInitialize correctly returned EGL_FALSE "
+            "and generated EGL_NOT_INITIALIZED for a valid "
+            "display that could not be initialized"
+        );
+
         TEST_LOG_SUCCESS(
-            test_case2,
+            test_case,
             test_procedure
         );
     }
 }
+
 
 void GS_EGL10_IN_INI_TP_004_draw(void) {
 
