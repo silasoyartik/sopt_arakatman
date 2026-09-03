@@ -4,7 +4,7 @@
 /*
 EGL10 - RenderingContexts - eglCreateContext
 
-Verify that a NULL context attribute list is accepted.
+Verify that a NULL attribute list creates a context with EGL_NO_CONTEXT sharing.
 
 Covered requirements:
     - GS-EGL10-RC-CC-004
@@ -16,7 +16,7 @@ static const char* test_procedure = "GS_EGL10_RC_CC_TP_004";
 static EGLDisplay test_display = EGL_NO_DISPLAY;
 static EGLContext test_context = EGL_NO_CONTEXT;
 
-/* Creates a context without supplying an attribute list. */
+/* Uses EGL_NO_CONTEXT and no attribute list to create a context. */
 void GS_EGL10_RC_CC_TP_004_init(void) {
     EGLConfig config;
     EGLint config_count = 0;
