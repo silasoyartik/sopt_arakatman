@@ -13,17 +13,35 @@ Covered requirements:
 static const char* test_case = "GS_EGL10_IN_TER_TC_005";
 static const char* test_procedure = "GS_EGL10_IN_TER_TP_005";
 
-/* Terminates a valid display obtained without calling eglInitialize. */
+/* Establishes an uninitialized display state, then verifies termination. */
 void GS_EGL10_IN_TER_TP_005_init(void) {
     EGLDisplay display;
     EGLBoolean result;
     EGLint error;
 
-    /* Do not call eglInitialize: the display must remain uninitialized. */
     display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
     if (display == EGL_NO_DISPLAY) {
         TEST_LOG_FAIL(test_case, test_procedure,
             "Could not obtain a valid EGLDisplay, error: 0x%x", eglGetError());
+        return;
+    }
+
+    /*
+     * A successful termination leaves a valid display uninitialized. This
+     * establishes the TER-005 precondition independently of prior test state.
+     */
+    (void)eglGetError();
+    if (eglInitialize(display, NULL, NULL) != EGL_TRUE) {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "Could not initialize the EGLDisplay, error: 0x%x", eglGetError());
+        return;
+    }
+
+    (void)eglGetError();
+    if (eglTerminate(display) != EGL_TRUE) {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "Could not establish an uninitialized EGLDisplay, error: 0x%x",
+            eglGetError());
         return;
     }
 
