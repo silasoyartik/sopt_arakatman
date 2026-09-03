@@ -2,19 +2,19 @@
 #include "../../macros.h"
 
 /*
-EGL10 - RenderingContexts - eglDestroyContext
+EGL10 - RenderingSurfaces - eglDestroySurface
 
 Verify the EGL_BAD_DISPLAY result for an invalid EGLDisplay.
 
 Covered requirement:
-    - GS-EGL10-RC-DC-008
+    - GS-EGL10-RS-DS-007
 */
 
-static const char* test_case = "GS_EGL10_RC_DC_TC_008";
-static const char* test_procedure = "GS_EGL10_RC_DC_TP_008";
+static const char* test_case = "GS_EGL10_RS_DS_TC_007";
+static const char* test_procedure = "GS_EGL10_RS_DS_TP_007";
 
-/* Calls eglDestroyContext with the invalid EGL_NO_DISPLAY handle. */
-void GS_EGL10_RC_DC_TP_008_init(void) {
+/* Calls eglDestroySurface with the invalid EGL_NO_DISPLAY handle. */
+void GS_EGL10_RS_DS_TP_007_init(void) {
     EGLBoolean result;
     EGLint error;
 
@@ -23,7 +23,7 @@ void GS_EGL10_RC_DC_TP_008_init(void) {
      * No EGL setup is required because the display argument is under test.
      */
     (void)eglGetError();
-    result = eglDestroyContext(EGL_NO_DISPLAY, EGL_NO_CONTEXT);
+    result = eglDestroySurface(EGL_NO_DISPLAY, EGL_NO_SURFACE);
     error = eglGetError();
 
     if ((result != EGL_FALSE) || (error != EGL_BAD_DISPLAY)) {
@@ -37,11 +37,11 @@ void GS_EGL10_RC_DC_TP_008_init(void) {
 }
 
 /* No drawing is required for this invalid-display test. */
-void GS_EGL10_RC_DC_TP_008_draw(void) {
+void GS_EGL10_RS_DS_TP_007_draw(void) {
 
 }
 
 /* No EGL objects are created by this negative test. */
-void GS_EGL10_RC_DC_TP_008_close(void) {
+void GS_EGL10_RS_DS_TP_007_close(void) {
 
 }
