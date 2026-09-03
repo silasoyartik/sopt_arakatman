@@ -2,43 +2,42 @@
 #include "../../helpers.h"
 
 /* EGL10 - BufferPosting - eglSwapBuffers
- * Covered requirement: GS-EGL10-BP-SB-004
+ * Covered requirement: GS-EGL10-BP-SB-011
  */
-static const char* test_case = "GS_EGL10_BP_SB_TC_004";
-static const char* test_procedure = "GS_EGL10_BP_SB_TP_004";
+static const char* test_case = "GS_EGL10_BP_SB_TC_011";
+static const char* test_procedure = "GS_EGL10_BP_SB_TP_011";
 static EGLBoolean test_success = EGL_TRUE;
 static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 
-void GS_EGL10_BP_SB_TP_004_init(void)
+void GS_EGL10_BP_SB_TP_011_init(void)
 {
     EGLBoolean result;
     EGLint error;
 
-    if (!GS_EGL10_prepare_pbuffer_environment(&environment, 16, 16) ||
-        !GS_EGL10_make_environment_current(&environment))
+    if (!GS_EGL10_prepare_pbuffer_environment(&environment, 16, 16))
     {
         TEST_LOG_FAIL(test_case, test_procedure,
             "Setup failed, EGL error: 0x%x", eglGetError());
         return;
     }
 
-    // Test starts here: swap a valid current pbuffer surface.
+    // Test starts here: pass EGL_NO_DISPLAY.
     (void)eglGetError();
-    result = eglSwapBuffers(environment.display, environment.surface);
+    result = eglSwapBuffers(EGL_NO_DISPLAY, environment.surface);
     error = eglGetError();
 
-    if (result != EGL_TRUE || error != EGL_SUCCESS)
+    if (result != EGL_FALSE || error != EGL_BAD_DISPLAY)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Expected EGL_TRUE/EGL_SUCCESS, got %u/0x%x",
+            "Expected EGL_FALSE/EGL_BAD_DISPLAY, got %u/0x%x",
             (unsigned int)result, error);
         test_success = EGL_FALSE;
     }
 
     if (test_success) TEST_LOG_SUCCESS(test_case, test_procedure);
 }
-void GS_EGL10_BP_SB_TP_004_draw(void) { }
-void GS_EGL10_BP_SB_TP_004_close(void)
+void GS_EGL10_BP_SB_TP_011_draw(void) { }
+void GS_EGL10_BP_SB_TP_011_close(void)
 {
     GS_EGL10_cleanup_environment(&environment);
 }
