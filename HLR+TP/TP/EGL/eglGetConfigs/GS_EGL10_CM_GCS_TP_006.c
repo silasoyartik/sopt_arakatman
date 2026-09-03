@@ -9,21 +9,33 @@ static const char* test_procedure = "GS_EGL10_CM_GCS_TP_006";
 void GS_EGL10_CM_GCS_TP_006_init(void)
 {
     EGLDisplay display = eglGetCurrentDisplay();
-    EGLConfig guard = (EGLConfig)0;
-    EGLConfig initial_guard = guard;
+    EGLConfig output[2] = { (EGLConfig)0, (EGLConfig)0 };
+    EGLint total = 0;
     EGLint returned = -1;
     if (display == EGL_NO_DISPLAY) {
         TEST_LOG_FAIL(test_case, test_procedure, "An initialized current EGLDisplay is required");
         return;
     }
-    if (eglGetConfigs(display, &guard, 0, &returned) != EGL_TRUE) {
+
+    /* Establish that one element is insufficient for the available list. */
+    if ((eglGetConfigs(display, NULL, 0, &total) != EGL_TRUE) || (total < 2)) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Zero-capacity eglGetConfigs failed, error: 0x%x", eglGetError());
+            "At least two EGLConfigs are required to establish the capacity boundary");
         return;
     }
-    if ((returned != 0) || (guard != initial_guard)) {
+
+    /*
+     * output[1] immediately follows the one-element logical output buffer. A
+     * write to output[1] would prove that eglGetConfigs exceeded config_size.
+     */
+    if (eglGetConfigs(display, output, 1, &returned) != EGL_TRUE) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "eglGetConfigs wrote beyond its zero-element config buffer");
+            "One-element eglGetConfigs failed, error: 0x%x", eglGetError());
+        return;
+    }
+    if ((returned > 1) || (output[1] != (EGLConfig)0)) {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "eglGetConfigs wrote beyond its one-element config buffer");
         return;
     }
     TEST_LOG_SUCCESS(test_case, test_procedure);
