@@ -187,6 +187,74 @@ olmadan hazırlanabilir.
 `GS_EGL10_prepare_pbuffer_environment` context'i özellikle current yapmaz.
 Böylece current olmayan surface/context hata durumları da test edilebilir.
 
+### Platform test hook'ları
+
+Bazı testler yalnızca standart EGL çağrıları ve pbuffer helper'ları ile
+hazırlanamaz. Native window veya native pixmap oluşturmak, pencere içeriğinin
+gerçekten ekrana gönderildiğini gözlemek, native window'u yeniden boyutlandırmak
+ya da geçersiz hâle getirmek gibi işlemler hedef platformun API'sine bağlıdır.
+Bu testler platforma özel işlemleri `GS_EGL_PLATFORM_TEST_HOOKS` derleme
+makrosuyla korur:
+
+```c
+#ifdef GS_EGL_PLATFORM_TEST_HOOKS
+/* Platforma özel fixture ve kontroller. */
+#else
+/* Hook desteği yoksa test "Not applicable" olarak raporlanır. */
+#endif
+```
+
+`GS_EGL_PLATFORM_TEST_HOOKS`, EGL standardına veya `helpers.h` dosyasına ait
+hazır bir özellik değildir. Hedef platform için gerekli hook fonksiyonları
+gerçekten sağlandığında derleme sistemi tarafından tanımlanması gereken bir
+feature flag'dir. Örneğin GCC veya Clang ile:
+
+```sh
+cc -DGS_EGL_PLATFORM_TEST_HOOKS ...
+```
+
+Test dosyalarındaki `extern` ifadeleri hook fonksiyonlarını yalnızca bildirir;
+bu fonksiyonların gövdeleri bu repoda bulunmaz. Fonksiyonlar, testi hedef
+platformda çalıştıran kişi veya entegrasyonu hazırlayan ekip tarafından ayrı
+bir `.c` dosyasında platformun native API'leri kullanılarak yazılmalı ve test
+binary'sine linklenmelidir. Implementasyonlar sağlanmadan makro tanımlanırsa
+derleme tamamlanabilse bile link aşamasında `undefined reference` benzeri
+hatalar oluşur.
+
+Örneğin `GS_EGL10_BP_SB_TP_002` testi aşağıdaki hook'ları bekler:
+
+```c
+EGLBoolean GS_EGL10_prepare_current_window_surface(
+    EGLDisplay *display, EGLSurface *surface);
+EGLBoolean GS_EGL10_verify_window_content_posted(void);
+void GS_EGL10_cleanup_current_window_surface(void);
+```
+
+Bu fonksiyonların sorumlulukları şöyledir:
+
+1. `GS_EGL10_prepare_current_window_surface`, native window'u ve ona bağlı EGL
+   display, context ve window surface'i oluşturur; context'i current yapar ve
+   döndürülen `display` ile `surface` değerlerini doldurur.
+2. `GS_EGL10_verify_window_content_posted`, `eglSwapBuffers` sonrasında hazırlanan
+   içeriğin native window'a gerçekten gönderildiğini platforma uygun bir
+   yöntemle doğrular.
+3. `GS_EGL10_cleanup_current_window_surface`, hook tarafından oluşturulan bütün
+   native ve EGL kaynaklarını serbest bırakır.
+
+Bu kaynaklar ve başlangıç durumu birlikte test fixture'ını oluşturur. Hook'u
+yazan taraf fixture'ın bütün yaşam döngüsünden sorumludur: setup başarısızlığında
+kısmen oluşturulmuş kaynakları güvenle temizlemeli, başarılı setup sonrasında
+ise testin `close` çağrısıyla yaptığı cleanup'ı desteklemelidir. Testteki
+`fixture_prepared` değişkeni fixture'ın kendisi değil, setup'ın başarılı
+olduğunu ve cleanup hook'unun çağrılabileceğini gösteren bayraktır.
+
+Diğer platform bağımlı testler pixmap hazırlama ve değişmediğini doğrulama,
+native window'u yeniden boyutlandırma veya geçersizleştirme, implicit flush'ı
+gözleme ve belirli `eglMakeCurrent` hata koşullarını hazırlama gibi ek hook'lar
+bildirir. Aynı kural bunların tamamı için geçerlidir: ilgili test dosyasındaki
+`extern` imzası aynen implemente edilmeli; platform bu koşulu güvenilir biçimde
+hazırlayamıyor veya gözleyemiyorsa `GS_EGL_PLATFORM_TEST_HOOKS` tanımlanmamalıdır.
+
 ### Context'i current yapma
 
 Test önkoşulu current bir context gerektiriyorsa setup'tan sonra şu çağrı
