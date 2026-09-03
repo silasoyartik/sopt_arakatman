@@ -4,8 +4,8 @@
 /*
 EGL10 - RenderingContexts - eglGetCurrentContext
 
-Verify that eglGetCurrentContext returns EGL_NO_CONTEXT when the calling
-thread has no current context.
+Verify that eglGetCurrentContext returns EGL_NO_CONTEXT and generates no EGL
+error when the calling thread has no current context.
 
 Covered requirements:
     - GS-EGL10-RC-GCC-003
@@ -20,7 +20,7 @@ static EGLSurface framework_read_surface = EGL_NO_SURFACE;
 static EGLContext framework_context = EGL_NO_CONTEXT;
 static EGLBoolean context_detached = EGL_FALSE;
 
-/* Detaches the GBM/DRM/KMS context and verifies the no-context return value. */
+/* Detaches the context, then verifies the no-context and no-error results. */
 void GS_EGL10_RC_GCC_TP_003_init(void) {
     EGLContext current_context;
     EGLint error;
@@ -40,6 +40,10 @@ void GS_EGL10_RC_GCC_TP_003_init(void) {
         return;
     }
 
+    /*
+     * Precondition for GCC-003: a successful no-context eglMakeCurrent call
+     * leaves the calling thread with no current EGLContext.
+     */
     (void)eglGetError();
     if (eglMakeCurrent(framework_display, EGL_NO_SURFACE, EGL_NO_SURFACE,
             EGL_NO_CONTEXT) != EGL_TRUE) {
@@ -50,6 +54,7 @@ void GS_EGL10_RC_GCC_TP_003_init(void) {
     }
     context_detached = EGL_TRUE;
 
+    /* GCC-003: EGL_NO_CONTEXT is returned and this query is not an error. */
     (void)eglGetError();
     current_context = eglGetCurrentContext();
     error = eglGetError();
