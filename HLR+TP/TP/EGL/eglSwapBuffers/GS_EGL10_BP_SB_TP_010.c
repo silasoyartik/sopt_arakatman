@@ -14,22 +14,28 @@ void GS_EGL10_BP_SB_TP_010_init(void)
     EGLBoolean result;
     EGLint error;
 
-    if (!GS_EGL10_prepare_pbuffer_environment(&environment, 16, 16))
+    if (!GS_EGL10_prepare_pbuffer_environment(&environment, 16, 16) ||
+        !GS_EGL10_make_environment_current(&environment))
     {
         TEST_LOG_FAIL(test_case, test_procedure,
             "Setup failed, EGL error: 0x%x", eglGetError());
         return;
     }
 
-    // Test starts here: pass EGL_NO_DISPLAY.
+    (void)eglMakeCurrent(environment.display, EGL_NO_SURFACE,
+        EGL_NO_SURFACE, EGL_NO_CONTEXT);
+    (void)eglTerminate(environment.display);
+    environment.initialized = EGL_FALSE;
+
+    // Test starts here: swap on a valid but uninitialized display.
     (void)eglGetError();
-    result = eglSwapBuffers(EGL_NO_DISPLAY, environment.surface);
+    result = eglSwapBuffers(environment.display, environment.surface);
     error = eglGetError();
 
-    if (result != EGL_FALSE || error != EGL_BAD_DISPLAY)
+    if (result != EGL_FALSE || error != EGL_NOT_INITIALIZED)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Expected EGL_FALSE/EGL_BAD_DISPLAY, got %u/0x%x",
+            "Expected EGL_FALSE/EGL_NOT_INITIALIZED, got %u/0x%x",
             (unsigned int)result, error);
         test_success = EGL_FALSE;
     }
@@ -41,4 +47,3 @@ void GS_EGL10_BP_SB_TP_010_close(void)
 {
     GS_EGL10_cleanup_environment(&environment);
 }
-

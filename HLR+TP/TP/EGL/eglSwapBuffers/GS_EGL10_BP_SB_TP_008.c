@@ -7,61 +7,37 @@
 static const char* test_case = "GS_EGL10_BP_SB_TC_008";
 static const char* test_procedure = "GS_EGL10_BP_SB_TP_008";
 static EGLBoolean test_success = EGL_TRUE;
-
-#ifdef GS_EGL_PLATFORM_TEST_HOOKS
-static EGLBoolean fixture_prepared;
-static EGLDisplay display = EGL_NO_DISPLAY;
-static EGLSurface surface = EGL_NO_SURFACE;
-extern EGLBoolean GS_EGL10_prepare_current_window_surface(
-    EGLDisplay *display, EGLSurface *surface);
-extern EGLBoolean GS_EGL10_invalidate_native_window(void);
-extern void GS_EGL10_cleanup_current_window_surface(void);
-#endif
+static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 
 void GS_EGL10_BP_SB_TP_008_init(void)
 {
-#ifdef GS_EGL_PLATFORM_TEST_HOOKS
     EGLBoolean result;
     EGLint error;
 
-    fixture_prepared = GS_EGL10_prepare_current_window_surface(
-        &display, &surface);
-    if (!fixture_prepared || !GS_EGL10_invalidate_native_window())
+    if (!GS_EGL10_prepare_pbuffer_environment(&environment, 16, 16))
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Invalid native-window setup failed");
-        test_success = EGL_FALSE;
+            "Setup failed, EGL error: 0x%x", eglGetError());
         return;
     }
 
-    // Test starts here: swap the surface whose native window is invalid.
+    // Test starts here: the valid surface is deliberately not current.
     (void)eglGetError();
-    result = eglSwapBuffers(display, surface);
+    result = eglSwapBuffers(environment.display, environment.surface);
     error = eglGetError();
 
-    if (result != EGL_FALSE || error != EGL_BAD_NATIVE_WINDOW)
+    if (result != EGL_FALSE || error != EGL_BAD_SURFACE)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Expected EGL_FALSE/EGL_BAD_NATIVE_WINDOW, got %u/0x%x",
+            "Expected EGL_FALSE/EGL_BAD_SURFACE, got %u/0x%x",
             (unsigned int)result, error);
         test_success = EGL_FALSE;
     }
 
     if (test_success) TEST_LOG_SUCCESS(test_case, test_procedure);
-#else
-    (void)test_success;
-    TEST_LOG_INFO("[ %s ][ %s ] Not applicable: GS_EGL_PLATFORM_TEST_HOOKS is not enabled.",
-        test_case, test_procedure);
-#endif
 }
-
 void GS_EGL10_BP_SB_TP_008_draw(void) { }
-
 void GS_EGL10_BP_SB_TP_008_close(void)
 {
-#ifdef GS_EGL_PLATFORM_TEST_HOOKS
-    if (fixture_prepared)
-        GS_EGL10_cleanup_current_window_surface();
-#endif
+    GS_EGL10_cleanup_environment(&environment);
 }
-

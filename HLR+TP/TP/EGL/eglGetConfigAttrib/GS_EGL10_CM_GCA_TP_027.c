@@ -2,16 +2,16 @@
 #include "../../helpers.h"
 
 /* EGL10 - ConfigurationManagement - eglGetConfigAttrib
- * Covered requirement: GS-EGL10-CM-GCA-008
+ * Covered requirement: GS-EGL10-CM-GCA-027
  */
-static const char* test_case = "GS_EGL10_CM_GCA_TC_008";
-static const char* test_procedure = "GS_EGL10_CM_GCA_TP_008";
+static const char* test_case = "GS_EGL10_CM_GCA_TC_027";
+static const char* test_procedure = "GS_EGL10_CM_GCA_TP_027";
 static EGLBoolean test_success = EGL_TRUE;
 static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 
-void GS_EGL10_CM_GCA_TP_008_init(void)
+void GS_EGL10_CM_GCA_TP_027_init(void)
 {
-    EGLint value = (EGLint)0x5a5a5a5a;
+    EGLint value = -1;
     EGLBoolean result;
     EGLint error;
 
@@ -23,26 +23,29 @@ void GS_EGL10_CM_GCA_TP_008_init(void)
         return;
     }
 
-    // Test starts here: query EGL_CONFIG_ID.
+    (void)eglTerminate(environment.display);
+    environment.initialized = EGL_FALSE;
+
+    // Test starts here: exercise the not initialized condition.
     (void)eglGetError();
     result = eglGetConfigAttrib(environment.display, environment.config,
         EGL_CONFIG_ID, &value);
     error = eglGetError();
 
-    if (result != EGL_TRUE || error != EGL_SUCCESS || (value < 0))
+    if (result != EGL_FALSE || error != EGL_NOT_INITIALIZED)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "EGL_CONFIG_ID query returned %u/0x%x with value %d",
-            (unsigned int)result, error, value);
+            "Expected EGL_FALSE/EGL_NOT_INITIALIZED, got %u/0x%x",
+            (unsigned int)result, error);
         test_success = EGL_FALSE;
     }
 
     if (test_success) TEST_LOG_SUCCESS(test_case, test_procedure);
 }
 
-void GS_EGL10_CM_GCA_TP_008_draw(void) { }
+void GS_EGL10_CM_GCA_TP_027_draw(void) { }
 
-void GS_EGL10_CM_GCA_TP_008_close(void)
+void GS_EGL10_CM_GCA_TP_027_close(void)
 {
     GS_EGL10_cleanup_environment(&environment);
 }

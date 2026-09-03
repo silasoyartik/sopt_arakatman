@@ -3,54 +3,62 @@
 
 /* EGL10 - BufferPosting - eglSwapBuffers
  * Covered requirement: GS-EGL10-BP-SB-006
+ *
+ * This test needs implementation instrumentation that can observe glFlush.
  */
 static const char* test_case = "GS_EGL10_BP_SB_TC_006";
 static const char* test_procedure = "GS_EGL10_BP_SB_TP_006";
 static EGLBoolean test_success = EGL_TRUE;
-static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
+
+#ifdef GS_EGL_PLATFORM_TEST_HOOKS
+static EGLBoolean fixture_prepared;
+static EGLDisplay display = EGL_NO_DISPLAY;
+static EGLSurface surface = EGL_NO_SURFACE;
+extern EGLBoolean GS_EGL10_prepare_current_window_surface(
+    EGLDisplay *display, EGLSurface *surface);
+extern void GS_EGL10_begin_flush_observation(void);
+extern EGLBoolean GS_EGL10_implicit_flush_observed(void);
+extern void GS_EGL10_cleanup_current_window_surface(void);
+#endif
 
 void GS_EGL10_BP_SB_TP_006_init(void)
 {
-    EGLSurface invalid_surface;
-    EGLBoolean result;
-    EGLint error;
-    const EGLint attributes[] = { EGL_WIDTH, 8, EGL_HEIGHT, 8, EGL_NONE };
-
-    if (!GS_EGL10_prepare_pbuffer_environment(&environment, 16, 16))
+#ifdef GS_EGL_PLATFORM_TEST_HOOKS
+    fixture_prepared = GS_EGL10_prepare_current_window_surface(
+        &display, &surface);
+    if (!fixture_prepared)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Setup failed, EGL error: 0x%x", eglGetError());
+            "Instrumented window setup failed");
+        test_success = EGL_FALSE;
         return;
     }
 
-    invalid_surface = eglCreatePbufferSurface(environment.display,
-        environment.config, attributes);
-    if (invalid_surface == EGL_NO_SURFACE ||
-        eglDestroySurface(environment.display, invalid_surface) != EGL_TRUE)
+    GS_EGL10_begin_flush_observation();
+
+    // Test starts here: eglSwapBuffers shall issue an implicit glFlush.
+    if (eglSwapBuffers(display, surface) != EGL_TRUE ||
+        !GS_EGL10_implicit_flush_observed())
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Could not create an invalid surface handle");
-        return;
-    }
-
-    // Test starts here: swap a destroyed EGLSurface handle.
-    (void)eglGetError();
-    result = eglSwapBuffers(environment.display, invalid_surface);
-    error = eglGetError();
-
-    if (result != EGL_FALSE || error != EGL_BAD_SURFACE)
-    {
-        TEST_LOG_FAIL(test_case, test_procedure,
-            "Expected EGL_FALSE/EGL_BAD_SURFACE, got %u/0x%x",
-            (unsigned int)result, error);
+            "Implicit glFlush was not observed");
         test_success = EGL_FALSE;
     }
 
     if (test_success) TEST_LOG_SUCCESS(test_case, test_procedure);
-}
-void GS_EGL10_BP_SB_TP_006_draw(void) { }
-void GS_EGL10_BP_SB_TP_006_close(void)
-{
-    GS_EGL10_cleanup_environment(&environment);
+#else
+    (void)test_success;
+    TEST_LOG_INFO("[ %s ][ %s ] Not applicable: flush instrumentation is not enabled.",
+        test_case, test_procedure);
+#endif
 }
 
+void GS_EGL10_BP_SB_TP_006_draw(void) { }
+
+void GS_EGL10_BP_SB_TP_006_close(void)
+{
+#ifdef GS_EGL_PLATFORM_TEST_HOOKS
+    if (fixture_prepared)
+        GS_EGL10_cleanup_current_window_surface();
+#endif
+}

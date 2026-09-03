@@ -7,44 +7,60 @@
 static const char* test_case = "GS_EGL10_BP_SB_TC_009";
 static const char* test_procedure = "GS_EGL10_BP_SB_TP_009";
 static EGLBoolean test_success = EGL_TRUE;
-static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
+
+#ifdef GS_EGL_PLATFORM_TEST_HOOKS
+static EGLBoolean fixture_prepared;
+static EGLDisplay display = EGL_NO_DISPLAY;
+static EGLSurface surface = EGL_NO_SURFACE;
+extern EGLBoolean GS_EGL10_prepare_current_window_surface(
+    EGLDisplay *display, EGLSurface *surface);
+extern EGLBoolean GS_EGL10_invalidate_native_window(void);
+extern void GS_EGL10_cleanup_current_window_surface(void);
+#endif
 
 void GS_EGL10_BP_SB_TP_009_init(void)
 {
+#ifdef GS_EGL_PLATFORM_TEST_HOOKS
     EGLBoolean result;
     EGLint error;
 
-    if (!GS_EGL10_prepare_pbuffer_environment(&environment, 16, 16) ||
-        !GS_EGL10_make_environment_current(&environment))
+    fixture_prepared = GS_EGL10_prepare_current_window_surface(
+        &display, &surface);
+    if (!fixture_prepared || !GS_EGL10_invalidate_native_window())
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Setup failed, EGL error: 0x%x", eglGetError());
+            "Invalid native-window setup failed");
+        test_success = EGL_FALSE;
         return;
     }
 
-    (void)eglMakeCurrent(environment.display, EGL_NO_SURFACE,
-        EGL_NO_SURFACE, EGL_NO_CONTEXT);
-    (void)eglTerminate(environment.display);
-    environment.initialized = EGL_FALSE;
-
-    // Test starts here: swap on a valid but uninitialized display.
+    // Test starts here: swap the surface whose native window is invalid.
     (void)eglGetError();
-    result = eglSwapBuffers(environment.display, environment.surface);
+    result = eglSwapBuffers(display, surface);
     error = eglGetError();
 
-    if (result != EGL_FALSE || error != EGL_NOT_INITIALIZED)
+    if (result != EGL_FALSE || error != EGL_BAD_NATIVE_WINDOW)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Expected EGL_FALSE/EGL_NOT_INITIALIZED, got %u/0x%x",
+            "Expected EGL_FALSE/EGL_BAD_NATIVE_WINDOW, got %u/0x%x",
             (unsigned int)result, error);
         test_success = EGL_FALSE;
     }
 
     if (test_success) TEST_LOG_SUCCESS(test_case, test_procedure);
-}
-void GS_EGL10_BP_SB_TP_009_draw(void) { }
-void GS_EGL10_BP_SB_TP_009_close(void)
-{
-    GS_EGL10_cleanup_environment(&environment);
+#else
+    (void)test_success;
+    TEST_LOG_INFO("[ %s ][ %s ] Not applicable: GS_EGL_PLATFORM_TEST_HOOKS is not enabled.",
+        test_case, test_procedure);
+#endif
 }
 
+void GS_EGL10_BP_SB_TP_009_draw(void) { }
+
+void GS_EGL10_BP_SB_TP_009_close(void)
+{
+#ifdef GS_EGL_PLATFORM_TEST_HOOKS
+    if (fixture_prepared)
+        GS_EGL10_cleanup_current_window_surface();
+#endif
+}

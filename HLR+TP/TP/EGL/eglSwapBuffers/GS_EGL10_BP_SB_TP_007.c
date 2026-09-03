@@ -11,8 +11,10 @@ static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 
 void GS_EGL10_BP_SB_TP_007_init(void)
 {
+    EGLSurface invalid_surface;
     EGLBoolean result;
     EGLint error;
+    const EGLint attributes[] = { EGL_WIDTH, 8, EGL_HEIGHT, 8, EGL_NONE };
 
     if (!GS_EGL10_prepare_pbuffer_environment(&environment, 16, 16))
     {
@@ -21,9 +23,19 @@ void GS_EGL10_BP_SB_TP_007_init(void)
         return;
     }
 
-    // Test starts here: the valid surface is deliberately not current.
+    invalid_surface = eglCreatePbufferSurface(environment.display,
+        environment.config, attributes);
+    if (invalid_surface == EGL_NO_SURFACE ||
+        eglDestroySurface(environment.display, invalid_surface) != EGL_TRUE)
+    {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "Could not create an invalid surface handle");
+        return;
+    }
+
+    // Test starts here: swap a destroyed EGLSurface handle.
     (void)eglGetError();
-    result = eglSwapBuffers(environment.display, environment.surface);
+    result = eglSwapBuffers(environment.display, invalid_surface);
     error = eglGetError();
 
     if (result != EGL_FALSE || error != EGL_BAD_SURFACE)
@@ -41,4 +53,3 @@ void GS_EGL10_BP_SB_TP_007_close(void)
 {
     GS_EGL10_cleanup_environment(&environment);
 }
-

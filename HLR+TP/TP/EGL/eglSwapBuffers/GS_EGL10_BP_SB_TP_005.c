@@ -3,8 +3,6 @@
 
 /* EGL10 - BufferPosting - eglSwapBuffers
  * Covered requirement: GS-EGL10-BP-SB-005
- *
- * This test needs implementation instrumentation that can observe glFlush.
  */
 static const char* test_case = "GS_EGL10_BP_SB_TC_005";
 static const char* test_procedure = "GS_EGL10_BP_SB_TP_005";
@@ -16,39 +14,46 @@ static EGLDisplay display = EGL_NO_DISPLAY;
 static EGLSurface surface = EGL_NO_SURFACE;
 extern EGLBoolean GS_EGL10_prepare_current_window_surface(
     EGLDisplay *display, EGLSurface *surface);
-extern void GS_EGL10_begin_flush_observation(void);
-extern EGLBoolean GS_EGL10_implicit_flush_observed(void);
+extern EGLBoolean GS_EGL10_resize_native_window(
+    EGLint *expected_width, EGLint *expected_height);
 extern void GS_EGL10_cleanup_current_window_surface(void);
 #endif
 
 void GS_EGL10_BP_SB_TP_005_init(void)
 {
 #ifdef GS_EGL_PLATFORM_TEST_HOOKS
+    EGLint expected_width;
+    EGLint expected_height;
+    EGLint actual_width = -1;
+    EGLint actual_height = -1;
+
     fixture_prepared = GS_EGL10_prepare_current_window_surface(
         &display, &surface);
-    if (!fixture_prepared)
+    if (!fixture_prepared ||
+        !GS_EGL10_resize_native_window(&expected_width, &expected_height))
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Instrumented window setup failed");
+            "Native resize setup failed");
         test_success = EGL_FALSE;
         return;
     }
 
-    GS_EGL10_begin_flush_observation();
-
-    // Test starts here: eglSwapBuffers shall issue an implicit glFlush.
+    // Test starts here: swap shall synchronize surface and window dimensions.
     if (eglSwapBuffers(display, surface) != EGL_TRUE ||
-        !GS_EGL10_implicit_flush_observed())
+        eglQuerySurface(display, surface, EGL_WIDTH, &actual_width) != EGL_TRUE ||
+        eglQuerySurface(display, surface, EGL_HEIGHT, &actual_height) != EGL_TRUE ||
+        actual_width != expected_width || actual_height != expected_height)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Implicit glFlush was not observed");
+            "Surface size %dx%d, expected %dx%d",
+            actual_width, actual_height, expected_width, expected_height);
         test_success = EGL_FALSE;
     }
 
     if (test_success) TEST_LOG_SUCCESS(test_case, test_procedure);
 #else
     (void)test_success;
-    TEST_LOG_INFO("[ %s ][ %s ] Not applicable: flush instrumentation is not enabled.",
+    TEST_LOG_INFO("[ %s ][ %s ] Not applicable: GS_EGL_PLATFORM_TEST_HOOKS is not enabled.",
         test_case, test_procedure);
 #endif
 }
@@ -62,4 +67,3 @@ void GS_EGL10_BP_SB_TP_005_close(void)
         GS_EGL10_cleanup_current_window_surface();
 #endif
 }
-
