@@ -4,7 +4,7 @@
 /*
 EGL10 - RenderingContexts - eglCreateContext
 
-Verify that an attribute list beginning with EGL_NONE is accepted.
+Verify that an EGL_NONE-terminated empty attribute list creates a context.
 
 Covered requirements:
     - GS-EGL10-RC-CC-003
@@ -16,7 +16,7 @@ static const char* test_procedure = "GS_EGL10_RC_CC_TP_003";
 static EGLDisplay test_display = EGL_NO_DISPLAY;
 static EGLContext test_context = EGL_NO_CONTEXT;
 
-/* Creates a context using an empty EGL_NONE-terminated attribute list. */
+/* Uses EGL_NO_CONTEXT and an empty EGL_NONE-terminated attribute list. */
 void GS_EGL10_RC_CC_TP_003_init(void) {
     EGLConfig config;
     EGLint config_count = 0;

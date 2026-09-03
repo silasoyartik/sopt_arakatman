@@ -4,7 +4,7 @@
 /*
 EGL10 - RenderingContexts - eglCreateContext
 
-Verify that a valid, compatible share_context can be used to create a second
+Verify that a valid, compatible share_context creates a distinct second
 context.
 
 Covered requirements:
@@ -39,7 +39,7 @@ static EGLBoolean get_test_display_and_config(EGLConfig* config) {
     return EGL_TRUE;
 }
 
-/* Creates a source context and a second context that shares its state. */
+/* Creates a source context and a distinct context that shares its state. */
 void GS_EGL10_RC_CC_TP_002_init(void) {
     EGLConfig config;
     EGLint error;
@@ -67,6 +67,14 @@ void GS_EGL10_RC_CC_TP_002_init(void) {
         TEST_LOG_FAIL(test_case, test_procedure,
             "eglCreateContext failed with a valid compatible share_context, error: 0x%x",
             error);
+        return;
+    }
+
+    if (shared_context == source_context) {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "eglCreateContext returned share_context instead of a new EGLContext");
+        (void)eglDestroyContext(test_display, shared_context);
+        shared_context = EGL_NO_CONTEXT;
         return;
     }
 
