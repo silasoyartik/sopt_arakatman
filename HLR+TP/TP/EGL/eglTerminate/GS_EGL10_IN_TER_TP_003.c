@@ -4,7 +4,7 @@
 /*
 EGL10 - Initialization - eglTerminate
 
-Verify that a successfully terminated display is left uninitialized.
+Verify that an invalid EGLDisplay generates EGL_BAD_DISPLAY.
 
 Covered requirements:
     - GS-EGL10-IN-TER-003
@@ -13,60 +13,36 @@ Covered requirements:
 static const char* test_case = "GS_EGL10_IN_TER_TC_003";
 static const char* test_procedure = "GS_EGL10_IN_TER_TP_003";
 
-/* Terminates a display and verifies its subsequent uninitialized state. */
+/* Calls eglTerminate with EGL_NO_DISPLAY and verifies the reported error. */
 void GS_EGL10_IN_TER_TP_003_init(void) {
-    EGLDisplay display;
-    const char* query_result;
+    EGLBoolean result;
     EGLint error;
 
-    display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (display == EGL_NO_DISPLAY) {
-        TEST_LOG_FAIL(test_case, test_procedure,
-            "Could not obtain a valid EGLDisplay, error: 0x%x", eglGetError());
-        return;
-    }
-
     (void)eglGetError();
-    if (eglInitialize(display, NULL, NULL) != EGL_TRUE) {
-        TEST_LOG_FAIL(test_case, test_procedure,
-            "Could not initialize the EGLDisplay, error: 0x%x", eglGetError());
-        return;
-    }
-
-    (void)eglGetError();
-    if (eglTerminate(display) != EGL_TRUE) {
-        TEST_LOG_FAIL(test_case, test_procedure,
-            "Could not terminate the initialized EGLDisplay, error: 0x%x",
-            eglGetError());
-        return;
-    }
-
-    /* eglQueryString requires initialization and shall fail after termination. */
-    (void)eglGetError();
-    query_result = eglQueryString(display, EGL_VENDOR);
+    result = eglTerminate(EGL_NO_DISPLAY);
     error = eglGetError();
 
-    if (query_result != NULL) {
+    if (result != EGL_FALSE) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "eglQueryString unexpectedly returned data after eglTerminate");
+            "eglTerminate unexpectedly succeeded for EGL_NO_DISPLAY");
         return;
     }
 
-    if (error != EGL_NOT_INITIALIZED) {
+    if (error != EGL_BAD_DISPLAY) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Expected EGL_NOT_INITIALIZED after eglTerminate, got: 0x%x", error);
+            "Expected EGL_BAD_DISPLAY, got: 0x%x", error);
         return;
     }
 
     TEST_LOG_SUCCESS(test_case, test_procedure);
 }
 
-/* No drawing is required for this display-state test. */
+/* No drawing is required for this error-condition test. */
 void GS_EGL10_IN_TER_TP_003_draw(void) {
 
 }
 
-/* The test intentionally leaves the display in its terminated state. */
+/* No EGL objects are created by this negative test. */
 void GS_EGL10_IN_TER_TP_003_close(void) {
 
 }

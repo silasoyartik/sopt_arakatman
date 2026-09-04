@@ -1,5 +1,4 @@
 #include <EGL/egl.h>
-#include <stdlib.h>
 #include "../../macros.h"
 
 /* EGL10 - ConfigurationManagement - eglGetConfigs
@@ -10,36 +9,31 @@ static const char* test_procedure = "GS_EGL10_CM_GCS_TP_005";
 void GS_EGL10_CM_GCS_TP_005_init(void)
 {
     EGLDisplay display = eglGetCurrentDisplay();
-    EGLConfig* configs;
+    EGLConfig config;
     EGLint total = 0;
-    EGLint returned = 0;
-    EGLint value;
-    EGLint index;
-    if ((display == EGL_NO_DISPLAY) ||
-        (eglGetConfigs(display, NULL, 0, &total) != EGL_TRUE) || (total <= 0)) {
-        TEST_LOG_FAIL(test_case, test_procedure, "Could not establish a non-empty config list");
+    EGLint returned = -1;
+    EGLint expected_returned;
+
+    if (display == EGL_NO_DISPLAY) {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "An initialized current EGLDisplay is required");
         return;
     }
-    configs = (EGLConfig*)malloc((size_t)total * sizeof(EGLConfig));
-    if (configs == NULL) {
-        TEST_LOG_FAIL(test_case, test_procedure, "Could not allocate the EGLConfig buffer");
+
+    if ((eglGetConfigs(display, NULL, 0, &total) != EGL_TRUE) || (total < 0)) {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "Could not obtain a valid total EGLConfig count");
         return;
     }
-    if ((eglGetConfigs(display, configs, total, &returned) != EGL_TRUE) ||
-        (returned != total)) {
-        TEST_LOG_FAIL(test_case, test_procedure, "Could not return the complete EGLConfig list");
-        free(configs);
+
+    expected_returned = (total > 0) ? 1 : 0;
+    if ((eglGetConfigs(display, &config, 1, &returned) != EGL_TRUE) ||
+        (returned != expected_returned)) {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "num_config does not report the number of handles returned to the one-element buffer (got %d, expected %d)",
+            returned, expected_returned);
         return;
     }
-    for (index = 0; index < returned; ++index) {
-        if (eglGetConfigAttrib(display, configs[index], EGL_CONFIG_ID, &value) != EGL_TRUE) {
-            TEST_LOG_FAIL(test_case, test_procedure,
-                "Returned config at index %d is not valid, error: 0x%x", index, eglGetError());
-            free(configs);
-            return;
-        }
-    }
-    free(configs);
     TEST_LOG_SUCCESS(test_case, test_procedure);
 }
 void GS_EGL10_CM_GCS_TP_005_draw(void) {}

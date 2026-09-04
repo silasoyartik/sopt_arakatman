@@ -8,20 +8,26 @@ static const char* test_procedure = "GS_EGL10_CM_GCS_TP_007";
 
 void GS_EGL10_CM_GCS_TP_007_init(void)
 {
-    EGLDisplay display = eglGetCurrentDisplay();
-    EGLConfig config;
-    EGLint total = 0;
-    EGLint returned = -1;
-    if ((display == EGL_NO_DISPLAY) ||
-        (eglGetConfigs(display, NULL, 0, &total) != EGL_TRUE) || (total <= 0)) {
-        TEST_LOG_FAIL(test_case, test_procedure, "Could not obtain the total EGLConfig count");
+    EGLDisplay display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    EGLint count = -1;
+    EGLBoolean result;
+    EGLint error;
+    if (display == EGL_NO_DISPLAY) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Could not obtain EGL_DEFAULT_DISPLAY");
         return;
     }
-    if ((eglGetConfigs(display, &config, 1, &returned) != EGL_TRUE) ||
-        (returned != 1)) {
+    if ((eglInitialize(display, NULL, NULL) != EGL_TRUE) ||
+        (eglTerminate(display) != EGL_TRUE)) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "num_config does not report the one handle returned to the one-element buffer (got %d)",
-            returned);
+            "Could not establish an uninitialized EGLDisplay, error: 0x%x", eglGetError());
+        return;
+    }
+    (void)eglGetError();
+    result = eglGetConfigs(display, NULL, 0, &count);
+    error = eglGetError();
+    if ((result != EGL_FALSE) || (error != EGL_NOT_INITIALIZED)) {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "Expected EGL_FALSE and EGL_NOT_INITIALIZED, got result %d, error: 0x%x", result, error);
         return;
     }
     TEST_LOG_SUCCESS(test_case, test_procedure);

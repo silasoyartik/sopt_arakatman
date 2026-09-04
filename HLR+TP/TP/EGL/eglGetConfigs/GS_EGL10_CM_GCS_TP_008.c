@@ -8,15 +8,19 @@ static const char* test_procedure = "GS_EGL10_CM_GCS_TP_008";
 
 void GS_EGL10_CM_GCS_TP_008_init(void)
 {
-    EGLint count = -1;
+    EGLDisplay display = eglGetCurrentDisplay();
     EGLBoolean result;
     EGLint error;
+    if (display == EGL_NO_DISPLAY) {
+        TEST_LOG_FAIL(test_case, test_procedure, "An initialized current EGLDisplay is required");
+        return;
+    }
     (void)eglGetError();
-    result = eglGetConfigs(EGL_NO_DISPLAY, NULL, 0, &count);
+    result = eglGetConfigs(display, NULL, 0, NULL);
     error = eglGetError();
-    if ((result != EGL_FALSE) || (error != EGL_BAD_DISPLAY)) {
+    if ((result != EGL_FALSE) || (error != EGL_BAD_PARAMETER)) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Expected EGL_FALSE and EGL_BAD_DISPLAY, got result %d, error: 0x%x", result, error);
+            "Expected EGL_FALSE and EGL_BAD_PARAMETER, got result %d, error: 0x%x", result, error);
         return;
     }
     TEST_LOG_SUCCESS(test_case, test_procedure);

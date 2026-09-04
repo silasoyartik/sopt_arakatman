@@ -4,8 +4,8 @@
 /*
 EGL10 - RenderingContexts - eglGetCurrentContext
 
-Verify that eglGetCurrentContext returns the known EGLContext bound to the
-calling thread by a successful eglMakeCurrent call.
+Verify that eglGetCurrentContext returns the known EGLContext after it is
+successfully bound to the calling thread.
 
 Covered requirements:
     - GS-EGL10-RC-GCC-002
@@ -82,8 +82,8 @@ void GS_EGL10_RC_GCC_TP_002_init(void) {
     }
 
     /*
-     * Precondition for GCC-002: this successful call binds test_context to
-     * the calling thread.
+     * Precondition for GCC-002: the successful binding below makes
+     * test_context current to the calling thread.
      */
     if (eglMakeCurrent(framework_display, framework_draw_surface,
             framework_read_surface, test_context) != EGL_TRUE) {
