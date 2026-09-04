@@ -1,7 +1,7 @@
 #include <EGL/egl.h>
 #include <GLES2/gl2.h>
+#include "../../helpers.h"
 #include "../../macros.h"
-
 /*
 EGL10 - RenderingContexts - eglCreateContext
 
@@ -14,48 +14,23 @@ Covered requirements:
 
 static const char* test_case = "GS_EGL10_RC_CC_TC_007";
 static const char* test_procedure = "GS_EGL10_RC_CC_TP_007";
-
-static EGLDisplay framework_display = EGL_NO_DISPLAY;
-static EGLSurface framework_draw_surface = EGL_NO_SURFACE;
-static EGLSurface framework_read_surface = EGL_NO_SURFACE;
-static EGLContext framework_context = EGL_NO_CONTEXT;
+static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 static EGLContext source_context = EGL_NO_CONTEXT;
 static EGLContext shared_context = EGL_NO_CONTEXT;
-static EGLBoolean framework_binding_replaced = EGL_FALSE;
-
-/* Obtains the EGLConfig used by the current framework context. */
-static EGLBoolean get_framework_config(EGLConfig* config)
-{
-    EGLint config_id;
-    EGLint config_count = 0;
-    EGLint selected_attributes[] = {
-        EGL_CONFIG_ID, 0,
-        EGL_NONE
-    };
-
-    if (eglQueryContext(framework_display, framework_context, EGL_CONFIG_ID,
-            &config_id) != EGL_TRUE)
-    {
-        return EGL_FALSE;
-    }
-
-    selected_attributes[1] = config_id;
-    return (eglChooseConfig(framework_display, selected_attributes, config, 1,
-        &config_count) == EGL_TRUE) && (config_count == 1);
-}
+static EGLBoolean test_binding_active = EGL_FALSE;
 
 /* Creates two compatible contexts, with shared_context sharing source_context. */
-static EGLBoolean create_shared_contexts(EGLConfig config)
+static EGLBoolean create_shared_contexts(void)
 {
-    source_context = eglCreateContext(framework_display, config, EGL_NO_CONTEXT,
-        NULL);
+    source_context = eglCreateContext(environment.display, environment.config,
+        EGL_NO_CONTEXT, NULL);
     if (source_context == EGL_NO_CONTEXT)
     {
         return EGL_FALSE;
     }
 
-    shared_context = eglCreateContext(framework_display, config, source_context,
-        NULL);
+    shared_context = eglCreateContext(environment.display, environment.config,
+        source_context, NULL);
     return (shared_context != EGL_NO_CONTEXT) &&
         (shared_context != source_context);
 }
@@ -63,33 +38,26 @@ static EGLBoolean create_shared_contexts(EGLConfig config)
 /* Creates a texture in source_context and verifies it in shared_context. */
 void GS_EGL10_RC_CC_TP_007_init(void)
 {
-    EGLConfig config;
     GLuint texture = 0;
     GLenum gl_error;
 
-    framework_display = eglGetCurrentDisplay();
-    framework_draw_surface = eglGetCurrentSurface(EGL_DRAW);
-    framework_read_surface = eglGetCurrentSurface(EGL_READ);
-    framework_context = eglGetCurrentContext();
-
-    if ((framework_display == EGL_NO_DISPLAY) ||
-        (framework_draw_surface == EGL_NO_SURFACE) ||
-        (framework_read_surface == EGL_NO_SURFACE) ||
-        (framework_context == EGL_NO_CONTEXT))
+    if (GS_EGL10_prepare_pbuffer_environment(&environment, 16, 16) != EGL_TRUE)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "A current GBM/DRM/KMS EGL display, surfaces and context are required");
+            "Could not prepare the EGL pbuffer fixture, error: 0x%x",
+            eglGetError());
         return;
     }
 
-    if (get_framework_config(&config) != EGL_TRUE)
+    if (GS_EGL10_make_environment_current(&environment) != EGL_TRUE)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Could not obtain the framework EGLConfig, error: 0x%x", eglGetError());
+            "Could not make the helper fixture context current, error: 0x%x",
+            eglGetError());
         return;
     }
 
-    if (create_shared_contexts(config) != EGL_TRUE)
+    if (create_shared_contexts() != EGL_TRUE)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
             "Could not create compatible shared EGLContexts, error: 0x%x",
@@ -97,15 +65,14 @@ void GS_EGL10_RC_CC_TP_007_init(void)
         return;
     }
 
-    /* Create and bind the texture object while source_context is current. */
-    if (eglMakeCurrent(framework_display, framework_draw_surface,
-            framework_read_surface, source_context) != EGL_TRUE)
+    if (eglMakeCurrent(environment.display, environment.surface,
+            environment.surface, source_context) != EGL_TRUE)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
             "Could not make source_context current, error: 0x%x", eglGetError());
         return;
     }
-    framework_binding_replaced = EGL_TRUE;
+    test_binding_active = EGL_TRUE;
 
     (void)glGetError();
     glGenTextures(1, &texture);
@@ -121,8 +88,8 @@ void GS_EGL10_RC_CC_TP_007_init(void)
     }
 
     /* CC-007: the texture created above shall be visible in shared_context. */
-    if (eglMakeCurrent(framework_display, framework_draw_surface,
-            framework_read_surface, shared_context) != EGL_TRUE)
+    if (eglMakeCurrent(environment.display, environment.surface,
+            environment.surface, shared_context) != EGL_TRUE)
     {
         TEST_LOG_FAIL(test_case, test_procedure,
             "Could not make shared_context current, error: 0x%x", eglGetError());
@@ -146,33 +113,30 @@ void GS_EGL10_RC_CC_TP_007_draw(void)
 {
 }
 
-/* Restores the framework binding and destroys the test-owned contexts. */
+/* Restores the fixture binding and releases all test-owned contexts. */
 void GS_EGL10_RC_CC_TP_007_close(void)
 {
-    if ((framework_binding_replaced == EGL_TRUE) &&
-        (framework_display != EGL_NO_DISPLAY))
+    if ((test_binding_active == EGL_TRUE) &&
+        (environment.display != EGL_NO_DISPLAY))
     {
-        (void)eglMakeCurrent(framework_display, framework_draw_surface,
-            framework_read_surface, framework_context);
+        (void)eglMakeCurrent(environment.display, environment.surface,
+            environment.surface, environment.context);
     }
 
-    if ((framework_display != EGL_NO_DISPLAY) &&
+    if ((environment.display != EGL_NO_DISPLAY) &&
         (shared_context != EGL_NO_CONTEXT))
     {
-        (void)eglDestroyContext(framework_display, shared_context);
+        (void)eglDestroyContext(environment.display, shared_context);
     }
 
-    if ((framework_display != EGL_NO_DISPLAY) &&
+    if ((environment.display != EGL_NO_DISPLAY) &&
         (source_context != EGL_NO_CONTEXT))
     {
-        (void)eglDestroyContext(framework_display, source_context);
+        (void)eglDestroyContext(environment.display, source_context);
     }
 
-    framework_display = EGL_NO_DISPLAY;
-    framework_draw_surface = EGL_NO_SURFACE;
-    framework_read_surface = EGL_NO_SURFACE;
-    framework_context = EGL_NO_CONTEXT;
     source_context = EGL_NO_CONTEXT;
     shared_context = EGL_NO_CONTEXT;
-    framework_binding_replaced = EGL_FALSE;
+    test_binding_active = EGL_FALSE;
+    GS_EGL10_cleanup_environment(&environment);
 }
