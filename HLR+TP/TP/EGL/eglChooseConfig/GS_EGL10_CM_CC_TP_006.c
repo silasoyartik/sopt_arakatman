@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
 EGL10 - ConfigurationManagement - ChooseConfig
@@ -11,11 +11,11 @@ when the requested EGL_SURFACE_TYPE mask does not contain
 EGL_WINDOW_BIT or when no native visual types exist.
 
 Covered requirements:
-    - GS-EGL10-CM-CC-011
+    - GS-EGL10-CM-CC-019
 */
 
 static const char* test_case =
-    "GS_EGL10_CM_CC_TC_011";
+    "GS_EGL10_CM_CC_TC_019";
 
 static const char* test_procedure =
     "GS_EGL10_CM_CC_TP_006";
@@ -34,18 +34,9 @@ static EGLBoolean get_matching_count(
 {
     EGLBoolean result;
 
-    *count = -1;
-
     (void)eglGetError();
-
-    result = eglChooseConfig(
-        display,
-        attrib_list,
-        NULL,
-        0,
-        count
-    );
-
+    result = GS_EGL10_get_matching_config_count(
+        display, attrib_list, count);
     *error = eglGetError();
 
     return result;
@@ -581,12 +572,12 @@ void GS_EGL10_CM_CC_TP_006_init(void)
 
         TEST_LOG_INFO(
             "No native visual types detected; "
-            "second CC-011 condition was exercised"
+            "second CC-019 condition was exercised"
         );
     }
     else
     {
-        /* The second branch of CC-011 requires a target
+        /* The second branch of CC-019 requires a target
          * environment that has no native visual types.
          * The first branch has still been exercised above.
          */

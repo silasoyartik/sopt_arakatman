@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
 EGL10 - Initialization - GetDisplay

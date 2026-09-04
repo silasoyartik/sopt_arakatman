@@ -1,45 +1,45 @@
 #include <stdio.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
 EGL10 - ConfigurationManagement - ChooseConfig
 
 Covered requirements:
-    - GS-EGL10-CM-CC-015
-    - GS-EGL10-CM-CC-016
-    - GS-EGL10-CM-CC-017
-    - GS-EGL10-CM-CC-018
+    - GS-EGL10-CM-CC-023
+    - GS-EGL10-CM-CC-024
+    - GS-EGL10-CM-CC-025
+    - GS-EGL10-CM-CC-026
 
-TC_015:
+TC_023:
     eglChooseConfig shall return EGL_FALSE and generate
     EGL_BAD_ATTRIBUTE when attrib_list contains an undefined
     attribute or an unrecognized/out-of-range attribute value.
 
-TC_016:
+TC_024:
     eglChooseConfig shall return EGL_FALSE and generate
     EGL_NOT_INITIALIZED when EGL is not initialized on dpy.
 
-TC_017:
+TC_025:
     eglChooseConfig shall return EGL_FALSE and generate
     EGL_BAD_PARAMETER when num_config is NULL.
 
-TC_018:
+TC_026:
     eglChooseConfig shall return EGL_FALSE and generate
     EGL_BAD_DISPLAY when dpy is invalid.
 */
 
 static const char* test_case1 =
-    "GS_EGL10_CM_CC_TC_015";
+    "GS_EGL10_CM_CC_TC_023";
 
 static const char* test_case2 =
-    "GS_EGL10_CM_CC_TC_016";
+    "GS_EGL10_CM_CC_TC_024";
 
 static const char* test_case3 =
-    "GS_EGL10_CM_CC_TC_017";
+    "GS_EGL10_CM_CC_TC_025";
 
 static const char* test_case4 =
-    "GS_EGL10_CM_CC_TC_018";
+    "GS_EGL10_CM_CC_TC_026";
 
 static const char* test_procedure =
     "GS_EGL10_CM_CC_TP_010";
@@ -98,7 +98,7 @@ void GS_EGL10_CM_CC_TP_010_init(void)
     /* Initialize and then terminate the display deliberately.
      *
      * This leaves us with a valid EGLDisplay for which EGL
-     * is not initialized. That state is required by TC_016.
+     * is not initialized. That state is required by TC_024.
      */
     result = eglInitialize(
         display,
@@ -218,7 +218,7 @@ void GS_EGL10_CM_CC_TP_010_init(void)
 
 
     /* Reinitialize the valid display.
-     * TC_015 and TC_017 require an initialized EGLDisplay so
+     * TC_023 and TC_025 require an initialized EGLDisplay so
      * that the intended parameter error is isolated from
      * EGL_NOT_INITIALIZED.
      */
@@ -317,7 +317,7 @@ void GS_EGL10_CM_CC_TP_010_init(void)
     }
 
 
-    /* TC_015 - Subcase B
+    /* TC_023 - Subcase B
      * Use a valid EGL attribute with an invalid /
      * unrecognized value.
      * EGL_CONFIG_CAVEAT accepts defined caveat values.

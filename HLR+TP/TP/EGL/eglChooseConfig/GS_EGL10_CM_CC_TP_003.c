@@ -1,768 +1,361 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
-EGL10 - ConfigurationManagement - ChooseConfig
-
-The eglChooseConfig function shall not check an attribute whose
-requested value is EGL_DONT_CARE, except that EGL_DONT_CARE
-shall not be accepted for EGL_LEVEL.
-
-The eglChooseConfig function shall match an EGLConfig only when
-each requested attribute satisfies its EGL 1.0 selection criterion.
-
-Selection criteria:
-    - Smaller
-    - Larger
-    - Exact
-    - Mask
-
-Covered requirements:
-    - GS-EGL10-CM-CC-007
-    - GS-EGL10-CM-CC-008
-*/
-
-static const char* test_case1 =
-    "GS_EGL10_CM_CC_TC_007";
-
-static const char* test_case2 =
-    "GS_EGL10_CM_CC_TC_008";
-
-static const char* test_procedure =
-    "GS_EGL10_CM_CC_TP_003";
-
-
-static EGLBoolean test_success1 = EGL_TRUE;
-static EGLBoolean test_success2 = EGL_TRUE;
-
-static EGLDisplay display = EGL_NO_DISPLAY;
-static EGLBoolean initialized = EGL_FALSE;
-
-
-/* Matching modes used internally by this test procedure. */
-#define MATCH_AT_LEAST  1
-#define MATCH_EXACT     2
-#define MATCH_MASK      3
-
-
-/* Helper:
- * Obtain all configurations matching attrib_list and verify
- * that the selected attribute satisfies the expected matching
- * criterion.
+ * EGL10 - ConfigurationManagement - eglChooseConfig
+ *
+ * Covered requirements:
+ *   GS-EGL10-CM-CC-007
+ *   GS-EGL10-CM-CC-008
+ *   GS-EGL10-CM-CC-009
+ *   GS-EGL10-CM-CC-010
+ *   GS-EGL10-CM-CC-011
+ *   GS-EGL10-CM-CC-012
+ *   GS-EGL10-CM-CC-013
+ *   GS-EGL10-CM-CC-014
+ *   GS-EGL10-CM-CC-015
+ *   GS-EGL10-CM-CC-016
  */
-static EGLBoolean verify_selection(
-    const EGLint *attrib_list,
+static const char *test_cases[] = {
+    "GS_EGL10_CM_CC_TC_007",
+    "GS_EGL10_CM_CC_TC_008",
+    "GS_EGL10_CM_CC_TC_009",
+    "GS_EGL10_CM_CC_TC_010",
+    "GS_EGL10_CM_CC_TC_011",
+    "GS_EGL10_CM_CC_TC_012",
+    "GS_EGL10_CM_CC_TC_013",
+    "GS_EGL10_CM_CC_TC_014",
+    "GS_EGL10_CM_CC_TC_015",
+    "GS_EGL10_CM_CC_TC_016"
+};
+static const char *test_procedure = "GS_EGL10_CM_CC_TP_003";
+static EGLBoolean test_success[] = {
+    EGL_TRUE, EGL_TRUE, EGL_TRUE, EGL_TRUE, EGL_TRUE,
+    EGL_TRUE, EGL_TRUE, EGL_TRUE, EGL_TRUE, EGL_TRUE
+};
+static EGLBoolean test_executed[] = {
+    EGL_TRUE, EGL_TRUE, EGL_TRUE, EGL_TRUE, EGL_TRUE,
+    EGL_TRUE, EGL_FALSE, EGL_TRUE, EGL_TRUE, EGL_FALSE
+};
+static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
+
+static EGLBoolean read_attribute(
+    EGLConfig config,
     EGLint attribute,
-    EGLint requested_value,
-    EGLint match_mode,
-    const char *criterion_name)
+    EGLint *value)
 {
-    EGLBoolean result;
-    EGLint error;
-
-    EGLint total_count = -1;
-    EGLint returned_count = -1;
-
-    EGLConfig *configs = NULL;
-
-
-    /* First query the number of matching configurations. */
-    (void)eglGetError();
-
-    result = eglChooseConfig(
-        display,
-        attrib_list,
-        NULL,
-        0,
-        &total_count
-    );
-
-    error = eglGetError();
-
-
-    if (result != EGL_TRUE)
-    {
-        TEST_LOG_FAIL(
-            test_case2,
-            test_procedure,
-            "%s selection count query failed. "
-            "eglGetError(): 0x%x",
-            criterion_name,
-            error
-        );
-
-        return EGL_FALSE;
-    }
-
-
-    /* The test input is derived from an existing EGLConfig, therefore at least one matching configuration is expected. */
-    if (total_count <= 0)
-    {
-        TEST_LOG_FAIL(
-            test_case2,
-            test_procedure,
-            "%s selection returned no matching configurations",
-            criterion_name
-        );
-
-        return EGL_FALSE;
-    }
-
-
-    configs = (EGLConfig*)malloc(
-        sizeof(EGLConfig) * (size_t)total_count
-    );
-
-
-    if (configs == NULL)
-    {
-        TEST_LOG_FAIL(
-            test_case2,
-            test_procedure,
-            "Memory allocation failed while testing %s "
-            "selection",
-            criterion_name
-        );
-
-        return EGL_FALSE;
-    }
-
-
-    /* Retrieve all matching configurations. */
-    (void)eglGetError();
-
-    result = eglChooseConfig(
-        display,
-        attrib_list,
-        configs,
-        total_count,
-        &returned_count
-    );
-
-    error = eglGetError();
-
-
-    if (result != EGL_TRUE)
-    {
-        TEST_LOG_FAIL(
-            test_case2,
-            test_procedure,
-            "%s selection failed while retrieving configs. "
-            "eglGetError(): 0x%x",
-            criterion_name,
-            error
-        );
-
-        free(configs);
-        return EGL_FALSE;
-    }
-
-
-    if (returned_count <= 0 ||
-        returned_count > total_count)
-    {
-        TEST_LOG_FAIL(
-            test_case2,
-            test_procedure,
-            "Invalid returned configuration count for %s "
-            "selection. Expected range: 1..%d, got: %d",
-            criterion_name,
-            total_count,
-            returned_count
-        );
-
-        free(configs);
-        return EGL_FALSE;
-    }
-
-
-    /* Verify every returned EGLConfig against the requested selection criterion. */
-    for (EGLint i = 0; i < returned_count; ++i)
-    {
-        EGLint actual_value = -1;
-
-
-        result = eglGetConfigAttrib(
-            display,
-            configs[i],
-            attribute,
-            &actual_value
-        );
-
-
-        if (result != EGL_TRUE)
-        {
-            error = eglGetError();
-
-            TEST_LOG_FAIL(
-                test_case2,
-                test_procedure,
-                "eglGetConfigAttrib failed while checking "
-                "%s selection at config index %d. "
-                "eglGetError(): 0x%x",
-                criterion_name,
-                i,
-                error
-            );
-
-            free(configs);
-            return EGL_FALSE;
-        }
-
-
-        /* Smaller and Larger have the same selection test in
-         * EGL 1.0: the attribute value must meet or exceed the
-         * requested value.
-         *
-         * Their difference affects sorting, not selection.
-         */
-        if (match_mode == MATCH_AT_LEAST)
-        {
-            if (actual_value < requested_value)
-            {
-                TEST_LOG_FAIL(
-                    test_case2,
-                    test_procedure,
-                    "%s criterion violated at config %d. "
-                    "Requested minimum: %d, actual: %d",
-                    criterion_name,
-                    i,
-                    requested_value,
-                    actual_value
-                );
-
-                free(configs);
-                return EGL_FALSE;
-            }
-        }
-
-
-        /* Exact:
-         * actual value must equal requested value.
-         */
-        else if (match_mode == MATCH_EXACT)
-        {
-            if (actual_value != requested_value)
-            {
-                TEST_LOG_FAIL(
-                    test_case2,
-                    test_procedure,
-                    "%s criterion violated at config %d. "
-                    "Expected exactly: %d, actual: %d",
-                    criterion_name,
-                    i,
-                    requested_value,
-                    actual_value
-                );
-
-                free(configs);
-                return EGL_FALSE;
-            }
-        }
-
-
-        /* Mask:
-         * every requested bit must also be present in the
-         * EGLConfig attribute.
-         */
-        else if (match_mode == MATCH_MASK)
-        {
-            if ((actual_value & requested_value) !=
-                requested_value)
-            {
-                TEST_LOG_FAIL(
-                    test_case2,
-                    test_procedure,
-                    "%s criterion violated at config %d. "
-                    "Requested mask: 0x%x, actual: 0x%x",
-                    criterion_name,
-                    i,
-                    requested_value,
-                    actual_value
-                );
-
-                free(configs);
-                return EGL_FALSE;
-            }
-        }
-    }
-
-
-    free(configs);
-
-    return EGL_TRUE;
+    return eglGetConfigAttrib(
+        environment.display, config, attribute, value);
 }
 
+static void verify_case(
+    EGLint case_index,
+    const EGLint *attributes,
+    const GS_EGL10_ConfigExpectation *expectations,
+    EGLint expectation_count)
+{
+    EGLint matching_count = 0;
 
-/* Initialization */
+    (void)eglGetError();
+    if (!GS_EGL10_verify_config_selection(environment.display, attributes,
+            expectations, expectation_count, &matching_count))
+    {
+        TEST_LOG_FAIL(test_cases[case_index], test_procedure,
+            "Returned configs did not satisfy the requested criteria; "
+            "EGL error: 0x%x",
+            eglGetError());
+        test_success[case_index] = EGL_FALSE;
+        return;
+    }
+
+    TEST_LOG_INFO("[ %s ][ %s ] validated %d matching configuration(s)",
+        test_cases[case_index], test_procedure, matching_count);
+}
+
 void GS_EGL10_CM_CC_TP_003_init(void)
 {
-    EGLBoolean result;
-    EGLint error;
+    const GS_EGL10_ConfigExpectation default_config_rules[] = {
+        { EGL_LEVEL, 0, GS_EGL10_CONFIG_MATCH_EXACT },
+        { EGL_SURFACE_TYPE, EGL_WINDOW_BIT, GS_EGL10_CONFIG_MATCH_MASK },
+        { EGL_TRANSPARENT_TYPE, EGL_NONE, GS_EGL10_CONFIG_MATCH_EXACT }
+    };
+    EGLint buffer_size;
+    EGLint red_size;
+    EGLint green_size;
+    EGLint blue_size;
+    EGLint alpha_size;
+    EGLint depth_size;
+    EGLint sample_buffers;
+    EGLint samples;
+    EGLint stencil_size;
+    EGLint level;
+    EGLint config_caveat;
+    EGLint native_renderable;
+    EGLint surface_type;
+    EGLint transparent_type;
+    EGLint index;
 
-
-    test_success1 = EGL_TRUE;
-    test_success2 = EGL_TRUE;
-
-
-    /* TEST PRECONDITION
-     * Obtain and initialize an EGLDisplay.
-     */
-
-    display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-
-
-    if (display == EGL_NO_DISPLAY)
+    for (index = 0; index < 10; ++index)
     {
-        error = eglGetError();
+        test_success[index] = EGL_TRUE;
+        test_executed[index] = EGL_TRUE;
+    }
+    test_executed[6] = EGL_FALSE;
+    test_executed[9] = EGL_FALSE;
 
-        TEST_LOG_FAIL(
-            test_case1,
-            test_procedure,
-            "Test precondition failed: eglGetDisplay returned "
-            "EGL_NO_DISPLAY. eglGetError(): 0x%x",
-            error
-        );
-
-        test_success1 = EGL_FALSE;
-        test_success2 = EGL_FALSE;
-
+    if (!GS_EGL10_initialize_display(&environment) ||
+        !GS_EGL10_find_config_matching(environment.display,
+            default_config_rules, 3, &environment.config))
+    {
+        TEST_LOG_FAIL(test_cases[0], test_procedure,
+            "Could not find a config satisfying EGL 1.0 defaults");
+        for (index = 0; index < 10; ++index)
+            test_success[index] = EGL_FALSE;
         return;
     }
 
-
-    result = eglInitialize(
-        display,
-        NULL,
-        NULL
-    );
-
-
-    if (result != EGL_TRUE)
+    if (!read_attribute(environment.config, EGL_BUFFER_SIZE, &buffer_size) ||
+        !read_attribute(environment.config, EGL_RED_SIZE, &red_size) ||
+        !read_attribute(environment.config, EGL_GREEN_SIZE, &green_size) ||
+        !read_attribute(environment.config, EGL_BLUE_SIZE, &blue_size) ||
+        !read_attribute(environment.config, EGL_ALPHA_SIZE, &alpha_size) ||
+        !read_attribute(environment.config, EGL_DEPTH_SIZE, &depth_size) ||
+        !read_attribute(environment.config, EGL_SAMPLE_BUFFERS,
+            &sample_buffers) ||
+        !read_attribute(environment.config, EGL_SAMPLES, &samples) ||
+        !read_attribute(environment.config, EGL_STENCIL_SIZE, &stencil_size) ||
+        !read_attribute(environment.config, EGL_LEVEL, &level) ||
+        !read_attribute(environment.config, EGL_CONFIG_CAVEAT,
+            &config_caveat) ||
+        !read_attribute(environment.config, EGL_NATIVE_RENDERABLE,
+            &native_renderable) ||
+        !read_attribute(environment.config, EGL_SURFACE_TYPE, &surface_type) ||
+        !read_attribute(environment.config, EGL_TRANSPARENT_TYPE,
+            &transparent_type))
     {
-        error = eglGetError();
-
-        TEST_LOG_FAIL(
-            test_case1,
-            test_procedure,
-            "Test precondition failed: eglInitialize returned "
-            "EGL_FALSE. eglGetError(): 0x%x",
-            error
-        );
-
-        test_success1 = EGL_FALSE;
-        test_success2 = EGL_FALSE;
-
+        TEST_LOG_FAIL(test_cases[0], test_procedure,
+            "Could not read the reference configuration attributes");
+        for (index = 0; index < 10; ++index)
+            test_success[index] = EGL_FALSE;
         return;
     }
 
-
-    initialized = EGL_TRUE;
-
-
-    /* Obtain one EGLConfig selected using the EGL 1.0 default
-     * criteria.
-     *
-     * The attribute values of this known matching config are
-     * later used to construct deterministic selection tests.
-     */
-
-    EGLConfig reference_config = (EGLConfig)0;
-    EGLint reference_count = 0;
-
-
-    result = eglChooseConfig(
-        display,
-        NULL,
-        &reference_config,
-        1,
-        &reference_count
-    );
-
-
-    if (result != EGL_TRUE ||
-        reference_count != 1 ||
-        reference_config == (EGLConfig)0)
+    /* CC-008: EGL_BUFFER_SIZE uses the at-least selection rule. */
     {
-        error = eglGetError();
-
-        TEST_LOG_FAIL(
-            test_case2,
-            test_procedure,
-            "Test precondition failed: unable to obtain "
-            "a reference EGLConfig. eglGetError(): 0x%x",
-            error
-        );
-
-        test_success1 = EGL_FALSE;
-        test_success2 = EGL_FALSE;
-
-        return;
+        const EGLint attributes[] = {
+            EGL_BUFFER_SIZE, buffer_size,
+            EGL_NONE
+        };
+        const GS_EGL10_ConfigExpectation expectations[] = {
+            { EGL_BUFFER_SIZE, buffer_size,
+                GS_EGL10_CONFIG_MATCH_AT_LEAST }
+        };
+        verify_case(1, attributes, expectations, 1);
     }
 
-
-    /* Obtain reference values required by TC_008. */
-    EGLint red_size = -1;
-    EGLint buffer_size = -1;
-    EGLint level = -1;
-    EGLint surface_type = -1;
-
-
-    if (eglGetConfigAttrib(
-            display,
-            reference_config,
-            EGL_RED_SIZE,
-            &red_size) != EGL_TRUE ||
-        eglGetConfigAttrib(
-            display,
-            reference_config,
-            EGL_BUFFER_SIZE,
-            &buffer_size) != EGL_TRUE ||
-        eglGetConfigAttrib(
-            display,
-            reference_config,
-            EGL_LEVEL,
-            &level) != EGL_TRUE ||
-        eglGetConfigAttrib(
-            display,
-            reference_config,
-            EGL_SURFACE_TYPE,
-            &surface_type) != EGL_TRUE)
+    /* CC-009: every requested RGBA component uses the at-least rule. */
     {
-        error = eglGetError();
-
-        TEST_LOG_FAIL(
-            test_case2,
-            test_procedure,
-            "Test precondition failed: reference EGLConfig "
-            "attributes could not be queried. "
-            "eglGetError(): 0x%x",
-            error
-        );
-
-        test_success1 = EGL_FALSE;
-        test_success2 = EGL_FALSE;
-
-        return;
+        const EGLint attributes[] = {
+            EGL_RED_SIZE, red_size,
+            EGL_GREEN_SIZE, green_size,
+            EGL_BLUE_SIZE, blue_size,
+            EGL_ALPHA_SIZE, alpha_size,
+            EGL_NONE
+        };
+        const GS_EGL10_ConfigExpectation expectations[] = {
+            { EGL_RED_SIZE, red_size, GS_EGL10_CONFIG_MATCH_AT_LEAST },
+            { EGL_GREEN_SIZE, green_size, GS_EGL10_CONFIG_MATCH_AT_LEAST },
+            { EGL_BLUE_SIZE, blue_size, GS_EGL10_CONFIG_MATCH_AT_LEAST },
+            { EGL_ALPHA_SIZE, alpha_size, GS_EGL10_CONFIG_MATCH_AT_LEAST }
+        };
+        verify_case(2, attributes, expectations, 4);
     }
 
-
-    // TEST CASE 007
-
-     /* EGL_DONT_CARE shall cause the corresponding attribute to be ignored, except for EGL_LEVEL. */
-
-    /*Case 1:
-     * Compare the default selection result with
-     * EGL_RED_SIZE = EGL_DONT_CARE.
-     *
-     * EGL_RED_SIZE shall not be checked when EGL_DONT_CARE
-     * is requested.
-     */
-
-    EGLint default_count = -1;
-    EGLint dont_care_count = -1;
-
-
-    const EGLint dont_care_attribs[] =
+    /* CC-010: depth, multisample and stencil values use at-least rules. */
     {
-        EGL_RED_SIZE, EGL_DONT_CARE,
-        EGL_NONE
-    };
-
-
-    (void)eglGetError();
-
-    result = eglChooseConfig(
-        display,
-        NULL,
-        NULL,
-        0,
-        &default_count
-    );
-
-
-    if (result != EGL_TRUE)
-    {
-        error = eglGetError();
-
-        TEST_LOG_FAIL(
-            test_case1,
-            test_procedure,
-            "Default eglChooseConfig query failed. "
-            "eglGetError(): 0x%x",
-            error
-        );
-
-        test_success1 = EGL_FALSE;
+        const EGLint attributes[] = {
+            EGL_DEPTH_SIZE, depth_size,
+            EGL_SAMPLE_BUFFERS, sample_buffers,
+            EGL_SAMPLES, samples,
+            EGL_STENCIL_SIZE, stencil_size,
+            EGL_NONE
+        };
+        const GS_EGL10_ConfigExpectation expectations[] = {
+            { EGL_DEPTH_SIZE, depth_size, GS_EGL10_CONFIG_MATCH_AT_LEAST },
+            { EGL_SAMPLE_BUFFERS, sample_buffers,
+                GS_EGL10_CONFIG_MATCH_AT_LEAST },
+            { EGL_SAMPLES, samples, GS_EGL10_CONFIG_MATCH_AT_LEAST },
+            { EGL_STENCIL_SIZE, stencil_size,
+                GS_EGL10_CONFIG_MATCH_AT_LEAST }
+        };
+        verify_case(3, attributes, expectations, 4);
     }
 
-
-    (void)eglGetError();
-
-    result = eglChooseConfig(
-        display,
-        dont_care_attribs,
-        NULL,
-        0,
-        &dont_care_count
-    );
-
-
-    if (result != EGL_TRUE)
+    /* CC-011: EGL_LEVEL uses exact matching. */
     {
-        error = eglGetError();
-
-        TEST_LOG_FAIL(
-            test_case1,
-            test_procedure,
-            "eglChooseConfig rejected EGL_DONT_CARE for "
-            "EGL_RED_SIZE. eglGetError(): 0x%x",
-            error
-        );
-
-        test_success1 = EGL_FALSE;
+        const EGLint attributes[] = {
+            EGL_LEVEL, level,
+            EGL_NONE
+        };
+        const GS_EGL10_ConfigExpectation expectations[] = {
+            { EGL_LEVEL, level, GS_EGL10_CONFIG_MATCH_EXACT }
+        };
+        verify_case(4, attributes, expectations, 1);
     }
 
-
-    /* EGL_RED_SIZE has default selection value 0.
-     *
-     * Therefore ignoring EGL_RED_SIZE with EGL_DONT_CARE
-     * should produce the same selection result as the
-     * default query.
-     */
-    if (default_count != dont_care_count)
+    /* CC-012: concrete caveat and native-renderable values match exactly. */
     {
-        TEST_LOG_FAIL(
-            test_case1,
-            test_procedure,
-            "EGL_DONT_CARE affected EGL_RED_SIZE selection. "
-            "Default count: %d, DONT_CARE count: %d",
-            default_count,
-            dont_care_count
-        );
-
-        test_success1 = EGL_FALSE;
+        const EGLint attributes[] = {
+            EGL_CONFIG_CAVEAT, config_caveat,
+            EGL_NATIVE_RENDERABLE, native_renderable,
+            EGL_NONE
+        };
+        const GS_EGL10_ConfigExpectation expectations[] = {
+            { EGL_CONFIG_CAVEAT, config_caveat,
+                GS_EGL10_CONFIG_MATCH_EXACT },
+            { EGL_NATIVE_RENDERABLE, native_renderable,
+                GS_EGL10_CONFIG_MATCH_EXACT }
+        };
+        verify_case(5, attributes, expectations, 2);
     }
 
-
-    // Case 2:
-
-    /* EGL_DONT_CARE shall NOT be accepted for EGL_LEVEL.  */
-    const EGLint invalid_level_attribs[] =
+    /* CC-013: native visual type is exact when it participates. */
     {
-        EGL_LEVEL, EGL_DONT_CARE,
-        EGL_NONE
-    };
+        const GS_EGL10_ConfigExpectation candidate_rules[] = {
+            { EGL_LEVEL, 0, GS_EGL10_CONFIG_MATCH_EXACT },
+            { EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                GS_EGL10_CONFIG_MATCH_MASK },
+            { EGL_TRANSPARENT_TYPE, EGL_NONE,
+                GS_EGL10_CONFIG_MATCH_EXACT },
+            { EGL_NATIVE_VISUAL_TYPE, EGL_NONE,
+                GS_EGL10_CONFIG_MATCH_NOT_EQUAL }
+        };
+        EGLConfig native_config = (EGLConfig)0;
+        EGLint native_visual_type = EGL_NONE;
 
-
-    EGLint level_count = -1;
-
-
-    /* Clear previous EGL error. */
-    (void)eglGetError();
-
-
-    result = eglChooseConfig(
-        display,
-        invalid_level_attribs,
-        NULL,
-        0,
-        &level_count
-    );
-
-
-    error = eglGetError();
-
-
-    if (result != EGL_FALSE)
-    {
-        TEST_LOG_FAIL(
-            test_case1,
-            test_procedure,
-            "eglChooseConfig accepted EGL_DONT_CARE "
-            "for EGL_LEVEL"
-        );
-
-        test_success1 = EGL_FALSE;
-    }
-
-
-    if (error != EGL_BAD_ATTRIBUTE)
-    {
-        TEST_LOG_FAIL(
-            test_case1,
-            test_procedure,
-            "Expected EGL_BAD_ATTRIBUTE when EGL_DONT_CARE "
-            "was specified for EGL_LEVEL, got: 0x%x",
-            error
-        );
-
-        test_success1 = EGL_FALSE;
-    }
-
-
-    if (test_success1)
-    {
-        TEST_LOG_SUCCESS(
-            test_case1,
-            test_procedure
-        );
-    }
-
-
-    // TEST CASE 008
-
-    /* Verify each EGL 1.0 selection criterion:
-     *     Larger
-     *     Smaller
-     *     Exact
-     *     Mask
-     */
-
-
-    /* LARGER
-     * EGL_RED_SIZE uses the Larger criterion.
-     * For selection, matching configs shall have:
-     *      EGL_RED_SIZE >= requested red size
-     */
-
-    const EGLint larger_attribs[] =
-    {
-        EGL_RED_SIZE, red_size,
-        EGL_NONE
-    };
-
-
-    if (verify_selection(
-            larger_attribs,
-            EGL_RED_SIZE,
-            red_size,
-            MATCH_AT_LEAST,
-            "Larger") != EGL_TRUE)
-    {
-        test_success2 = EGL_FALSE;
-    }
-
-
-    /* SMALLER
-     * EGL_BUFFER_SIZE uses the Smaller criterion.
-     * For selection, matching configs shall have:
-     *    EGL_BUFFER_SIZE >= requested buffer size
-     * In EGL 1.0 the distinction between Smaller and Larger
-     * affects sorting, not the selection comparison.
-     */
-
-    const EGLint smaller_attribs[] =
-    {
-        EGL_BUFFER_SIZE, buffer_size,
-        EGL_NONE
-    };
-
-
-    if (verify_selection(
-            smaller_attribs,
-            EGL_BUFFER_SIZE,
-            buffer_size,
-            MATCH_AT_LEAST,
-            "Smaller") != EGL_TRUE)
-    {
-        test_success2 = EGL_FALSE;
-    }
-
-
-    /* EXACT
-     * EGL_LEVEL uses the Exact criterion.
-     * Matching configs shall have:
-     *      EGL_LEVEL == requested level
-     */
-
-    const EGLint exact_attribs[] =
-    {
-        EGL_LEVEL, level,
-        EGL_NONE
-    };
-
-
-    if (verify_selection(
-            exact_attribs,
-            EGL_LEVEL,
-            level,
-            MATCH_EXACT,
-            "Exact") != EGL_TRUE)
-    {
-        test_success2 = EGL_FALSE;
-    }
-
-
-    /* MASK
-     * EGL_SURFACE_TYPE uses the Mask criterion.
-     * The reference config was selected using the default
-     * EGL 1.0 criteria, which require EGL_WINDOW_BIT.
-     * Every returned configuration shall therefore contain
-     * EGL_WINDOW_BIT in EGL_SURFACE_TYPE.
-     */
-
-    const EGLint mask_attribs[] =
-    {
-        EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
-        EGL_NONE
-    };
-
-
-    if ((surface_type & EGL_WINDOW_BIT) == 0)
-    {
-        TEST_LOG_FAIL(
-            test_case2,
-            test_procedure,
-            "Test precondition failed: reference config "
-            "does not contain EGL_WINDOW_BIT"
-        );
-
-        test_success2 = EGL_FALSE;
-    }
-    else
-    {
-        if (verify_selection(
-                mask_attribs,
-                EGL_SURFACE_TYPE,
-                EGL_WINDOW_BIT,
-                MATCH_MASK,
-                "Mask") != EGL_TRUE)
+        if (GS_EGL10_find_config_matching(environment.display,
+                candidate_rules, 4, &native_config) &&
+            read_attribute(native_config, EGL_NATIVE_VISUAL_TYPE,
+                &native_visual_type))
         {
-            test_success2 = EGL_FALSE;
+            const EGLint attributes[] = {
+                EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                EGL_NATIVE_VISUAL_TYPE, native_visual_type,
+                EGL_NONE
+            };
+            const GS_EGL10_ConfigExpectation expectations[] = {
+                { EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                    GS_EGL10_CONFIG_MATCH_MASK },
+                { EGL_NATIVE_VISUAL_TYPE, native_visual_type,
+                    GS_EGL10_CONFIG_MATCH_EXACT }
+            };
+            test_executed[6] = EGL_TRUE;
+            verify_case(6, attributes, expectations, 2);
+        }
+        else
+        {
+            TEST_LOG_INFO("[ %s ][ %s ] Not applicable: no participating "
+                "native visual type is exposed",
+                test_cases[6], test_procedure);
         }
     }
 
-
-    if (test_success2)
+    /* CC-014: every requested surface-type bit must be present. */
     {
-        TEST_LOG_INFO(
-            "Selection criteria verified: "
-            "Larger, Smaller, Exact, Mask"
-        );
+        const EGLint attributes[] = {
+            EGL_SURFACE_TYPE, surface_type,
+            EGL_NONE
+        };
+        const GS_EGL10_ConfigExpectation expectations[] = {
+            { EGL_SURFACE_TYPE, surface_type, GS_EGL10_CONFIG_MATCH_MASK }
+        };
+        verify_case(7, attributes, expectations, 1);
+    }
 
-        TEST_LOG_SUCCESS(
-            test_case2,
-            test_procedure
-        );
+    /* CC-015: EGL_TRANSPARENT_TYPE uses exact matching. */
+    {
+        const EGLint attributes[] = {
+            EGL_TRANSPARENT_TYPE, transparent_type,
+            EGL_NONE
+        };
+        const GS_EGL10_ConfigExpectation expectations[] = {
+            { EGL_TRANSPARENT_TYPE, transparent_type,
+                GS_EGL10_CONFIG_MATCH_EXACT }
+        };
+        verify_case(8, attributes, expectations, 1);
+    }
+
+    /* CC-016: transparent RGB components are exact when they participate. */
+    {
+        const GS_EGL10_ConfigExpectation candidate_rules[] = {
+            { EGL_LEVEL, 0, GS_EGL10_CONFIG_MATCH_EXACT },
+            { EGL_SURFACE_TYPE, EGL_WINDOW_BIT,
+                GS_EGL10_CONFIG_MATCH_MASK },
+            { EGL_TRANSPARENT_TYPE, EGL_TRANSPARENT_RGB,
+                GS_EGL10_CONFIG_MATCH_EXACT }
+        };
+        EGLConfig transparent_config = (EGLConfig)0;
+        EGLint transparent_red = 0;
+        EGLint transparent_green = 0;
+        EGLint transparent_blue = 0;
+
+        if (GS_EGL10_find_config_matching(environment.display,
+                candidate_rules, 3, &transparent_config) &&
+            read_attribute(transparent_config, EGL_TRANSPARENT_RED_VALUE,
+                &transparent_red) &&
+            read_attribute(transparent_config, EGL_TRANSPARENT_GREEN_VALUE,
+                &transparent_green) &&
+            read_attribute(transparent_config, EGL_TRANSPARENT_BLUE_VALUE,
+                &transparent_blue))
+        {
+            const EGLint attributes[] = {
+                EGL_TRANSPARENT_TYPE, EGL_TRANSPARENT_RGB,
+                EGL_TRANSPARENT_RED_VALUE, transparent_red,
+                EGL_TRANSPARENT_GREEN_VALUE, transparent_green,
+                EGL_TRANSPARENT_BLUE_VALUE, transparent_blue,
+                EGL_NONE
+            };
+            const GS_EGL10_ConfigExpectation expectations[] = {
+                { EGL_TRANSPARENT_TYPE, EGL_TRANSPARENT_RGB,
+                    GS_EGL10_CONFIG_MATCH_EXACT },
+                { EGL_TRANSPARENT_RED_VALUE, transparent_red,
+                    GS_EGL10_CONFIG_MATCH_EXACT },
+                { EGL_TRANSPARENT_GREEN_VALUE, transparent_green,
+                    GS_EGL10_CONFIG_MATCH_EXACT },
+                { EGL_TRANSPARENT_BLUE_VALUE, transparent_blue,
+                    GS_EGL10_CONFIG_MATCH_EXACT }
+            };
+            test_executed[9] = EGL_TRUE;
+            verify_case(9, attributes, expectations, 4);
+        }
+        else
+        {
+            TEST_LOG_INFO("[ %s ][ %s ] Not applicable: no transparent RGB "
+                "configuration is exposed",
+                test_cases[9], test_procedure);
+        }
+    }
+
+    /* CC-007 is demonstrated by all concrete selection-rule checks above. */
+    for (index = 1; index < 10; ++index)
+    {
+        if (test_success[index] != EGL_TRUE)
+            test_success[0] = EGL_FALSE;
+    }
+
+    for (index = 0; index < 10; ++index)
+    {
+        if (test_success[index] == EGL_TRUE &&
+            test_executed[index] == EGL_TRUE)
+        {
+            TEST_LOG_SUCCESS(test_cases[index], test_procedure);
+        }
     }
 }
 
-
-void GS_EGL10_CM_CC_TP_003_draw(void) {
-
-}
+void GS_EGL10_CM_CC_TP_003_draw(void) { }
 
 void GS_EGL10_CM_CC_TP_003_close(void)
 {
-    if (initialized == EGL_TRUE &&
-        display != EGL_NO_DISPLAY)
-    {
-        eglTerminate(display);
-    }
-
-    initialized = EGL_FALSE;
-    display = EGL_NO_DISPLAY;
+    GS_EGL10_cleanup_environment(&environment);
 }

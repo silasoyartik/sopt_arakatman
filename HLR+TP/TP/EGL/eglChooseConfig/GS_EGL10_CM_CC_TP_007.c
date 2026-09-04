@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
 EGL10 - ConfigurationManagement - ChooseConfig
@@ -13,11 +13,11 @@ EGL_TRANSPARENT_BLUE_VALUE
 when EGL_TRANSPARENT_TYPE is requested as EGL_NONE.
 
 Covered requirements:
-    - GS-EGL10-CM-CC-012
+    - GS-EGL10-CM-CC-020
 */
 
 static const char* test_case =
-    "GS_EGL10_CM_CC_TC_012";
+    "GS_EGL10_CM_CC_TC_020";
 
 static const char* test_procedure =
     "GS_EGL10_CM_CC_TP_007";
@@ -36,18 +36,9 @@ static EGLBoolean get_matching_count(
 {
     EGLBoolean result;
 
-    *count = -1;
-
     (void)eglGetError();
-
-    result = eglChooseConfig(
-        display,
-        attrib_list,
-        NULL,
-        0,
-        count
-    );
-
+    result = GS_EGL10_get_matching_config_count(
+        display, attrib_list, count);
     *error = eglGetError();
 
     return result;

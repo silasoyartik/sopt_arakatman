@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
 EGL10 - ConfigurationManagement - ChooseConfig
@@ -10,11 +10,11 @@ than EGL_CONFIG_ID when EGL_CONFIG_ID is specified and shall
 return only the EGLConfig having the requested ID when it exists.
 
 Covered requirements:
-    - GS-EGL10-CM-CC-009
+    - GS-EGL10-CM-CC-017
 */
 
 static const char* test_case =
-    "GS_EGL10_CM_CC_TC_009";
+    "GS_EGL10_CM_CC_TC_017";
 
 static const char* test_procedure =
     "GS_EGL10_CM_CC_TP_004";

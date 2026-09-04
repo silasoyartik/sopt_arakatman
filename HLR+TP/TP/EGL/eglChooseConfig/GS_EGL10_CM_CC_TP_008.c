@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
 EGL10 - ConfigurationManagement - ChooseConfig
@@ -12,11 +12,11 @@ num_config to zero when no EGLConfig matches attrib_list.
 Absence of a matching EGLConfig is not a function failure.
 
 Covered requirements:
-    - GS-EGL10-CM-CC-013
+    - GS-EGL10-CM-CC-021
 */
 
 static const char* test_case =
-    "GS_EGL10_CM_CC_TC_013";
+    "GS_EGL10_CM_CC_TC_021";
 
 static const char* test_procedure =
     "GS_EGL10_CM_CC_TP_008";

@@ -1,244 +1,115 @@
-#include <stdio.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
-EGL10 - Initialization - Initialize
+ * EGL10 - Initialization - eglInitialize
+ *
+ * Covered requirements:
+ *   GS-EGL10-IN-INI-003
+ *   GS-EGL10-IN-INI-004
+ */
+static const char *test_case1 = "GS_EGL10_IN_INI_TC_003";
+static const char *test_case2 = "GS_EGL10_IN_INI_TC_004";
+static const char *test_procedure = "GS_EGL10_IN_INI_TP_002";
+static EGLBoolean test_success1 = EGL_TRUE;
+static EGLBoolean test_success2 = EGL_TRUE;
+static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 
-The eglInitialize function shall allow major, minor, or both
-to be NULL without causing initialization to fail solely
-because an output pointer is NULL.
+static EGLBoolean terminate_between_cases(void)
+{
+    if (environment.initialized == EGL_TRUE)
+    {
+        if (eglTerminate(environment.display) != EGL_TRUE)
+        {
+            return EGL_FALSE;
+        }
+        environment.initialized = EGL_FALSE;
+    }
+    return EGL_TRUE;
+}
 
-A NULL output pointer is not updated. Each non-NULL output
-pointer shall receive the corresponding EGL version number
-on successful initialization.
-
-Covered requirements:
-    - GS-EGL10-IN-INI-004
-*/
-
-static const char* test_case =
-    "GS_EGL10_IN_INI_TC_004";
-
-static const char* test_procedure =
-    "GS_EGL10_IN_INI_TP_002";
-
-static EGLBoolean test_success = EGL_TRUE;
-
-static EGLDisplay display = EGL_NO_DISPLAY;
-static EGLBoolean initialized = EGL_FALSE;
-
-
-/* Initialization */
 void GS_EGL10_IN_INI_TP_002_init(void)
 {
     EGLBoolean result;
-    EGLint error;
-
     EGLint major;
     EGLint minor;
 
-
-    /* Obtain an EGLDisplay required by eglInitialize. */
-    display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-
-    if (display == EGL_NO_DISPLAY)
+    if (!GS_EGL10_get_default_display(&environment))
     {
-        error = eglGetError();
-
-        TEST_LOG_FAIL(
-            test_case,
-            test_procedure,
-            "Test precondition failed: "
-            "eglGetDisplay(EGL_DEFAULT_DISPLAY) returned "
-            "EGL_NO_DISPLAY. eglGetError(): 0x%x",
-            error
-        );
-
-        test_success = EGL_FALSE;
+        TEST_LOG_FAIL(test_case1, test_procedure,
+            "Could not obtain the display required by the test");
+        test_success1 = EGL_FALSE;
+        test_success2 = EGL_FALSE;
         return;
     }
 
+    /* INI-003: both output pointers may be NULL. */
+    result = eglInitialize(environment.display, NULL, NULL);
+    if (result != EGL_TRUE)
+    {
+        TEST_LOG_FAIL(test_case1, test_procedure,
+            "eglInitialize(display, NULL, NULL) failed, EGL error: 0x%x",
+            eglGetError());
+        test_success1 = EGL_FALSE;
+    }
+    else
+    {
+        environment.initialized = EGL_TRUE;
+    }
 
-    /* Case 1
-     * major = NULL
-     * minor = valid output pointer
-     * Expected:
-     *     - eglInitialize returns EGL_TRUE
-     *     - minor is updated
-     */
+    if (!terminate_between_cases())
+    {
+        TEST_LOG_FAIL(test_case2, test_procedure,
+            "Could not restore the uninitialized display precondition");
+        test_success2 = EGL_FALSE;
+        return;
+    }
 
+    /* INI-004, case A: only minor is supplied. */
     minor = -1;
-
-    (void)eglGetError();
-
-    result = eglInitialize(
-        display,
-        NULL,
-        &minor
-    );
-
-    error = eglGetError();
-
-    if (result != EGL_TRUE)
+    result = eglInitialize(environment.display, NULL, &minor);
+    if (result != EGL_TRUE || minor < 0)
     {
-        TEST_LOG_FAIL(
-            test_case,
-            test_procedure,
-            "eglInitialize(display, NULL, &minor) returned "
-            "EGL_FALSE. eglGetError(): 0x%x",
-            error
-        );
-
-        test_success = EGL_FALSE;
+        TEST_LOG_FAIL(test_case2, test_procedure,
+            "Expected EGL_TRUE and a minor version with major == NULL; "
+            "got %u/%d, EGL error: 0x%x",
+            (unsigned int)result, minor, eglGetError());
+        test_success2 = EGL_FALSE;
     }
-    else
+    if (result == EGL_TRUE)
+        environment.initialized = EGL_TRUE;
+
+    if (!terminate_between_cases())
     {
-        initialized = EGL_TRUE;
-
-        if (minor == -1)
-        {
-            TEST_LOG_FAIL(
-                test_case,
-                test_procedure,
-                "Minor version was not updated when major "
-                "was NULL"
-            );
-
-            test_success = EGL_FALSE;
-        }
+        TEST_LOG_FAIL(test_case2, test_procedure,
+            "Could not restore the display before the second pointer case");
+        test_success2 = EGL_FALSE;
+        return;
     }
 
-
-    /* Return the display to the uninitialized state before testing the next combination. */
-    if (initialized == EGL_TRUE)
-    {
-        eglTerminate(display);
-        initialized = EGL_FALSE;
-    }
-
-
-    /* Case 2
-     * major = valid output pointer
-     * minor = NULL
-     * Expected:
-     *     - eglInitialize returns EGL_TRUE
-     *     - major is updated
-     */
-
+    /* INI-004, case B: only major is supplied. */
     major = -1;
-
-    (void)eglGetError();
-
-    result = eglInitialize(
-        display,
-        &major,
-        NULL
-    );
-
-    error = eglGetError();
-
-    if (result != EGL_TRUE)
+    result = eglInitialize(environment.display, &major, NULL);
+    if (result != EGL_TRUE || major < 0)
     {
-        TEST_LOG_FAIL(
-            test_case,
-            test_procedure,
-            "eglInitialize(display, &major, NULL) returned "
-            "EGL_FALSE. eglGetError(): 0x%x",
-            error
-        );
-
-        test_success = EGL_FALSE;
+        TEST_LOG_FAIL(test_case2, test_procedure,
+            "Expected EGL_TRUE and a major version with minor == NULL; "
+            "got %u/%d, EGL error: 0x%x",
+            (unsigned int)result, major, eglGetError());
+        test_success2 = EGL_FALSE;
     }
-    else
-    {
-        initialized = EGL_TRUE;
+    if (result == EGL_TRUE)
+        environment.initialized = EGL_TRUE;
 
-        if (major == -1)
-        {
-            TEST_LOG_FAIL(
-                test_case,
-                test_procedure,
-                "Major version was not updated when minor "
-                "was NULL"
-            );
-
-            test_success = EGL_FALSE;
-        }
-    }
-
-
-    /* Return the display to the uninitialized state before testing the next combination. */
-    if (initialized == EGL_TRUE)
-    {
-        eglTerminate(display);
-        initialized = EGL_FALSE;
-    }
-
-
-    /* Case 3
-     * major = NULL
-     * minor = NULL
-     * Expected:
-     *     - eglInitialize returns EGL_TRUE
-     *     - no version output is requested
-     */
-
-    (void)eglGetError();
-
-    result = eglInitialize(
-        display,
-        NULL,
-        NULL
-    );
-
-    error = eglGetError();
-
-    if (result != EGL_TRUE)
-    {
-        TEST_LOG_FAIL(
-            test_case,
-            test_procedure,
-            "eglInitialize(display, NULL, NULL) returned "
-            "EGL_FALSE. eglGetError(): 0x%x",
-            error
-        );
-
-        test_success = EGL_FALSE;
-    }
-    else
-    {
-        initialized = EGL_TRUE;
-    }
-
-
-    /* Final Test Result */
-    if (test_success)
-    {
-        TEST_LOG_INFO(
-            "eglInitialize accepted all required NULL "
-            "major/minor combinations and updated each "
-            "provided version output"
-        );
-
-        TEST_LOG_SUCCESS(
-            test_case,
-            test_procedure
-        );
-    }
+    if (test_success1)
+        TEST_LOG_SUCCESS(test_case1, test_procedure);
+    if (test_success2)
+        TEST_LOG_SUCCESS(test_case2, test_procedure);
 }
 
-void GS_EGL10_IN_INI_TP_002_draw(void) {
+void GS_EGL10_IN_INI_TP_002_draw(void) { }
 
-}
-
-void GS_EGL10_IN_INI_TP_002_close(void) {
-    if (initialized == EGL_TRUE &&
-        display != EGL_NO_DISPLAY)
-    {
-        eglTerminate(display);
-    }
-
-    initialized = EGL_FALSE;
-    display = EGL_NO_DISPLAY;
+void GS_EGL10_IN_INI_TP_002_close(void)
+{
+    GS_EGL10_cleanup_environment(&environment);
 }
