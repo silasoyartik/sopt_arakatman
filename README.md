@@ -93,6 +93,60 @@ ana çözüm Makefile'a bağlı değildir. Python scriptinin çıktıyı sadece 
 değiştiğinde yazması, bu küçük dokümantasyon build'i için aynı pratik faydayı
 taşınabilir biçimde sağlar.
 
+## HLR ve test isimlendirmesi
+
+HLR, **High-Level Requirement** anlamına gelir. Bir EGL gereksinim kimliği
+aşağıdaki yapıyı kullanır:
+
+```text
+GS-EGL10-CM-GCA-002
+|  |     |  |   |
+|  |     |  |   +-- Fonksiyona ait sıra numarası
+|  |     |  +------ Fonksiyon kısaltması
+|  |     +--------- Alt modül kısaltması
+|  +--------------- EGL 1.0 modülü
++------------------ Proje namespace öneki
+```
+
+`GS` proje genelinde kullanılan namespace önekidir; tarihsel veya açık yazımı
+bu repoda tanımlanmamıştır. `EGL10`, EGL 1.0 modülünü belirtir.
+
+EGL alt modül kısaltmaları:
+
+| Kısaltma | Alt modül |
+| :-------- | :-------- |
+| `IN` | Initialization |
+| `CM` | Configuration Management |
+| `RC` | Rendering Contexts |
+| `RS` | Rendering Surfaces |
+| `BP` | Buffer Posting |
+| `ER` | Errors |
+
+EGL fonksiyon kısaltmaları:
+
+| Kısaltma | Fonksiyon |
+| :-------- | :------- |
+| `GD` | `eglGetDisplay` |
+| `INI` | `eglInitialize` |
+| `TER` | `eglTerminate` |
+| `CC` | `eglChooseConfig` (`CM` altında) veya `eglCreateContext` (`RC` altında) |
+| `GCS` | `eglGetConfigs` |
+| `GCA` | `eglGetConfigAttrib` |
+| `DC` | `eglDestroyContext` |
+| `GCC` | `eglGetCurrentContext` |
+| `GCD` | `eglGetCurrentDisplay` |
+| `MC` | `eglMakeCurrent` |
+| `CWS` | `eglCreateWindowSurface` |
+| `DS` | `eglDestroySurface` |
+| `SB` | `eglSwapBuffers` |
+| `GE` | `eglGetError` |
+
+Test dosyaları aynı kimliği tire yerine alt çizgiyle kullanır. `TP`, **Test
+Procedure**; `TC` ise **Test Case** anlamına gelir. Örneğin
+`GS_EGL10_CM_GCA_TP_002.c`, `GS-EGL10-CM-GCA-002` gereksiniminin test prosedürü
+dosyasıdır; dosya içindeki karşılık gelen test case kimliği
+`GS_EGL10_CM_GCA_TC_002` biçimindedir.
+
 ## EGL test helper kullanımı
 
 `HLR+TP/TP/helpers.h`, EGL testlerinde tekrarlanan display, config, context ve
