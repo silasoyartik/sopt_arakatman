@@ -1,4 +1,5 @@
 #include <EGL/egl.h>
+#include "../../helpers.h"
 #include "../../macros.h"
 
 /*
@@ -17,17 +18,19 @@ static const char* test_procedure = "GS_EGL10_RC_CC_TP_002";
 static EGLDisplay test_display = EGL_NO_DISPLAY;
 static EGLContext source_context = EGL_NO_CONTEXT;
 static EGLContext shared_context = EGL_NO_CONTEXT;
+static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 
 /* Obtains the initialized display and one valid configuration for the test. */
 static EGLBoolean get_test_display_and_config(EGLConfig* config) {
     EGLint config_count = 0;
 
-    test_display = eglGetCurrentDisplay();
-    if (test_display == EGL_NO_DISPLAY) {
+    if (GS_EGL10_initialize_display(&environment) != EGL_TRUE) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "An initialized current EGLDisplay is required");
+            "Could not obtain and initialize EGL_DEFAULT_DISPLAY, error: 0x%x",
+            eglGetError());
         return EGL_FALSE;
     }
+    test_display = environment.display;
 
     if ((eglGetConfigs(test_display, config, 1, &config_count) != EGL_TRUE) ||
         (config_count < 1)) {
@@ -97,4 +100,7 @@ void GS_EGL10_RC_CC_TP_002_close(void) {
         (void)eglDestroyContext(test_display, source_context);
         source_context = EGL_NO_CONTEXT;
     }
+
+    GS_EGL10_cleanup_environment(&environment);
+    test_display = EGL_NO_DISPLAY;
 }
