@@ -2,7 +2,7 @@
 | ------------------- | ----------------------- |
 | **Module Name**     | EGL10                   |
 | **Sub-Module Name** | ConfigurationManagement |
-| **Target Function** | eglGetConfigAttrib      |
+| **Target Function** | `eglGetConfigAttrib`      |
 | **Safety Level**    | DAL A                   |
 | **Rationale**       | Not derived             |
 | **Create Date**     | 30.08.2026              |
