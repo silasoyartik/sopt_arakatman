@@ -4,7 +4,7 @@
 /*
 EGL10 - Initialization - eglTerminate
 
-Verify that eglTerminate succeeds for a valid, uninitialized EGLDisplay.
+Verify that a display can be initialized again after successful termination.
 
 Covered requirements:
     - GS-EGL10-IN-TER-005
@@ -13,58 +13,58 @@ Covered requirements:
 static const char* test_case = "GS_EGL10_IN_TER_TC_005";
 static const char* test_procedure = "GS_EGL10_IN_TER_TP_005";
 
-/* Establishes an uninitialized display state, then verifies termination. */
+static EGLDisplay test_display = EGL_NO_DISPLAY;
+static EGLBoolean reinitialized = EGL_FALSE;
+
+/* Terminates an initialized display and verifies that it can be reinitialized. */
 void GS_EGL10_IN_TER_TP_005_init(void) {
-    EGLDisplay display;
-    EGLBoolean result;
     EGLint error;
 
-    display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (display == EGL_NO_DISPLAY) {
+    test_display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    if (test_display == EGL_NO_DISPLAY) {
         TEST_LOG_FAIL(test_case, test_procedure,
             "Could not obtain a valid EGLDisplay, error: 0x%x", eglGetError());
         return;
     }
 
-    /*
-     * A successful termination leaves a valid display uninitialized. This
-     * establishes the TER-005 precondition independently of prior test state.
-     */
     (void)eglGetError();
-    if (eglInitialize(display, NULL, NULL) != EGL_TRUE) {
+    if (eglInitialize(test_display, NULL, NULL) != EGL_TRUE) {
         TEST_LOG_FAIL(test_case, test_procedure,
             "Could not initialize the EGLDisplay, error: 0x%x", eglGetError());
         return;
     }
 
     (void)eglGetError();
-    if (eglTerminate(display) != EGL_TRUE) {
+    if (eglTerminate(test_display) != EGL_TRUE) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Could not establish an uninitialized EGLDisplay, error: 0x%x",
+            "Could not terminate the initialized EGLDisplay, error: 0x%x",
             eglGetError());
         return;
     }
 
     (void)eglGetError();
-    result = eglTerminate(display);
-    error = eglGetError();
-
-    if (result != EGL_TRUE) {
+    if (eglInitialize(test_display, NULL, NULL) != EGL_TRUE) {
+        error = eglGetError();
         TEST_LOG_FAIL(test_case, test_procedure,
-            "Expected EGL_TRUE for a valid uninitialized display, error: 0x%x",
-            error);
+            "eglInitialize failed after eglTerminate, error: 0x%x", error);
         return;
     }
 
+    reinitialized = EGL_TRUE;
     TEST_LOG_SUCCESS(test_case, test_procedure);
 }
 
-/* No drawing is required for this uninitialized-display test. */
+/* No drawing is required for this display-lifecycle test. */
 void GS_EGL10_IN_TER_TP_005_draw(void) {
 
 }
 
-/* No EGL objects are created by this test. */
+/* Releases the display initialization established for the reinitialization check. */
 void GS_EGL10_IN_TER_TP_005_close(void) {
+    if ((reinitialized == EGL_TRUE) && (test_display != EGL_NO_DISPLAY)) {
+        (void)eglTerminate(test_display);
+    }
 
+    reinitialized = EGL_FALSE;
+    test_display = EGL_NO_DISPLAY;
 }
