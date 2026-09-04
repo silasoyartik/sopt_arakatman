@@ -17,10 +17,6 @@ static GS_EGL10_TestEnvironment pbuffer_environment =
 static EGLBoolean pixmap_fixture_prepared;
 static EGLDisplay pixmap_display = EGL_NO_DISPLAY;
 static EGLSurface pixmap_surface = EGL_NO_SURFACE;
-extern EGLBoolean GS_EGL10_prepare_current_pixmap_surface(
-    EGLDisplay *display, EGLSurface *surface);
-extern EGLBoolean GS_EGL10_verify_pixmap_unchanged(void);
-extern void GS_EGL10_cleanup_current_pixmap_surface(void);
 #endif
 
 void GS_EGL10_BP_SB_TP_003_init(void)

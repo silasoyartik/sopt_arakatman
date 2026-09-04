@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /* PLATFORM ADAPTATION
  *
@@ -16,14 +16,6 @@
  *     GS_EGL10_release_unmatched_native_display()
  *
  */
-
-extern EGLNativeDisplayType
-GS_EGL10_get_unmatched_native_display(void);
-
-extern void
-GS_EGL10_release_unmatched_native_display(
-    EGLNativeDisplayType native_display);
-
 
 /*
 EGL10 - Initialization - GetDisplay

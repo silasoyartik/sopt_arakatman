@@ -1,5 +1,5 @@
 #include <EGL/egl.h>
-#include "../../macros.h"
+#include "../../helpers.h"
 
 /* EGL10 - RenderingSurfaces - eglCreateWindowSurface
  * Covered requirement: GS-EGL10-RS-CWS-010
@@ -12,9 +12,6 @@ static const char* test_procedure = "GS_EGL10_RS_CWS_TP_010";
 static EGLBoolean fixture_prepared = EGL_FALSE;
 static EGLDisplay display = EGL_NO_DISPLAY;
 static EGLSurface surface = EGL_NO_SURFACE;
-extern EGLBoolean GS_EGL10_prepare_window_surface_allocation_failure(
-    EGLDisplay *display, EGLConfig *config, EGLNativeWindowType *window);
-extern void GS_EGL10_cleanup_window_surface_allocation_failure(void);
 #endif
 
 void GS_EGL10_RS_CWS_TP_010_init(void)

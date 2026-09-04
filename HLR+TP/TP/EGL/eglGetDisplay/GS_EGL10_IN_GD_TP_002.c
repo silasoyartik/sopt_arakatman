@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /* OPTIONAL PLATFORM ADAPTATION - WAYLAND EXAMPLE
  *
@@ -40,24 +40,6 @@ static void GS_EGL10_release_valid_native_display(
         wayland_display = NULL;
     }
 }
-
-#else
-
-/* PLATFORM-SPECIFIC IMPLEMENTATION REQUIRED
- *
- * The target platform shall provide a valid native display
- * identifier that can be passed to eglGetDisplay().
- *
- * Example implementations may use the native display mechanism
- * provided by the target operating system / window system.
- */
-
-extern EGLNativeDisplayType
-GS_EGL10_get_valid_native_display(void);
-
-extern void
-GS_EGL10_release_valid_native_display(
-    EGLNativeDisplayType native_display);
 
 #endif
 

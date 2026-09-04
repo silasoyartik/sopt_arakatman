@@ -84,16 +84,7 @@ Sıra dosyasındaki yollar dosyanın bulunduğu `docs/` klasörüne göre çöz�
 eglFunctions/advanced functions/egl Example.md
 ```
 
-## Makefile gerekli mi?
-
-Make, kaynaklardan biri daha yeniyse hedefi üretmek için faydalı olabilir. Ancak
-Windows'ta varsayılan olarak bulunmaz ve boşluk içeren dosya yolları ile dinamik
-sıra listelerini dependency olarak yönetmek ek karmaşıklık getirir. Bu nedenle
-ana çözüm Makefile'a bağlı değildir. Python scriptinin çıktıyı sadece içerik
-değiştiğinde yazması, bu küçük dokümantasyon build'i için aynı pratik faydayı
-taşınabilir biçimde sağlar.
-
-## HLR ve test isimlendirmesi
+# HLR ve test isimlendirmesi
 
 HLR, **High-Level Requirement** anlamına gelir. Bir EGL gereksinim kimliği
 aşağıdaki yapıyı kullanır:
@@ -113,33 +104,33 @@ bu repoda tanımlanmamıştır. `EGL10`, EGL 1.0 modülünü belirtir.
 
 EGL alt modül kısaltmaları:
 
-| Kısaltma | Alt modül |
-| :-------- | :-------- |
-| `IN` | Initialization |
-| `CM` | Configuration Management |
-| `RC` | Rendering Contexts |
-| `RS` | Rendering Surfaces |
-| `BP` | Buffer Posting |
-| `ER` | Errors |
+| Kısaltma | Alt modül               |
+| :-------- | :----------------------- |
+| `IN`    | Initialization           |
+| `CM`    | Configuration Management |
+| `RC`    | Rendering Contexts       |
+| `RS`    | Rendering Surfaces       |
+| `BP`    | Buffer Posting           |
+| `ER`    | Errors                   |
 
 EGL fonksiyon kısaltmaları:
 
-| Kısaltma | Fonksiyon |
-| :-------- | :------- |
-| `GD` | `eglGetDisplay` |
-| `INI` | `eglInitialize` |
-| `TER` | `eglTerminate` |
-| `CC` | `eglChooseConfig` (`CM` altında) veya `eglCreateContext` (`RC` altında) |
-| `GCS` | `eglGetConfigs` |
-| `GCA` | `eglGetConfigAttrib` |
-| `DC` | `eglDestroyContext` |
-| `GCC` | `eglGetCurrentContext` |
-| `GCD` | `eglGetCurrentDisplay` |
-| `MC` | `eglMakeCurrent` |
-| `CWS` | `eglCreateWindowSurface` |
-| `DS` | `eglDestroySurface` |
-| `SB` | `eglSwapBuffers` |
-| `GE` | `eglGetError` |
+| Kısaltma | Fonksiyon                                                                         |
+| :-------- | :-------------------------------------------------------------------------------- |
+| `GD`    | `eglGetDisplay`                                                                 |
+| `INI`   | `eglInitialize`                                                                 |
+| `TER`   | `eglTerminate`                                                                  |
+| `CC`    | `eglChooseConfig` (`CM` altında) veya `eglCreateContext` (`RC` altında) |
+| `GCS`   | `eglGetConfigs`                                                                 |
+| `GCA`   | `eglGetConfigAttrib`                                                            |
+| `DC`    | `eglDestroyContext`                                                             |
+| `GCC`   | `eglGetCurrentContext`                                                          |
+| `GCD`   | `eglGetCurrentDisplay`                                                          |
+| `MC`    | `eglMakeCurrent`                                                                |
+| `CWS`   | `eglCreateWindowSurface`                                                        |
+| `DS`    | `eglDestroySurface`                                                             |
+| `SB`    | `eglSwapBuffers`                                                                |
+| `GE`    | `eglGetError`                                                                   |
 
 Test dosyaları aynı kimliği tire yerine alt çizgiyle kullanır. `TP`, **Test
 Procedure**; `TC` ise **Test Case** anlamına gelir. Örneğin
@@ -147,7 +138,7 @@ Procedure**; `TC` ise **Test Case** anlamına gelir. Örneğin
 dosyasıdır; dosya içindeki karşılık gelen test case kimliği
 `GS_EGL10_CM_GCA_TC_002` biçimindedir.
 
-## EGL test helper kullanımı
+# EGL test helper kullanımı
 
 `HLR+TP/TP/helpers.h`, EGL testlerinde tekrarlanan display, config, context ve
 surface hazırlama işlemlerini ortaklaştırır. Testler bir `main` fonksiyonundan
@@ -161,7 +152,7 @@ Bir test dosyası helper'ı şu şekilde dahil eder:
 #include "../../helpers.h"
 ```
 
-### Test environment
+## Test environment
 
 `GS_EGL10_TestEnvironment`, test boyunca kullanılan temel EGL durumunu tek bir
 yapıda tutar:
@@ -241,7 +232,7 @@ olmadan hazırlanabilir.
 `GS_EGL10_prepare_pbuffer_environment` context'i özellikle current yapmaz.
 Böylece current olmayan surface/context hata durumları da test edilebilir.
 
-### Platform test hook'ları
+## Platform test hook'ları
 
 Bazı testler yalnızca standart EGL çağrıları ve pbuffer helper'ları ile
 hazırlanamaz. Native window veya native pixmap oluşturmak, pencere içeriğinin
@@ -258,22 +249,47 @@ makrosuyla korur:
 #endif
 ```
 
-`GS_EGL_PLATFORM_TEST_HOOKS`, EGL standardına veya `helpers.h` dosyasına ait
-hazır bir özellik değildir. Hedef platform için gerekli hook fonksiyonları
-gerçekten sağlandığında derleme sistemi tarafından tanımlanması gereken bir
-feature flag'dir. Örneğin GCC veya Clang ile:
+`GS_EGL_PLATFORM_TEST_HOOKS`, EGL standardına ait hazır bir özellik değildir.
+Hedef platform için gerekli hook fonksiyonları gerçekten sağlandığında derleme
+sistemi tarafından tanımlanması gereken bir feature flag'dir. Hook arayüzlerinin
+tamamı ve her fonksiyonun implementasyon sözleşmesi `HLR+TP/TP/helpers.h`
+içindeki **Platform test hook interface** bölümünde merkezi olarak bulunur.
+Test dosyaları ayrıca `extern` bildirimi taşımaz; böylece imza ve sözleşme için
+tek kaynak `helpers.h` olur.
+
+Hook'ların gövdeleri ortak helper'a bilinçli olarak yazılmamıştır. Native window,
+pixmap, sunum gözlemi ve fault injection kodu X11, Wayland, GBM, Android veya
+hedef sürücüye göre değişir. Entegrasyonu hazırlayan ekip, örneğin
+`platform_hooks_x11.c` gibi ayrı bir dosyada `helpers.h` içindeki fonksiyonları
+implemente eder ve bu dosyayı test binary'sine linkler. GCC veya Clang ile genel
+biçim şöyledir:
 
 ```sh
-cc -DGS_EGL_PLATFORM_TEST_HOOKS ...
+cc -DGS_EGL_PLATFORM_TEST_HOOKS \
+   platform_hooks_<target>.c <test-sources> ... -lEGL
 ```
 
-Test dosyalarındaki `extern` ifadeleri hook fonksiyonlarını yalnızca bildirir;
-bu fonksiyonların gövdeleri bu repoda bulunmaz. Fonksiyonlar, testi hedef
-platformda çalıştıran kişi veya entegrasyonu hazırlayan ekip tarafından ayrı
-bir `.c` dosyasında platformun native API'leri kullanılarak yazılmalı ve test
-binary'sine linklenmelidir. Implementasyonlar sağlanmadan makro tanımlanırsa
-derleme tamamlanabilse bile link aşamasında `undefined reference` benzeri
-hatalar oluşur.
+Platform implementasyonu da aynı derleme makrosuyla ve ortak bildirimlerle
+derlenmelidir:
+
+```c
+#include "HLR+TP/TP/helpers.h"
+
+EGLBoolean GS_EGL10_prepare_native_window(
+    EGLDisplay *display,
+    EGLConfig *config,
+    EGLNativeWindowType *window)
+{
+    /* helpers.h içindeki bu fonksiyon sözleşmesinin adımlarını uygula. */
+    return EGL_FALSE; /* Implementasyon tamamlanana kadar desteği ilan etme. */
+}
+```
+
+Implementasyonlar sağlanmadan makro tanımlanırsa derleme tamamlanabilse bile
+link aşamasında `undefined reference` benzeri hatalar oluşur. Sadece bir hook'u
+boş bırakıp `EGL_TRUE` döndüren geçici gövde yazmak da doğru değildir; makronun
+tanımlı olması fixture'ın gerçekten kurulabildiği ve test oracle'ının gerçekten
+gözlenebildiği taahhüdüdür.
 
 Örneğin `GS_EGL10_BP_SB_TP_002` testi aşağıdaki hook'ları bekler:
 
@@ -302,12 +318,61 @@ ise testin `close` çağrısıyla yaptığı cleanup'ı desteklemelidir. Testtek
 `fixture_prepared` değişkeni fixture'ın kendisi değil, setup'ın başarılı
 olduğunu ve cleanup hook'unun çağrılabileceğini gösteren bayraktır.
 
-Diğer platform bağımlı testler pixmap hazırlama ve değişmediğini doğrulama,
-native window'u yeniden boyutlandırma veya geçersizleştirme, implicit flush'ı
-gözleme ve belirli `eglMakeCurrent` hata koşullarını hazırlama gibi ek hook'lar
-bildirir. Aynı kural bunların tamamı için geçerlidir: ilgili test dosyasındaki
-`extern` imzası aynen implemente edilmeli; platform bu koşulu güvenilir biçimde
-hazırlayamıyor veya gözleyemiyorsa `GS_EGL_PLATFORM_TEST_HOOKS` tanımlanmamalıdır.
+### Hook grupları ve kullanıldıkları koşullar
+
+| Hook grubu                                                | Hazırlaması veya gözlemesi gereken koşul                                                                                                           |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `prepare_native_window` / `cleanup_native_window`     | Initialized EGLDisplay, `EGL_WINDOW_BIT` içeren uyumlu config ve henüz bir surface'e bağlı olmayan geçerli native window                                 |
+| `prepare_incompatible_native_window`                    | Tek uyumsuzluğu native visual/pixel format ile EGLConfig arasında olan geçerli window fixture'ı                                                    |
+| `prepare_non_window_config`                             | Geçerli native window ve `EGL_WINDOW_BIT` içermeyen geçerli config; böyle bir config yoksa sızıntısız `EGL_FALSE`                          |
+| `prepare_invalid_native_window`                         | EGL'nin kesin olarak geçersiz tanıyacağı native window handle'ı; tercihen gerçek window oluşturulup yok edilerek elde edilen stale handle       |
+| `prepare_invalid_native_pixmap`                         | EGL'nin kesin olarak geçersiz tanıyacağı native pixmap handle'ı ve pixmap-capable config                                                          |
+| `prepare_window_surface_allocation_failure`             | `eglCreateWindowSurface` için güvenli ve deterministik `EGL_BAD_ALLOC` fault injection                                       |
+| `prepare_make_current_error`                            | `EGL_BAD_NATIVE_WINDOW`, `EGL_BAD_MATCH`, `EGL_BAD_CURRENT_SURFACE` veya `EGL_BAD_ALLOC` üretecek kontrollü `eglMakeCurrent` önkoşulu    |
+| `prepare_current_window_surface` / cleanup              | Calling thread'de current olan window surface/context ve native window dahil bütün fixture yaşam döngüsü                                         |
+| `verify_window_content_posted`                          | Swap öncesi hazırlanan ayırt edilebilir içeriğin native/front buffer'a gerçekten ulaştığının platform API'siyle gözlenmesi                 |
+| `resize_native_window`                                  | Aktif fixture'ın window'unu farklı ve desteklenen bir boyuta getirip kabul edilen gerçek boyutu döndürme                                          |
+| `begin_flush_observation` / `implicit_flush_observed` | Hedef `eglSwapBuffers` çağrısının implicit `glFlush` etkisini driver instrumentation veya doğrulanmış eşdeğer oracle ile gözleme |
+| `invalidate_native_window`                              | EGLSurface'i yok etmeden ve current binding'i bırakmadan backing native window'u geçersizleştirme                                                   |
+| `prepare_current_pixmap_surface` / cleanup              | Native pixmap, `EGL_PIXMAP_BIT` içeren uyumlu config, current EGLSurface/context ve karşılaştırma baseline'ı                                            |
+| `verify_pixmap_unchanged`                               | `eglSwapBuffers` sonrasında native pixmap'in baseline'a göre değişmediğini native API ile doğrulama                                            |
+
+Her prepare fonksiyonu çıkış pointer'larını doğrulamalı ve yalnız bütün
+postcondition'lar kurulduğunda `EGL_TRUE` döndürmelidir. Cleanup sırası genel
+olarak current binding'i bırakma, EGL context/surface'leri yok etme, EGLDisplay'i
+sonlandırma ve en son native nesneleri yok etme şeklindedir. Cleanup; yarım kalan
+setup, daha önce yok edilmiş native window/pixmap ve test tarafından terminate
+edilmiş display durumlarında da güvenli olmalıdır. Özellikle
+`GS_EGL10_cleanup_make_current_error`, bazı testler tarafından setup başarısız
+olsa bile çağrıldığı için boş/kısmi fixture üzerinde güvenli olmak zorundadır.
+
+Geçersiz native handle için rastgele sayı veya sıfır kullanmak yeterli değildir;
+hedef EGL'nin bu değeri ilgili native hata olarak tanıyacağı platform sözleşmesi
+bulunmalıdır. Benzer biçimde `EGL_BAD_ALLOC` testleri gerçek sistem belleğini
+tüketmeye çalışmamalı, hedefin desteklediği fault-injection mekanizmasını
+kullanmalıdır. Platform bu koşullardan birini güvenilir biçimde hazırlayamıyor
+veya gözleyemiyorsa ilgili test binary'si için
+`GS_EGL_PLATFORM_TEST_HOOKS` tanımlanmamalıdır.
+
+### Diğer hedef adaptasyon hook'ları
+
+Bazı eski testler global platform-hook makrosu yerine kendilerine ait feature
+flag kullanır veya doğrudan hedef fixture'ı bekler. Bunların bildirimleri ve
+ayrıntılı sözleşmeleri de `helpers.h` içindeki **Additional target-adaptation
+hook interface** bölümünde merkezi olarak tutulur:
+
+| Fonksiyon | Sözleşme / feature flag |
+| --- | --- |
+| `GS_EGL10_get_valid_native_display` / `release_valid_native_display` | `eglGetDisplay` ile eşleşen gerçek bir native display açar ve kapatır. `GS_EGL_USE_WAYLAND` tanımlıysa TP_002 içindeki hazır Wayland gövdesi kullanılır; diğer hedefler dış implementasyon sağlar. |
+| `GS_EGL10_get_unmatched_native_display` / `release_unmatched_native_display` | Güvenle `eglGetDisplay`'e verilebilen fakat karşılık gelen EGLDisplay bulunmayan, platform tarafından tanımlı bir identifier sağlar. Fabricated pointer kullanılamaz. |
+| `GS_EGL10_get_noninitializable_display` / `release_noninitializable_display` | Geçerli fakat kontrollü koşul/fault injection nedeniyle `EGL_NOT_INITIALIZED` üretecek EGLDisplay sağlar; release enjeksiyonu mutlaka kapatır. |
+| `GS_EGL10_compare_native_visual_type` | Hedefin implementation-defined native visual sırasını `-1`, `0`, `1` ile bildirir. Yalnız `GS_EGL10_NATIVE_VISUAL_COMPARE_AVAILABLE` tanımlandığında dış gövde gerekir. |
+| `GS_EGL10_create_and_join_thread` | Callback'i yeni thread'de tam bir kez çalıştırır, join eder ve memory visibility sağlar. `GS_EGL_USE_PTHREAD` tanımlıysa TP_006 içindeki hazır pthread gövdesi kullanılır; diğer hedefler dış implementasyon sağlar. |
+
+Bu fonksiyonların da yerel bildirimleri test dosyalarından kaldırılmıştır.
+Platform implementasyonu `helpers.h` dosyasını dahil ederek ortak imzayı
+kullanmalıdır. Feature flag ile hazır gövde seçilen durumlarda aynı isimle ikinci
+bir dış implementasyon linklenmemelidir.
 
 ### Context'i current yapma
 

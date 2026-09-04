@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /* PLATFORM / TEST ENVIRONMENT ADAPTATION
  *
@@ -20,14 +20,6 @@
  * a controlled test fixture or fault-injection mechanism.
  *
  */
-
-extern EGLDisplay
-GS_EGL10_get_noninitializable_display(void);
-
-extern void
-GS_EGL10_release_noninitializable_display(
-    EGLDisplay display);
-
 
 /*
 EGL10 - Initialization - Initialize
