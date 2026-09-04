@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
 EGL10 - ConfigurationManagement - ChooseConfig
@@ -10,11 +10,11 @@ valid as long as the EGLDisplay from which they were obtained
 has not been terminated.
 
 Covered requirements:
-    - GS-EGL10-CM-CC-019
+    - GS-EGL10-CM-CC-027
 */
 
 static const char* test_case =
-    "GS_EGL10_CM_CC_TC_019";
+    "GS_EGL10_CM_CC_TC_027";
 
 static const char* test_procedure =
     "GS_EGL10_CM_CC_TP_011";
@@ -415,7 +415,7 @@ void GS_EGL10_CM_CC_TP_011_init(void)
 
     /* LIFETIME BOUNDARY
      * Terminate the EGLDisplay.
-     * CC-019 guarantees validity only while the display has
+     * CC-027 guarantees validity only while the display has
      * not been terminated. Therefore this TP deliberately does
      * NOT require any particular behavior from the EGLConfig
      * handle after eglTerminate.

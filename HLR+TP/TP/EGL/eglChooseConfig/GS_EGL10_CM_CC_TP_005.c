@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /*
 EGL10 - ConfigurationManagement - ChooseConfig
@@ -16,11 +16,11 @@ as selection criteria when they appear with attribute values
 in attrib_list.
 
 Covered requirements:
-    - GS-EGL10-CM-CC-010
+    - GS-EGL10-CM-CC-018
 */
 
 static const char* test_case =
-    "GS_EGL10_CM_CC_TC_010";
+    "GS_EGL10_CM_CC_TC_018";
 
 static const char* test_procedure =
     "GS_EGL10_CM_CC_TP_005";
@@ -39,18 +39,9 @@ static EGLBoolean get_matching_count(
 {
     EGLBoolean result;
 
-    *count = -1;
-
     (void)eglGetError();
-
-    result = eglChooseConfig(
-        display,
-        attrib_list,
-        NULL,
-        0,
-        count
-    );
-
+    result = GS_EGL10_get_matching_config_count(
+        display, attrib_list, count);
     *error = eglGetError();
 
     return result;

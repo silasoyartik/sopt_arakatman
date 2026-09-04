@@ -53,11 +53,11 @@ The eglChooseConfig function shall sort multiple matching
 EGLConfigs according to the EGL 1.0 best-match precedence rules.
 
 Covered requirements:
-    - GS-EGL10-CM-CC-014
+    - GS-EGL10-CM-CC-022
 */
 
 static const char* test_case =
-    "GS_EGL10_CM_CC_TC_014";
+    "GS_EGL10_CM_CC_TC_022";
 
 static const char* test_procedure =
     "GS_EGL10_CM_CC_TP_009";

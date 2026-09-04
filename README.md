@@ -199,9 +199,32 @@ if (!GS_EGL10_initialize_display(&environment) ||
 Başarılı olduğunda environment içindeki `initialized` alanını `EGL_TRUE`
 yapar.
 
+`eglInitialize` fonksiyonunun kendisini test eden prosedürlerde setup çağrısı
+hedef davranışı gizlememelidir. Bu nedenle
+`GS_EGL10_get_default_display` yalnızca default display'i alır ve initialize
+etmez. Test, başarılı hedef çağrısından sonra environment içindeki
+`initialized` alanını `EGL_TRUE` yapar; ortak cleanup böylece display'i doğru
+biçimde sonlandırır.
+
 `GS_EGL10_choose_config`, verilen surface type için `eglChooseConfig` çağırır
 ve ilk uygun config'i environment içine kaydeder. En az bir config bulunmadığı
 durumda `EGL_FALSE` döndürür.
+
+`eglChooseConfig` prosedürlerinin bağımsız setup yapabilmesi için
+`GS_EGL10_get_first_config` ve `GS_EGL10_prepare_config_environment`,
+konfigürasyon envanterini `eglGetConfigs` ile hazırlar; setup sırasında
+`eglChooseConfig` çağırmaz.
+
+Seçim testlerinde kullanılan diğer ortak yardımcılar:
+
+- `GS_EGL10_get_matching_config_count`, bir attribute listesi için yalnız
+  eşleşme sayısını alır.
+- `GS_EGL10_verify_config_selection`, dönen bütün handle'ları
+  `eglGetConfigAttrib` ile bağımsız olarak doğrular. At-least, exact ve mask
+  kurallarını `GS_EGL10_ConfigExpectation` girdileriyle uygular.
+- `GS_EGL10_find_config_matching`, test girdisi oluşturmak için
+  `eglGetConfigs` envanterinde verilen beklentileri sağlayan gerçek bir config
+  arar.
 
 ### Pbuffer ortamı hazırlama
 

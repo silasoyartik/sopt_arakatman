@@ -1,6 +1,7 @@
 #ifndef GS_EGL10_TEST_HELPERS_H
 #define GS_EGL10_TEST_HELPERS_H
 
+#include <stdlib.h>
 #include <EGL/egl.h>
 #include "macros.h"
 
@@ -29,11 +30,23 @@ typedef struct
         }                                                                   \
     } while (0)
 
+/* Obtain a valid default EGLDisplay without initializing it. */
+static EGLBoolean GS_EGL10_get_default_display(
+    GS_EGL10_TestEnvironment *environment)
+{
+    if (environment == NULL)
+    {
+        return EGL_FALSE;
+    }
+
+    environment->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
+    return environment->display != EGL_NO_DISPLAY;
+}
+
 static EGLBoolean GS_EGL10_initialize_display(
     GS_EGL10_TestEnvironment *environment)
 {
-    environment->display = eglGetDisplay(EGL_DEFAULT_DISPLAY);
-    if (environment->display == EGL_NO_DISPLAY)
+    if (!GS_EGL10_get_default_display(environment))
     {
         return EGL_FALSE;
     }
@@ -45,6 +58,241 @@ static EGLBoolean GS_EGL10_initialize_display(
 
     environment->initialized = EGL_TRUE;
     return EGL_TRUE;
+}
+
+/* Obtain one real EGLConfig without exercising eglChooseConfig. */
+static EGLBoolean GS_EGL10_get_first_config(
+    GS_EGL10_TestEnvironment *environment)
+{
+    EGLint count = 0;
+
+    if (environment == NULL || !environment->initialized)
+    {
+        return EGL_FALSE;
+    }
+
+    environment->config = (EGLConfig)0;
+    return eglGetConfigs(environment->display, &environment->config, 1,
+               &count) == EGL_TRUE &&
+        count == 1 && environment->config != (EGLConfig)0;
+}
+
+/* Prepare an initialized display and one config without calling the function
+ * under test in eglChooseConfig procedures. */
+static EGLBoolean GS_EGL10_prepare_config_environment(
+    GS_EGL10_TestEnvironment *environment)
+{
+    return GS_EGL10_initialize_display(environment) &&
+        GS_EGL10_get_first_config(environment);
+}
+
+static EGLBoolean GS_EGL10_get_matching_config_count(
+    EGLDisplay display,
+    const EGLint *attributes,
+    EGLint *count)
+{
+    if (display == EGL_NO_DISPLAY || count == NULL)
+    {
+        return EGL_FALSE;
+    }
+
+    *count = -1;
+    return eglChooseConfig(display, attributes, NULL, 0, count) == EGL_TRUE;
+}
+
+typedef enum
+{
+    GS_EGL10_CONFIG_MATCH_AT_LEAST,
+    GS_EGL10_CONFIG_MATCH_EXACT,
+    GS_EGL10_CONFIG_MATCH_MASK,
+    GS_EGL10_CONFIG_MATCH_NOT_EQUAL
+} GS_EGL10_ConfigMatchRule;
+
+typedef struct
+{
+    EGLint attribute;
+    EGLint requested_value;
+    GS_EGL10_ConfigMatchRule rule;
+} GS_EGL10_ConfigExpectation;
+
+static EGLBoolean GS_EGL10_config_value_matches(
+    EGLint actual,
+    const GS_EGL10_ConfigExpectation *expectation)
+{
+    if (expectation == NULL)
+    {
+        return EGL_FALSE;
+    }
+
+    switch (expectation->rule)
+    {
+        case GS_EGL10_CONFIG_MATCH_AT_LEAST:
+            return actual >= expectation->requested_value;
+
+        case GS_EGL10_CONFIG_MATCH_EXACT:
+            return actual == expectation->requested_value;
+
+        case GS_EGL10_CONFIG_MATCH_MASK:
+            return (actual & expectation->requested_value) ==
+                expectation->requested_value;
+
+        case GS_EGL10_CONFIG_MATCH_NOT_EQUAL:
+            return actual != expectation->requested_value;
+
+        default:
+            return EGL_FALSE;
+    }
+}
+
+/* Execute a successful eglChooseConfig query and independently validate every
+ * returned handle with eglGetConfigAttrib.  The caller supplies the exact
+ * criteria represented by attributes. */
+static EGLBoolean GS_EGL10_verify_config_selection(
+    EGLDisplay display,
+    const EGLint *attributes,
+    const GS_EGL10_ConfigExpectation *expectations,
+    EGLint expectation_count,
+    EGLint *matching_count)
+{
+    EGLConfig *configs = NULL;
+    EGLint available = 0;
+    EGLint returned = 0;
+    EGLint config_index;
+    EGLint expectation_index;
+    EGLBoolean valid = EGL_TRUE;
+
+    if (display == EGL_NO_DISPLAY || attributes == NULL ||
+        expectations == NULL || expectation_count <= 0)
+    {
+        return EGL_FALSE;
+    }
+
+    if (!GS_EGL10_get_matching_config_count(display, attributes, &available) ||
+        available <= 0 ||
+        (size_t)available > ((size_t)-1) / sizeof(EGLConfig))
+    {
+        return EGL_FALSE;
+    }
+
+    configs = (EGLConfig *)malloc(sizeof(EGLConfig) * (size_t)available);
+    if (configs == NULL)
+    {
+        return EGL_FALSE;
+    }
+
+    if (eglChooseConfig(display, attributes, configs, available,
+            &returned) != EGL_TRUE ||
+        returned != available)
+    {
+        free(configs);
+        return EGL_FALSE;
+    }
+
+    for (config_index = 0;
+         config_index < returned && valid == EGL_TRUE;
+         ++config_index)
+    {
+        for (expectation_index = 0;
+             expectation_index < expectation_count;
+             ++expectation_index)
+        {
+            EGLint actual = 0;
+
+            if (eglGetConfigAttrib(display, configs[config_index],
+                    expectations[expectation_index].attribute,
+                    &actual) != EGL_TRUE ||
+                !GS_EGL10_config_value_matches(
+                    actual, &expectations[expectation_index]))
+            {
+                valid = EGL_FALSE;
+                break;
+            }
+        }
+    }
+
+    free(configs);
+
+    if (matching_count != NULL)
+    {
+        *matching_count = returned;
+    }
+
+    return valid;
+}
+
+/* Search the complete eglGetConfigs inventory without using eglChooseConfig.
+ * This is useful for constructing independent eglChooseConfig test inputs. */
+static EGLBoolean GS_EGL10_find_config_matching(
+    EGLDisplay display,
+    const GS_EGL10_ConfigExpectation *expectations,
+    EGLint expectation_count,
+    EGLConfig *matching_config)
+{
+    EGLConfig *configs = NULL;
+    EGLint available = 0;
+    EGLint returned = 0;
+    EGLint config_index;
+    EGLint expectation_index;
+
+    if (display == EGL_NO_DISPLAY || expectations == NULL ||
+        expectation_count <= 0 || matching_config == NULL)
+    {
+        return EGL_FALSE;
+    }
+
+    *matching_config = (EGLConfig)0;
+
+    if (eglGetConfigs(display, NULL, 0, &available) != EGL_TRUE ||
+        available <= 0 ||
+        (size_t)available > ((size_t)-1) / sizeof(EGLConfig))
+    {
+        return EGL_FALSE;
+    }
+
+    configs = (EGLConfig *)malloc(sizeof(EGLConfig) * (size_t)available);
+    if (configs == NULL)
+    {
+        return EGL_FALSE;
+    }
+
+    if (eglGetConfigs(display, configs, available, &returned) != EGL_TRUE ||
+        returned < 0 || returned > available)
+    {
+        free(configs);
+        return EGL_FALSE;
+    }
+
+    for (config_index = 0; config_index < returned; ++config_index)
+    {
+        EGLBoolean matches = EGL_TRUE;
+
+        for (expectation_index = 0;
+             expectation_index < expectation_count;
+             ++expectation_index)
+        {
+            EGLint actual = 0;
+
+            if (eglGetConfigAttrib(display, configs[config_index],
+                    expectations[expectation_index].attribute,
+                    &actual) != EGL_TRUE ||
+                !GS_EGL10_config_value_matches(
+                    actual, &expectations[expectation_index]))
+            {
+                matches = EGL_FALSE;
+                break;
+            }
+        }
+
+        if (matches == EGL_TRUE)
+        {
+            *matching_config = configs[config_index];
+            free(configs);
+            return EGL_TRUE;
+        }
+    }
+
+    free(configs);
+    return EGL_FALSE;
 }
 
 static EGLBoolean GS_EGL10_choose_config(
