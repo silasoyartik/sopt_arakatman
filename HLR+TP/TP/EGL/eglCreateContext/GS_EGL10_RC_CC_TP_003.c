@@ -1,4 +1,5 @@
 #include <EGL/egl.h>
+#include "../../helpers.h"
 #include "../../macros.h"
 
 /*
@@ -17,6 +18,7 @@ static const char* test_procedure = "GS_EGL10_RC_CC_TP_003";
 static EGLDisplay test_display = EGL_NO_DISPLAY;
 static EGLContext null_list_context = EGL_NO_CONTEXT;
 static EGLContext empty_list_context = EGL_NO_CONTEXT;
+static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 
 /* Tests both valid attrib_list forms with EGL_NO_CONTEXT sharing. */
 void GS_EGL10_RC_CC_TP_003_init(void) {
@@ -25,12 +27,13 @@ void GS_EGL10_RC_CC_TP_003_init(void) {
     EGLint error;
     const EGLint attrib_list[] = { EGL_NONE };
 
-    test_display = eglGetCurrentDisplay();
-    if (test_display == EGL_NO_DISPLAY) {
+    if (GS_EGL10_initialize_display(&environment) != EGL_TRUE) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "An initialized current EGLDisplay is required");
+            "Could not obtain and initialize EGL_DEFAULT_DISPLAY, error: 0x%x",
+            eglGetError());
         return;
     }
+    test_display = environment.display;
 
     if ((eglGetConfigs(test_display, &config, 1, &config_count) != EGL_TRUE) ||
         (config_count < 1)) {
@@ -78,4 +81,7 @@ void GS_EGL10_RC_CC_TP_003_close(void) {
         (void)eglDestroyContext(test_display, empty_list_context);
         empty_list_context = EGL_NO_CONTEXT;
     }
+
+    GS_EGL10_cleanup_environment(&environment);
+    test_display = EGL_NO_DISPLAY;
 }

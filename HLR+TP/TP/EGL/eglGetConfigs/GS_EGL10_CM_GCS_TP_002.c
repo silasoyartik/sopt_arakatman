@@ -1,23 +1,28 @@
 #include <EGL/egl.h>
 #include <stdlib.h>
+#include "../../helpers.h"
 #include "../../macros.h"
 
 /* EGL10 - ConfigurationManagement - eglGetConfigs
  * Covered requirements: GS-EGL10-CM-GCS-002 */
 static const char* test_case = "GS_EGL10_CM_GCS_TC_002";
 static const char* test_procedure = "GS_EGL10_CM_GCS_TP_002";
+static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 
 void GS_EGL10_CM_GCS_TP_002_init(void)
 {
-    EGLDisplay display = eglGetCurrentDisplay();
+    EGLDisplay display;
     EGLConfig* configs;
     EGLint total = -1;
     EGLint returned = -1;
 
-    if (display == EGL_NO_DISPLAY) {
-        TEST_LOG_FAIL(test_case, test_procedure, "An initialized current EGLDisplay is required");
+    if (GS_EGL10_initialize_display(&environment) != EGL_TRUE) {
+        TEST_LOG_FAIL(test_case, test_procedure,
+            "Could not obtain and initialize EGL_DEFAULT_DISPLAY, error: 0x%x",
+            eglGetError());
         return;
     }
+    display = environment.display;
 
     (void)eglGetError();
     if (eglGetConfigs(display, NULL, 0, &total) != EGL_TRUE) {
@@ -59,4 +64,7 @@ void GS_EGL10_CM_GCS_TP_002_init(void)
     TEST_LOG_SUCCESS(test_case, test_procedure);
 }
 void GS_EGL10_CM_GCS_TP_002_draw(void) {}
-void GS_EGL10_CM_GCS_TP_002_close(void) {}
+void GS_EGL10_CM_GCS_TP_002_close(void)
+{
+    GS_EGL10_cleanup_environment(&environment);
+}

@@ -1,4 +1,5 @@
 #include <EGL/egl.h>
+#include "../../helpers.h"
 #include "../../macros.h"
 
 /*
@@ -12,6 +13,7 @@ Covered requirements:
 
 static const char* test_case = "GS_EGL10_RC_CC_TC_006";
 static const char* test_procedure = "GS_EGL10_RC_CC_TP_006";
+static GS_EGL10_TestEnvironment environment = GS_EGL10_ENV_INITIALIZER;
 
 /* Uses a valid config with EGL_NO_DISPLAY to isolate the invalid display input. */
 void GS_EGL10_RC_CC_TP_006_init(void) {
@@ -21,12 +23,13 @@ void GS_EGL10_RC_CC_TP_006_init(void) {
     EGLint config_count = 0;
     EGLint error;
 
-    valid_display = eglGetCurrentDisplay();
-    if (valid_display == EGL_NO_DISPLAY) {
+    if (GS_EGL10_initialize_display(&environment) != EGL_TRUE) {
         TEST_LOG_FAIL(test_case, test_procedure,
-            "An initialized current EGLDisplay is required");
+            "Could not obtain and initialize EGL_DEFAULT_DISPLAY, error: 0x%x",
+            eglGetError());
         return;
     }
+    valid_display = environment.display;
 
     if ((eglGetConfigs(valid_display, &valid_config, 1, &config_count) !=
             EGL_TRUE) || (config_count < 1)) {
@@ -62,7 +65,7 @@ void GS_EGL10_RC_CC_TP_006_draw(void) {
 
 }
 
-/* No EGL objects are created by this negative test. */
+/* Releases the display initialization established by this independent test. */
 void GS_EGL10_RC_CC_TP_006_close(void) {
-
+    GS_EGL10_cleanup_environment(&environment);
 }
