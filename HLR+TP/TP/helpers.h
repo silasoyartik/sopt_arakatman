@@ -20,7 +20,7 @@ typedef struct
 #define CHECK_ERROR(test_procedure)                                         \
     do                                                                      \
     {                                                                       \
-        EGLint gs_egl_check_error = eglGetError();                           \
+        EGLint gs_egl_check_error = eglGetError();                          \
         if (gs_egl_check_error != EGL_SUCCESS)                              \
         {                                                                   \
             TEST_LOG_FAIL(test_case, test_procedure,                        \
