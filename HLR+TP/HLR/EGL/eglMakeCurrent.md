@@ -2,7 +2,7 @@
 | ------------------- | ----------------- |
 | **Module Name**     | EGL10             |
 | **Sub-Module Name** | RenderingContexts |
-| **Target Function** | eglMakeCurrent    |
+| **Target Function** | `eglMakeCurrent`    |
 | **Safety Level**    | DAL A             |
 | **Rationale**       | Not derived       |
 | **Create Date**     | 30.08.2026        |
