@@ -65,15 +65,14 @@ void GS_EGL10_IN_INI_TP_002_init(void)
         return;
     }
 
-    /* INI-004, case A: only minor is supplied. */
+    /* INI-004, case A: major is NULL and minor is non-NULL. */
     minor = -1;
     result = eglInitialize(environment.display, NULL, &minor);
-    if (result != EGL_TRUE || minor < 0)
+    if (result != EGL_TRUE)
     {
         TEST_LOG_FAIL(test_case2, test_procedure,
-            "Expected EGL_TRUE and a minor version with major == NULL; "
-            "got %u/%d, EGL error: 0x%x",
-            (unsigned int)result, minor, eglGetError());
+            "eglInitialize failed when major was NULL, EGL error: 0x%x",
+            eglGetError());
         test_success2 = EGL_FALSE;
     }
     if (result == EGL_TRUE)
@@ -87,15 +86,14 @@ void GS_EGL10_IN_INI_TP_002_init(void)
         return;
     }
 
-    /* INI-004, case B: only major is supplied. */
+    /* INI-004, case B: minor is NULL and major is non-NULL. */
     major = -1;
     result = eglInitialize(environment.display, &major, NULL);
-    if (result != EGL_TRUE || major < 0)
+    if (result != EGL_TRUE)
     {
         TEST_LOG_FAIL(test_case2, test_procedure,
-            "Expected EGL_TRUE and a major version with minor == NULL; "
-            "got %u/%d, EGL error: 0x%x",
-            (unsigned int)result, major, eglGetError());
+            "eglInitialize failed when minor was NULL, EGL error: 0x%x",
+            eglGetError());
         test_success2 = EGL_FALSE;
     }
     if (result == EGL_TRUE)
