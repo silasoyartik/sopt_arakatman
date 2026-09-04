@@ -28,7 +28,7 @@ void GS_EGL10_IN_TER_TP_004_init(void) {
 
     /*
      * A successful termination leaves a valid display uninitialized. This
-     * establishes the TER-005 precondition independently of prior test state.
+     * establishes the TER-004 precondition independently of prior test state.
      */
     (void)eglGetError();
     if (eglInitialize(display, NULL, NULL) != EGL_TRUE) {
