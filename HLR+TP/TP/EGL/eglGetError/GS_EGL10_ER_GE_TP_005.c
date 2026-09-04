@@ -1,5 +1,5 @@
 #include <EGL/egl.h>
-#include "../../macros.h"
+#include "../../helpers.h"
 
 /* EGL10 - Errors - eglGetError
  * Covered requirement: GS-EGL10-ER-GE-005
@@ -10,10 +10,6 @@ static const char* test_procedure = "GS_EGL10_ER_GE_TP_005";
 
 #ifdef GS_EGL_PLATFORM_TEST_HOOKS
 static EGLBoolean fixture_prepared = EGL_FALSE;
-extern EGLBoolean GS_EGL10_prepare_make_current_error(
-    EGLint expected_error, EGLDisplay *display, EGLSurface *draw,
-    EGLSurface *read, EGLContext *context);
-extern void GS_EGL10_cleanup_make_current_error(EGLint expected_error);
 #endif
 
 void GS_EGL10_ER_GE_TP_005_init(void)

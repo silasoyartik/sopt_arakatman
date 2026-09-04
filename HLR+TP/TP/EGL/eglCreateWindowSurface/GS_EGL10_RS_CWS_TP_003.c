@@ -1,5 +1,5 @@
 #include <EGL/egl.h>
-#include "../../macros.h"
+#include "../../helpers.h"
 
 /* EGL10 - RenderingSurfaces - eglCreateWindowSurface
  * Covered requirement: GS-EGL10-RS-CWS-003
@@ -12,9 +12,6 @@ static EGLBoolean fixture_prepared = EGL_FALSE;
 static EGLDisplay display = EGL_NO_DISPLAY;
 static EGLSurface surface = EGL_NO_SURFACE;
 static EGLContext context = EGL_NO_CONTEXT;
-extern EGLBoolean GS_EGL10_prepare_native_window(EGLDisplay *display,
-    EGLConfig *config, EGLNativeWindowType *window);
-extern void GS_EGL10_cleanup_native_window(void);
 #endif
 
 void GS_EGL10_RS_CWS_TP_003_init(void)

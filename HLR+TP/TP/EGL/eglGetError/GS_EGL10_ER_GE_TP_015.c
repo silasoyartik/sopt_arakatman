@@ -1,5 +1,5 @@
 #include <EGL/egl.h>
-#include "../../macros.h"
+#include "../../helpers.h"
 
 /* EGL10 - Errors - eglGetError
  * Covered requirement: GS-EGL10-ER-GE-015
@@ -12,9 +12,6 @@ static const char* test_procedure = "GS_EGL10_ER_GE_TP_015";
 static EGLBoolean fixture_prepared = EGL_FALSE;
 static EGLDisplay display = EGL_NO_DISPLAY;
 static EGLSurface created_surface = EGL_NO_SURFACE;
-extern EGLBoolean GS_EGL10_prepare_invalid_native_window(
-    EGLDisplay *display, EGLConfig *config, EGLNativeWindowType *window);
-extern void GS_EGL10_cleanup_invalid_native_window(void);
 #endif
 
 void GS_EGL10_ER_GE_TP_015_init(void)

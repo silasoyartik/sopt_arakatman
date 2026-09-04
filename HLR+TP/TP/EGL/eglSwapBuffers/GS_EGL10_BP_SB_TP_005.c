@@ -12,11 +12,6 @@ static EGLBoolean test_success = EGL_TRUE;
 static EGLBoolean fixture_prepared;
 static EGLDisplay display = EGL_NO_DISPLAY;
 static EGLSurface surface = EGL_NO_SURFACE;
-extern EGLBoolean GS_EGL10_prepare_current_window_surface(
-    EGLDisplay *display, EGLSurface *surface);
-extern EGLBoolean GS_EGL10_resize_native_window(
-    EGLint *expected_width, EGLint *expected_height);
-extern void GS_EGL10_cleanup_current_window_surface(void);
 #endif
 
 void GS_EGL10_BP_SB_TP_005_init(void)

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /* OPTIONAL IMPLEMENTATION ADAPTATION
  *
@@ -28,13 +28,7 @@
  * type, no adaptation is required.
  */
 
-#ifdef GS_EGL10_NATIVE_VISUAL_COMPARE_AVAILABLE
-
-extern int GS_EGL10_compare_native_visual_type(
-    EGLint lhs,
-    EGLint rhs);
-
-#else
+#ifndef GS_EGL10_NATIVE_VISUAL_COMPARE_AVAILABLE
 
 static int GS_EGL10_compare_native_visual_type(
     EGLint lhs,

@@ -12,10 +12,6 @@ static const char* test_procedure = "GS_EGL10_RC_MC_TP_014";
 static EGLBoolean test_success = EGL_TRUE;
 
 #ifdef GS_EGL_PLATFORM_TEST_HOOKS
-extern EGLBoolean GS_EGL10_prepare_make_current_error(
-    EGLint expected_error, EGLDisplay *display, EGLSurface *draw,
-    EGLSurface *read, EGLContext *context);
-extern void GS_EGL10_cleanup_make_current_error(EGLint expected_error);
 #endif
 
 void GS_EGL10_RC_MC_TP_014_init(void)
@@ -66,4 +62,3 @@ void GS_EGL10_RC_MC_TP_014_close(void)
     GS_EGL10_cleanup_make_current_error(EGL_BAD_CURRENT_SURFACE);
 #endif
 }
-

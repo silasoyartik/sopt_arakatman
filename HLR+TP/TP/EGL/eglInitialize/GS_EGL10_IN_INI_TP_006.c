@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <EGL/egl.h>
-#include "macros.h"
+#include "../../helpers.h"
 
 /* OPTIONAL PLATFORM ADAPTATION - POSIX/PTHREAD EXAMPLE
  *
@@ -19,9 +19,6 @@
  *     4. Return EGL_TRUE when thread execution succeeds.
  *
  */
-
-typedef void (*GS_EGL10_ThreadFunction)(void *argument);
-
 
 #ifdef GS_EGL_USE_PTHREAD
 
@@ -79,15 +76,6 @@ static EGLBoolean GS_EGL10_create_and_join_thread(
     return EGL_TRUE;
 }
 
-
-#else
-
-/*
- * PLATFORM-SPECIFIC IMPLEMENTATION REQUIRED
- */
-extern EGLBoolean GS_EGL10_create_and_join_thread(
-    GS_EGL10_ThreadFunction function,
-    void *argument);
 
 #endif
 
