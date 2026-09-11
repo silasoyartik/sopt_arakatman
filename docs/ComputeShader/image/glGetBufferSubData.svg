@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1160" height="390" viewBox="0 0 1160 390" role="img" aria-labelledby="title desc">
+  <title id="title">glGetBufferSubData ile compute shader SSBO sonucunu CPU'ya alma</title>
+  <desc id="desc">Compute shader sayıları iki ile çarpar ve SSBO'ya yazar. glGetBufferSubData seçilen byte aralığını CPU result dizisine kopyalar.</desc>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#334155"/></marker></defs>
+  <style>text{font-family:Arial,sans-serif;fill:#0f172a}.title{font-size:23px;font-weight:bold}.label{font-size:17px;font-weight:bold}.small{font-size:14px}.tiny{font-size:12px}.box{stroke:#334155;stroke-width:2;rx:12;ry:12}.arrow{stroke:#334155;stroke-width:3;fill:none;marker-end:url(#arrow)}</style>
+  <rect width="1160" height="390" fill="#f8fafc"/>
+  <text x="38" y="40" class="title">OpenGL 4.3: compute sonucu glGetBufferSubData ile CPU'ya kopyalanır</text>
+  <rect x="35" y="125" width="195" height="120" class="box" fill="#f3e8ff"/>
+  <text x="56" y="161" class="label">Compute shader</text><text x="58" y="190" class="small">[1, 2, 3, 4] × 2</text><text x="67" y="216" class="small">4 invocation</text>
+  <path d="M230 185 H320" class="arrow"/>
+  <rect x="325" y="105" width="225" height="160" class="box" fill="#fef3c7"/>
+  <text x="398" y="143" class="label">SSBO</text><text x="357" y="176" class="small">GL_SHADER_STORAGE_</text><text x="410" y="198" class="small">BUFFER</text><text x="360" y="236" class="small">[2, 4, 6, 8]</text>
+  <path d="M550 185 H630" class="arrow"/>
+  <rect x="635" y="105" width="245" height="160" class="box" fill="#dbeafe"/>
+  <text x="657" y="143" class="label">glGetBufferSubData</text><text x="665" y="172" class="tiny">target = GL_SHADER_STORAGE_</text><text x="738" y="190" class="tiny">BUFFER</text><text x="665" y="215" class="tiny">offset = 0, size = sizeof(result)</text><text x="665" y="242" class="tiny">data = result</text>
+  <path d="M880 185 H950" class="arrow"/>
+  <rect x="955" y="125" width="165" height="120" class="box" fill="#dcfce7"/>
+  <text x="992" y="162" class="label">CPU</text><text x="975" y="193" class="small">result[]</text><text x="975" y="217" class="small">[2, 4, 6, 8]</text>
+</svg>

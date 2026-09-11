@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="360" viewBox="0 0 1080 360" role="img" aria-labelledby="title desc">
+  <title id="title">glBindBufferBase SSBO binding akışı</title>
+  <desc id="desc">CPU çağrısı buffer'ı hem general hem indexed binding point'e bağlar; shader binding point üzerinden buffer'a erişir.</desc>
+  <defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#334155"/></marker></defs>
+  <style>text{font-family:Arial,sans-serif;fill:#0f172a}.title{font-size:23px;font-weight:bold}.label{font-size:18px;font-weight:bold}.small{font-size:15px}.box{stroke:#334155;stroke-width:2;rx:12;ry:12}.arrow{stroke:#334155;stroke-width:3;fill:none;marker-end:url(#arrow)}</style>
+  <rect width="1080" height="360" fill="#f8fafc"/>
+  <text x="40" y="42" class="title">glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, ssbo)</text>
+  <rect x="40" y="90" width="270" height="180" class="box" fill="#dbeafe"/>
+  <text x="70" y="130" class="label">CPU / OpenGL çağrısı</text>
+  <text x="70" y="164" class="small">target = GL_SHADER_STORAGE_BUFFER</text>
+  <text x="70" y="192" class="small">index = 2</text>
+  <text x="70" y="220" class="small">buffer = ssbo</text>
+  <path d="M310 145 H455" class="arrow"/><path d="M310 225 H455" class="arrow"/>
+  <rect x="460" y="80" width="250" height="100" class="box" fill="#dcfce7"/>
+  <text x="490" y="120" class="label">General binding</text><text x="490" y="150" class="small">SSBO → ssbo</text>
+  <rect x="460" y="205" width="250" height="100" class="box" fill="#fef3c7"/>
+  <text x="490" y="245" class="label">Indexed binding [2]</text><text x="490" y="275" class="small">SSBO[2] → ssbo</text>
+  <path d="M710 255 H830" class="arrow"/>
+  <rect x="835" y="185" width="205" height="120" class="box" fill="#f3e8ff"/>
+  <text x="860" y="225" class="label">Compute shader</text><text x="860" y="255" class="small">layout(binding = 2)</text><text x="860" y="278" class="small">buffer block</text>
+</svg>
