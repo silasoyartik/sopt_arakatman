@@ -132,6 +132,16 @@ static int GS_GLES31_load_entry_points(void)
 
 #endif
 
+/* These two entry points are used during environment validation, before
+ * the common fixture can validate the rest of the loaded API.
+ */
+#if defined(GS_GLES31_USE_GLAD1) || defined(GS_GLES31_USE_GLAD2)
+    if (glGetString == NULL || glGetError == NULL)
+    {
+        fprintf(stderr, "The loader did not provide environment query entry points.\n");
+        return 0;
+    }
+#endif
 
     return 1;
 }
