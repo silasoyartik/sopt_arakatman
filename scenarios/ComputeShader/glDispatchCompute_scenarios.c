@@ -431,12 +431,10 @@ void scenario_dispatch_exceed_max_z(void)
 /* ============================================================
  * SCENARIO 10
  *
- * No active program.
+ * No active compute shader executable.
  *
- * glUseProgram(0) removes the active program.
- *
- * glDispatchCompute() requires an active program containing
- * a compute shader executable.
+ * The current program and any active program pipeline are
+ * removed before glDispatchCompute() is called.
  *
  * Expected error:
  *
@@ -446,9 +444,14 @@ void scenario_dispatch_exceed_max_z(void)
 void scenario_dispatch_no_active_program(void)
 {
     /*
-     * Remove the currently active program.
+     * Remove the current program.
      */
     glUseProgram(0);
+
+    /*
+     * Make sure that no program pipeline is active.
+     */
+    glBindProgramPipeline(0);
 
     clear_gl_errors();
 
@@ -461,7 +464,7 @@ void scenario_dispatch_no_active_program(void)
     GLenum error = glGetError();
 
     printf(
-        "Scenario 10 - No active program\n"
+        "Scenario 10 - No active compute shader executable\n"
     );
 
     printf(
@@ -482,7 +485,7 @@ void scenario_dispatch_no_active_program(void)
 /* ============================================================
  * SCENARIO 11
  *
- * Active program without a compute shader.
+ * Active linked program without a compute shader executable.
  *
  * The supplied program must be a successfully linked graphics
  * program containing graphics shader stages but no compute

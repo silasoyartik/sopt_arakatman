@@ -234,7 +234,10 @@ Burada `gl_WorkGroupID` mevcut work group'ın konumunu, `gl_GlobalInvocationID` 
 
 ## 7. Aktif Compute Shader Programı
 
-`glDispatchCompute` çağrısının geçerli bir şekilde gerçekleştirilmesi için aktif programın compute shader executable içermesi gerekir.
+`glDispatchCompute` çağrısının geçerli bir şekilde gerçekleştirilmesi için compute shader stage için geçerli bir executable'ın aktif olması gerekir.
+
+Bu executable, başarıyla link edilmiş bir compute shader programından sağlanmalıdır.
+Compute shader stage için geçerli bir executable bulunmadığında `glDispatchCompute` çağrısı `GL_INVALID_OPERATION` oluşturur.
 
 Örneğin:
 
@@ -571,7 +574,7 @@ olur.
 
 | Hata                     | Koşul                                                                              |
 | ------------------------ | ----------------------------------------------------------------------------------- |
-| `GL_INVALID_OPERATION` | Geçerli aktif compute shader programı bulunmaması                                |
+| `GL_INVALID_OPERATION` | Compute shader stage için geçerli bir executable'ın aktif olmaması                                |
 | `GL_INVALID_VALUE`     | `num_groups_x` değerinin X maksimumunu aşması                                  |
 | `GL_INVALID_VALUE`     | `num_groups_y` değerinin Y maksimumunu aşması                                  |
 | `GL_INVALID_VALUE`     | `num_groups_z` değerinin Z maksimumunu aşması                                  |
