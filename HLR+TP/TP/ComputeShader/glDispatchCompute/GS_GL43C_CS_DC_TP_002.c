@@ -1,103 +1,127 @@
-#include <GL/gl.h>
-#include "../../helpers.h"
+#include "../../helpers_gles31.h"
 
 /*
- * GL43C - ComputeShaders - glDispatchCompute
+ * GS_GLES31_CS_DC_TP_002
  *
- * Covered requirements:
- *   GS-GL43C-CS-DC-002
- *   GS-GL43C-CS-DC-010
- *   GS-GL43C-CS-DC-011
- *   GS-GL43C-CS-DC-012
+ * HLR: GS-GLES31-CS-DC-009.
+ *
+ * Dispatch (2,3,2), local size (1,1,1): observe every group coordinate
+ * and gl_NumWorkGroups. Atomic counters detect missing or repeated groups.
  */
-static const char *test_case2 = "GS_GL43C_CS_DC_TC_002";
-static const char *test_case10 = "GS_GL43C_CS_DC_TC_010";
-static const char *test_case11 = "GS_GL43C_CS_DC_TC_011";
-static const char *test_case12 = "GS_GL43C_CS_DC_TC_012";
-static const char *test_procedure = "GS_GL43C_CS_DC_TP_002";
+#define TP002_GROUPS_X 2u
+#define TP002_GROUPS_Y 3u
+#define TP002_GROUPS_Z 2u
+#define TP002_TOTAL_GROUPS (TP002_GROUPS_X * TP002_GROUPS_Y * TP002_GROUPS_Z)
+#define TP002_VALUES_PER_GROUP 8u
+#define TP002_BUFFER_VALUES (1u + TP002_TOTAL_GROUPS * TP002_VALUES_PER_GROUP)
+#define TP002_MARKER_BASE 0xC0DE0000u
 
-static GLboolean test_success2 = GL_TRUE;
-static GLboolean test_success10 = GL_TRUE;
-static GLboolean test_success11 = GL_TRUE;
-static GLboolean test_success12 = GL_TRUE;
+static GS_GLES31_TestResult result =
+    GS_GLES31_RESULT("GS_GLES31_CS_DC_TC_009", "GS_GLES31_CS_DC_TP_002");
+static GS_GLES31_TestFixture fixture = GS_GLES31_FIXTURE_INITIALIZER;
 
-static GS_GL_TestEnvironment environment = GS_GL_ENV_INITIALIZER;
+/*
+ * data[0]: actual invocation count (one invocation per work group).
+ * Each group record: visits, NumWorkGroups.xyz, WorkGroupID.xyz, marker.
+ * Only the first visitor writes the record, including under duplicate IDs.
+ * Fixed indexing keeps the output address independent of gl_NumWorkGroups.
+ */
+static const char *compute_shader_source =
+    "#version 310 es\n"
+    "layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;\n"
+    "layout(std430, binding = 0) buffer OutputBuffer { uint data[]; };\n"
+    "void main()\n"
+    "{\n"
+    "    atomicAdd(data[0], 1u);\n"
+    "    uvec3 id = gl_WorkGroupID;\n"
+    "    if (id.x >= 2u || id.y >= 3u || id.z >= 2u) return;\n"
+    "    uint linear_index = id.x + 2u * (id.y + 3u * id.z);\n"
+    "    uint base = 1u + linear_index * 8u;\n"
+    "    if (atomicAdd(data[base], 1u) != 0u) return;\n"
+    "    data[base + 1u] = gl_NumWorkGroups.x;\n"
+    "    data[base + 2u] = gl_NumWorkGroups.y;\n"
+    "    data[base + 3u] = gl_NumWorkGroups.z;\n"
+    "    data[base + 4u] = id.x;\n"
+    "    data[base + 5u] = id.y;\n"
+    "    data[base + 6u] = id.z;\n"
+    "    data[base + 7u] = 0xC0DE0000u + linear_index;\n"
+    "}\n";
 
-void GS_GL43C_CS_DC_TP_002_init(void)
+void GS_GLES31_CS_DC_TP_002_init(void)
 {
-    void (*dispatch_compute)(GLuint, GLuint, GLuint) = glDispatchCompute;[cite: 4]
-    GLuint compute_program = 0;
-    GLuint ssbo = 0;
-    GLuint *mapped_data = NULL;
-    int i = 0;
+    GLuint data[TP002_BUFFER_VALUES];
+    GLuint output_buffer;
+    GLuint x, y, z, index;
 
-    if (!GS_GL_prepare_environment(&environment))
+    GS_GLES31_reset_results(&result, 1);
+    if (!GS_GLES31_begin_fixture(&fixture) ||
+        !GS_GLES31_fixture_compute_program(&fixture, compute_shader_source))
     {
-        TEST_LOG_FAIL(test_case2, test_procedure,
-            "Could not prepare an initialized GL environment");[cite: 4]
-        test_success2 = GL_FALSE;
-        test_success10 = GL_FALSE;
-        test_success11 = GL_FALSE;
-        test_success12 = GL_FALSE;
-        return;
+        GS_GLES31_FAIL_RESULTS(&result, 1, "%s",
+                              "Could not prepare the compute test fixture");
+        goto report;
     }
 
-    /* 
-     * Shader writes `gl_GlobalInvocationID.x + gl_LocalInvocationID.x` 
-     * to SSBO using layout(local_size_x = 2). 
-     */
-    compute_program = GS_GL_compile_validation_compute_shader();
-    glUseProgram(compute_program);
+    GS_GLES31_fill_uint(data, TP002_BUFFER_VALUES, 0xFFFFFFFFu);
+    data[0] = 0u;
+    for (index = 0; index < TP002_TOTAL_GROUPS; ++index)
+        data[1u + index * TP002_VALUES_PER_GROUP] = 0u;
 
-    glGenBuffers(1, &ssbo);
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    glBufferData(GL_SHADER_STORAGE_BUFFER, 4 * sizeof(GLuint), NULL, GL_DYNAMIC_COPY);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, ssbo);
-
-    /* TC_002, TC_010: Dispatch 2 groups on X, local_size is 2, total 4 invocations */
-    dispatch_compute(2, 1, 1);
-    
-    if (glGetError() != GL_NO_ERROR) 
+    output_buffer = GS_GLES31_fixture_ssbo(
+        &fixture, 0, (GLsizeiptr)sizeof(data), data, GL_DYNAMIC_READ);
+    if (output_buffer == 0)
     {
-        TEST_LOG_FAIL(test_case2, test_procedure, "Dispatch generated error");
-        test_success2 = GL_FALSE;
+        GS_GLES31_FAIL_RESULTS(&result, 1, "%s", "Could not create the output SSBO");
+        goto report;
     }
 
-    glMemoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-    
-    /* TC_011, TC_012: Check memory execution and GLSL variables via readback */
-    glBindBuffer(GL_SHADER_STORAGE_BUFFER, ssbo);
-    mapped_data = (GLuint*)glMapBuffer(GL_SHADER_STORAGE_BUFFER, GL_READ_ONLY);
-    
-    if (mapped_data != NULL)
+    GS_GLES31_clear_errors();
+    glDispatchCompute(TP002_GROUPS_X, TP002_GROUPS_Y, TP002_GROUPS_Z);
+    if (!GS_GLES31_EXPECT_ERROR(&result, GL_NO_ERROR, "glDispatchCompute(2,3,2)"))
+        goto report;
+
+    if (!GS_GLES31_read_ssbo(output_buffer, (GLsizeiptr)sizeof(data), data))
     {
-        for (i = 0; i < 4; ++i)
+        GS_GLES31_FAIL_RESULTS(&result, 1, "%s", "Could not read compute output");
+        goto report;
+    }
+
+    GS_GLES31_CHECK(&result, data[0] == TP002_TOTAL_GROUPS,
+                   "Expected %u executed groups, got %u", TP002_TOTAL_GROUPS, data[0]);
+    for (z = 0; z < TP002_GROUPS_Z; ++z)
+    {
+        for (y = 0; y < TP002_GROUPS_Y; ++y)
         {
-            /* Check layout execution and local variables */
-            if (mapped_data[i] == 0) 
+            for (x = 0; x < TP002_GROUPS_X; ++x)
             {
-                TEST_LOG_FAIL(test_case10, test_procedure, "Shader failed to run");
-                test_success10 = GL_FALSE;
-                test_success11 = GL_FALSE;
+                const GLuint linear_index = x + TP002_GROUPS_X * (y + TP002_GROUPS_Y * z);
+                const GLuint base = 1u + linear_index * TP002_VALUES_PER_GROUP;
+                const GLuint expected[] = {
+                    1u, TP002_GROUPS_X, TP002_GROUPS_Y, TP002_GROUPS_Z,
+                    x, y, z, TP002_MARKER_BASE + linear_index
+                };
+                static const char *fields[] = {
+                    "visits", "NumWorkGroups.x", "NumWorkGroups.y", "NumWorkGroups.z",
+                    "WorkGroupID.x", "WorkGroupID.y", "WorkGroupID.z", "marker"
+                };
+
+                for (index = 0; index < TP002_VALUES_PER_GROUP; ++index)
+                    GS_GLES31_CHECK(&result, data[base + index] == expected[index],
+                                   "Group (%u,%u,%u) %s: expected %u, got %u",
+                                   x, y, z, fields[index], expected[index], data[base + index]);
             }
         }
-        glUnmapBuffer(GL_SHADER_STORAGE_BUFFER);
-    }
-    else
-    {
-        TEST_LOG_FAIL(test_case12, test_procedure, "Failed to map SSBO buffer");
-        test_success12 = GL_FALSE;
     }
 
-    if (test_success2) TEST_LOG_SUCCESS(test_case2, test_procedure);[cite: 4]
-    if (test_success10) TEST_LOG_SUCCESS(test_case10, test_procedure);
-    if (test_success11) TEST_LOG_SUCCESS(test_case11, test_procedure);
-    if (test_success12) TEST_LOG_SUCCESS(test_case12, test_procedure);
+report:
+    GS_GLES31_report_results(&result, 1);
 }
 
-void GS_GL43C_CS_DC_TP_002_draw(void) { }[cite: 4]
-
-void GS_GL43C_CS_DC_TP_002_close(void)
+void GS_GLES31_CS_DC_TP_002_draw(void)
 {
-    GS_GL_cleanup_environment(&environment);[cite: 4]
+}
+
+void GS_GLES31_CS_DC_TP_002_close(void)
+{
+    GS_GLES31_end_fixture(&fixture);
 }
