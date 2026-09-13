@@ -1,39 +1,48 @@
-#ifdef GS_GLES31_API_HEADER
-#include GS_GLES31_API_HEADER
-#else
-#include <GLES3/gl31.h>
-#endif
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "../../macros.h"
+#define GS_BUFFER_TEST_GLES31
+#include "../../compute_helpers.h"
 
-/* Covered requirement: GS-GLES31-CS-BBB-001
- * Compile/link the exact API signature; do not substitute a wrapper.
- * Precondition: the harness supplies a fresh, isolated current context and
- * loaded entry points for this API. Context lifetime belongs to the harness.
- * This procedure creates and deletes only its own GL objects.
- */
-static const char *test_case = "GS_GLES31_CS_BBB_TC_001";
-static const char *test_procedure = "GS_GLES31_CS_BBB_TP_001";
+/*
+GLES31 - ComputeShader - glBindBufferBase
 
-/* Result values: -1 = not run, 0 = fail, 1 = pass. */
-static int test_result = -1;
+Compile/link the exact API signature; do not substitute a wrapper.
 
-void GS_GLES31_CS_BBB_TP_001_init(void)
-{
-    /* Compile/link check: exact standard API signature, no GL objects needed.
-     * A dynamic loader, if used, must already have resolved the entry point.
-     */
-    PFNGLBINDBUFFERBASEPROC volatile entry = glBindBufferBase;
-    test_result = 0;
-    if (entry == NULL)
-    {
-        TEST_LOG_FAIL(test_case, test_procedure, "glBindBufferBase entry point unavailable");
+Covered requirements:
+        - GS-GLES31-CS-BBB-001
+*/
+
+static const char* test_case = "GS_GLES31_CS_BBB_TC_001";
+static const char* test_procedure = "GS_GLES31_CS_BBB_TP_001";
+
+/* ---- Static state ---- */
+static GLboolean test_success = GL_TRUE;
+
+/* Initialization */
+void GS_GLES31_CS_BBB_TP_001_init(void) {
+    test_success = GL_TRUE;
+    CHECK_GL_ERROR(test_case, test_procedure, test_success);
+    if (!test_success) {
         return;
     }
-    test_result = 1;
-    TEST_LOG_SUCCESS(test_case, test_procedure);
+
+    // Test Case 001: standard API signature and link symbol.
+    PFNGLBINDBUFFERBASEPROC volatile entry = glBindBufferBase;
+    if (entry == NULL) {
+        TEST_LOG_FAIL(test_case, test_procedure, "glBindBufferBase entry point unavailable");
+        test_success = GL_FALSE;
+    }
+    if (test_success) {
+        TEST_LOG_SUCCESS(test_case, test_procedure);
+    }
 }
+
+/* Draw */
 void GS_GLES31_CS_BBB_TP_001_draw(void) {}
-void GS_GLES31_CS_BBB_TP_001_close(void) {}
-int GS_GLES31_CS_BBB_TP_001_result(void) { return test_result; }
+
+/* Cleanup */
+void GS_GLES31_CS_BBB_TP_001_close(void) {
+    CHECK_GL_ERROR(test_case, test_procedure, test_success);
+}

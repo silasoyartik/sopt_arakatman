@@ -1,156 +1,132 @@
-#ifdef GS_GLES31_API_HEADER
-#include GS_GLES31_API_HEADER
-#else
-#include <GLES3/gl31.h>
-#endif
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "../../macros.h"
+#define GS_BUFFER_TEST_GLES31
+#include "../../compute_helpers.h"
 
-/* Covered requirement: GS-GLES31-CS-BBB-006
- * Unbind both general and indexed bindings from a nonzero baseline.
- * Precondition: the harness supplies a fresh, isolated current context and
- * loaded entry points for this API. Context lifetime belongs to the harness.
- * This procedure creates and deletes only its own GL objects.
- */
-static const char *test_case = "GS_GLES31_CS_BBB_TC_006";
-static const char *test_procedure = "GS_GLES31_CS_BBB_TP_004";
+/*
+GLES31 - ComputeShader - glBindBufferBase
 
-/* Result values: -1 = not run, 0 = fail, 1 = pass. */
-static int test_result = -1;
+Unbind both general and indexed bindings from a nonzero baseline.
 
-void GS_GLES31_CS_BBB_TP_004_init(void)
-{
-    GLenum actual_error, extra_error;
-    GLuint buffers[4] = {0};
-    int cleanup_ok = 1;
-    test_result = 0; /* No early exit may report success. */
-    actual_error = glGetError();
-    extra_error = glGetError();
-    if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-    {
-        TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                      "Pre-existing GL error before test setup", (unsigned)GL_NO_ERROR,
-                      (unsigned)actual_error, (unsigned)extra_error);
-        goto finish;
+Covered requirements:
+        - GS-GLES31-CS-BBB-006
+*/
+
+static const char* test_case = "GS_GLES31_CS_BBB_TC_006";
+static const char* test_procedure = "GS_GLES31_CS_BBB_TP_004";
+
+/* ---- Static state ---- */
+static GLboolean test_success = GL_TRUE;
+static GLuint buffers[4] = {0};
+
+/* Initialization */
+void GS_GLES31_CS_BBB_TP_004_init(void) {
+    test_success = GL_TRUE;
+
+    GLenum err;
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x", (unsigned)err);
+        test_success = GL_FALSE;
+        return;
     }
 
     const GLuint data[4] = {1, 2, 3, 4};
     /* Prepare storage through a non-indexed target. */
     glGenBuffers(1, &buffers[0]);
-    actual_error = glGetError();
-    extra_error = glGetError();
-    if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-    {
-        TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                      "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                      (unsigned)extra_error);
-        goto finish;
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x", (unsigned)err);
+        test_success = GL_FALSE;
+        return;
     }
-    if (buffers[0] == 0)
-    {
+    if (buffers[0] == 0) {
         TEST_LOG_FAIL(test_case, test_procedure, "%s", "Buffer setup failed");
-        goto finish;
+        test_success = GL_FALSE;
+        return;
     }
     glBindBuffer(GL_COPY_WRITE_BUFFER, buffers[0]);
-    actual_error = glGetError();
-    extra_error = glGetError();
-    if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-    {
-        TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                      "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                      (unsigned)extra_error);
-        goto finish;
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x", (unsigned)err);
+        test_success = GL_FALSE;
+        return;
     }
     glBufferData(GL_COPY_WRITE_BUFFER, sizeof(data), data, GL_STATIC_DRAW);
-    actual_error = glGetError();
-    extra_error = glGetError();
-    if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-    {
-        TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                      "Buffer setup failed", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                      (unsigned)extra_error);
-        goto finish;
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x", (unsigned)err);
+        test_success = GL_FALSE;
+        return;
     }
     glBindBufferRange(GL_SHADER_STORAGE_BUFFER, 0, buffers[0], 0, sizeof(data));
-    actual_error = glGetError();
-    extra_error = glGetError();
-    if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-    {
-        TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                      "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                      (unsigned)extra_error);
-        goto finish;
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x", (unsigned)err);
+        test_success = GL_FALSE;
+        return;
     }
     {
         GLint actual_general = -1, actual_indexed = -1;
         glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &actual_general);
         glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &actual_indexed);
-        actual_error = glGetError();
-        extra_error = glGetError();
-        if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-        {
-            TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                          "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                          (unsigned)extra_error);
-            goto finish;
+        err = glGetError();
+        if (err != GL_NO_ERROR) {
+            TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                          (unsigned)err);
+            test_success = GL_FALSE;
+            return;
         }
-        if (!((GLuint)actual_general == buffers[0] && (GLuint)actual_indexed == buffers[0]))
-        {
+        if (!((GLuint)actual_general == buffers[0] && (GLuint)actual_indexed == buffers[0])) {
             TEST_LOG_FAIL(test_case, test_procedure, "%s", "Nonzero baseline missing");
-            goto finish;
+            test_success = GL_FALSE;
+            return;
         }
     }
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, 0);
-    actual_error = glGetError();
-    extra_error = glGetError();
-    if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-    {
-        TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                      "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                      (unsigned)extra_error);
-        goto finish;
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x", (unsigned)err);
+        test_success = GL_FALSE;
+        return;
     }
     {
         GLint actual_general = -1, actual_indexed = -1;
         glGetIntegerv(GL_SHADER_STORAGE_BUFFER_BINDING, &actual_general);
         glGetIntegeri_v(GL_SHADER_STORAGE_BUFFER_BINDING, 0, &actual_indexed);
-        actual_error = glGetError();
-        extra_error = glGetError();
-        if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-        {
-            TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                          "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                          (unsigned)extra_error);
-            goto finish;
+        err = glGetError();
+        if (err != GL_NO_ERROR) {
+            TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                          (unsigned)err);
+            test_success = GL_FALSE;
+            return;
         }
-        if (!((GLuint)actual_general == 0 && (GLuint)actual_indexed == 0))
-        {
+        if (!((GLuint)actual_general == 0 && (GLuint)actual_indexed == 0)) {
             TEST_LOG_FAIL(test_case, test_procedure, "%s", "Zero did not unbind both points");
-            goto finish;
+            test_success = GL_FALSE;
+            return;
         }
     }
 
-    test_result = 1;
-finish:
-    /* Release test-owned GL objects while the harness context is still current. */
-    glDeleteBuffers(4, buffers);
-    {
-        GLenum cleanup_error = glGetError();
-        GLenum extra_error = glGetError();
-        if (cleanup_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-        {
-            cleanup_ok = 0;
-            TEST_LOG_FAIL(test_case, test_procedure, "Cleanup GL error: 0x%x / 0x%x",
-                          (unsigned)cleanup_error, (unsigned)extra_error);
-        }
-    }
-    if (!cleanup_ok)
-        test_result = 0;
-    if (test_result == 1)
+    if (test_success) {
         TEST_LOG_SUCCESS(test_case, test_procedure);
+    }
 }
+
+/* Draw */
 void GS_GLES31_CS_BBB_TP_004_draw(void) {}
-/* init releases resources on both success and failure; repeated close is harmless. */
-void GS_GLES31_CS_BBB_TP_004_close(void) {}
-int GS_GLES31_CS_BBB_TP_004_result(void) { return test_result; }
+
+/* Cleanup */
+void GS_GLES31_CS_BBB_TP_004_close(void) {
+    CHECK_GL_ERROR(test_case, test_procedure, test_success);
+    glDeleteBuffers(4, buffers);
+    memset(buffers, 0, sizeof(buffers));
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Cleanup error: 0x%x", (unsigned)err);
+        test_success = GL_FALSE;
+    }
+    CHECK_GL_ERROR(test_case, test_procedure, test_success);
+}
