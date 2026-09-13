@@ -1,208 +1,189 @@
-#ifdef GS_GLES31_API_HEADER
-#include GS_GLES31_API_HEADER
-#else
-#include <GLES3/gl31.h>
-#endif
+#include <stdio.h>
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
-#include "../../macros.h"
+#define GS_BUFFER_TEST_GLES31
+#include "../../compute_helpers.h"
 
-/* Covered requirement: GS-GLES31-CS-BBB-011
- * Query explicit and default block bindings immediately after link; no override is used.
- * Precondition: the harness supplies a fresh, isolated current context and
- * loaded entry points for this API. Context lifetime belongs to the harness.
- * This procedure creates and deletes only its own GL objects.
- */
-static const char *test_case = "GS_GLES31_CS_BBB_TC_011";
-static const char *test_procedure = "GS_GLES31_CS_BBB_TP_009";
+/*
+GLES31 - ComputeShader - glBindBufferBase
 
-/* Result values: -1 = not run, 0 = fail, 1 = pass. */
-static int test_result = -1;
+Query explicit and default block bindings immediately after link; no override is used.
 
-void GS_GLES31_CS_BBB_TP_009_init(void)
-{
-    GLenum actual_error, extra_error;
-    GLuint shader = 0, program = 0;
-    int cleanup_ok = 1;
-    test_result = 0; /* No early exit may report success. */
-    actual_error = glGetError();
-    extra_error = glGetError();
-    if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-    {
-        TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                      "Pre-existing GL error before test setup", (unsigned)GL_NO_ERROR,
-                      (unsigned)actual_error, (unsigned)extra_error);
-        goto finish;
+Covered requirements:
+        - GS-GLES31-CS-BBB-011
+*/
+
+static const char* test_case = "GS_GLES31_CS_BBB_TC_011";
+static const char* test_procedure = "GS_GLES31_CS_BBB_TP_009";
+
+/* ---- Shader sources ---- */
+static const char* sources[] = {"#version 310 es\nlayout(local_size_x=1) in;\n"
+                                "layout(std430,binding=1) buffer Payload { uint value; };\n"
+                                "void main(){ value=7u; }\n",
+                                "#version 310 es\nlayout(local_size_x=1) in;\n"
+                                "layout(std430) buffer Payload { uint value; };\n"
+                                "void main(){ value=7u; }\n"};
+
+/* ---- Static state ---- */
+static GLboolean test_success = GL_TRUE;
+static GLuint shader = 0, program = 0;
+
+/* Initialization */
+void GS_GLES31_CS_BBB_TP_009_init(void) {
+    test_success = GL_TRUE;
+
+    GLenum err;
+    err = glGetError();
+    if (err != GL_NO_ERROR) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x", (unsigned)err);
+        test_success = GL_FALSE;
+        return;
     }
 
-    const char *sources[] = {"#version 310 es\nlayout(local_size_x=1) in;\n"
-                             "layout(std430,binding=1) buffer Payload { uint value; };\n"
-                             "void main(){ value=7u; }\n",
-                             "#version 310 es\nlayout(local_size_x=1) in;\n"
-                             "layout(std430) buffer Payload { uint value; };\n"
-                             "void main(){ value=7u; }\n"};
-    for (unsigned i = 0; i < 2; ++i)
-    {
+    for (unsigned i = 0; i < 2; ++i) {
         GLint binding = -1;
         GLenum property = GL_BUFFER_BINDING;
         /* Compile and link the compute program used by this requirement. */
         {
-            const GLchar *shader_source = sources[i];
+            const GLchar* shader_source = sources[i];
             GLint compiled = GL_FALSE, linked = GL_FALSE;
             GLchar info_log[1024] = {0};
             shader = glCreateShader(GL_COMPUTE_SHADER);
-            actual_error = glGetError();
-            extra_error = glGetError();
-            if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-            {
-                TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                              "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                              (unsigned)extra_error);
-                goto finish;
+            err = glGetError();
+            if (err != GL_NO_ERROR) {
+                TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                              (unsigned)err);
+                test_success = GL_FALSE;
+                return;
             }
-            if (shader == 0)
-            {
+            if (shader == 0) {
                 TEST_LOG_FAIL(test_case, test_procedure, "%s", "Could not create compute shader");
-                goto finish;
+                test_success = GL_FALSE;
+                return;
             }
             glShaderSource(shader, 1, &shader_source, NULL);
             glCompileShader(shader);
             glGetShaderiv(shader, GL_COMPILE_STATUS, &compiled);
-            actual_error = glGetError();
-            extra_error = glGetError();
-            if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-            {
-                TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                              "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                              (unsigned)extra_error);
-                goto finish;
+            err = glGetError();
+            if (err != GL_NO_ERROR) {
+                TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                              (unsigned)err);
+                test_success = GL_FALSE;
+                return;
             }
-            if (compiled != GL_TRUE)
-            {
+            if (compiled != GL_TRUE) {
                 glGetShaderInfoLog(shader, sizeof(info_log), NULL, info_log);
                 TEST_LOG_FAIL(test_case, test_procedure, "Shader compilation failed: %s", info_log);
-                goto finish;
+                test_success = GL_FALSE;
+                return;
             }
             program = glCreateProgram();
-            actual_error = glGetError();
-            extra_error = glGetError();
-            if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-            {
-                TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                              "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                              (unsigned)extra_error);
-                goto finish;
+            err = glGetError();
+            if (err != GL_NO_ERROR) {
+                TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                              (unsigned)err);
+                test_success = GL_FALSE;
+                return;
             }
-            if (program == 0)
-            {
+            if (program == 0) {
                 TEST_LOG_FAIL(test_case, test_procedure, "%s", "Could not create program");
-                goto finish;
+                test_success = GL_FALSE;
+                return;
             }
             glAttachShader(program, shader);
             glLinkProgram(program);
             glGetProgramiv(program, GL_LINK_STATUS, &linked);
-            actual_error = glGetError();
-            extra_error = glGetError();
-            if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-            {
-                TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                              "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                              (unsigned)extra_error);
-                goto finish;
+            err = glGetError();
+            if (err != GL_NO_ERROR) {
+                TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                              (unsigned)err);
+                test_success = GL_FALSE;
+                return;
             }
-            if (linked != GL_TRUE)
-            {
+            if (linked != GL_TRUE) {
                 glGetProgramInfoLog(program, sizeof(info_log), NULL, info_log);
                 TEST_LOG_FAIL(test_case, test_procedure, "Program link failed: %s", info_log);
-                goto finish;
+                test_success = GL_FALSE;
+                return;
             }
             glDetachShader(program, shader);
             glDeleteShader(shader);
             shader = 0;
-            actual_error = glGetError();
-            extra_error = glGetError();
-            if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-            {
-                TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                              "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                              (unsigned)extra_error);
-                goto finish;
+            err = glGetError();
+            if (err != GL_NO_ERROR) {
+                TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                              (unsigned)err);
+                test_success = GL_FALSE;
+                return;
             }
         }
-        if (program == 0)
-        {
+        if (program == 0) {
             TEST_LOG_FAIL(test_case, test_procedure, "%s", "Program link failed");
-            goto finish;
+            test_success = GL_FALSE;
+            return;
         }
         GLuint block = glGetProgramResourceIndex(program, GL_SHADER_STORAGE_BLOCK, "Payload");
-        actual_error = glGetError();
-        extra_error = glGetError();
-        if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-        {
-            TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                          "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                          (unsigned)extra_error);
-            goto finish;
+        err = glGetError();
+        if (err != GL_NO_ERROR) {
+            TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                          (unsigned)err);
+            test_success = GL_FALSE;
+            return;
         }
-        if (block == GL_INVALID_INDEX)
-        {
+        if (block == GL_INVALID_INDEX) {
             TEST_LOG_FAIL(test_case, test_procedure, "%s", "Active storage block missing");
-            goto finish;
+            test_success = GL_FALSE;
+            return;
         }
         glGetProgramResourceiv(program, GL_SHADER_STORAGE_BLOCK, block, 1, &property, 1, NULL,
                                &binding);
-        actual_error = glGetError();
-        extra_error = glGetError();
-        if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-        {
-            TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                          "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                          (unsigned)extra_error);
-            goto finish;
+        err = glGetError();
+        if (err != GL_NO_ERROR) {
+            TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                          (unsigned)err);
+            test_success = GL_FALSE;
+            return;
         }
-        if (!(binding == (i == 0 ? 1 : 0)))
-        {
+        if (!(binding == (i == 0 ? 1 : 0))) {
             TEST_LOG_FAIL(test_case, test_procedure, "%s",
                           "Linked block binding differs from explicit/default binding");
-            goto finish;
+            test_success = GL_FALSE;
+            return;
         }
         glDeleteProgram(program);
         program = 0;
-        actual_error = glGetError();
-        extra_error = glGetError();
-        if (actual_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-        {
-            TEST_LOG_FAIL(test_case, test_procedure, "%s (expected 0x%x, got 0x%x, extra 0x%x)",
-                          "Unexpected GL error", (unsigned)GL_NO_ERROR, (unsigned)actual_error,
-                          (unsigned)extra_error);
-            goto finish;
+        err = glGetError();
+        if (err != GL_NO_ERROR) {
+            TEST_LOG_FAIL(test_case, test_procedure, "Expected GL_NO_ERROR, got: 0x%x",
+                          (unsigned)err);
+            test_success = GL_FALSE;
+            return;
         }
     }
 
-    test_result = 1;
-finish:
-    /* Release test-owned GL objects while the harness context is still current. */
+    if (test_success) {
+        TEST_LOG_SUCCESS(test_case, test_procedure);
+    }
+}
+
+/* Draw */
+void GS_GLES31_CS_BBB_TP_009_draw(void) {}
+
+/* Cleanup */
+void GS_GLES31_CS_BBB_TP_009_close(void) {
+    CHECK_GL_ERROR(test_case, test_procedure, test_success);
     glUseProgram(0);
     if (shader != 0)
         glDeleteShader(shader);
     if (program != 0)
         glDeleteProgram(program);
-    {
-        GLenum cleanup_error = glGetError();
-        GLenum extra_error = glGetError();
-        if (cleanup_error != GL_NO_ERROR || extra_error != GL_NO_ERROR)
-        {
-            cleanup_ok = 0;
-            TEST_LOG_FAIL(test_case, test_procedure, "Cleanup GL error: 0x%x / 0x%x",
-                          (unsigned)cleanup_error, (unsigned)extra_error);
-        }
+    shader = 0;
+    program = 0;
+    GLenum err = glGetError();
+    if (err != GL_NO_ERROR) {
+        TEST_LOG_FAIL(test_case, test_procedure, "Cleanup error: 0x%x", (unsigned)err);
+        test_success = GL_FALSE;
     }
-    if (!cleanup_ok)
-        test_result = 0;
-    if (test_result == 1)
-        TEST_LOG_SUCCESS(test_case, test_procedure);
+    CHECK_GL_ERROR(test_case, test_procedure, test_success);
 }
-void GS_GLES31_CS_BBB_TP_009_draw(void) {}
-/* init releases resources on both success and failure; repeated close is harmless. */
-void GS_GLES31_CS_BBB_TP_009_close(void) {}
-int GS_GLES31_CS_BBB_TP_009_result(void) { return test_result; }
