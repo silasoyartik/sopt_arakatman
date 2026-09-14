@@ -1,23 +1,30 @@
-# glDispatchCompute testleri
+﻿# glDispatchCompute testleri
 
-Ortak dosyaların görevleri, fonksiyonlar ve örnek TP için
-[test helper rehberine](../../README_helpers.md) bakın.
+On TP'nin tamamı ortak helper kullanmadan çalışır. Yalnızca GLES API başlığı
+ve loglama için `../../macros.h` kullanılır. Shader derleme/link, program ve
+SSBO oluşturma, dispatch, hata/çıktı kontrolü ve kaynak temizliği doğrudan
+ilgili TP'nin `init()` ve `close()` fonksiyonlarındadır.
 
-TP dosyaları shader senaryosunu, dispatch parametrelerini, beklenen hata ve
-çıktı kontrollerini içerir. Ortam, kaynak sahipliği, shader derleme/link,
-SSBO okuma ve sonuç raporlama `../../helpers_gles31.c` içindedir.
+## Runner ve yaşam döngüsü
 
-Derlemeye **`helpers_gles31.c` ve tek bir platform uygulaması** eklenmelidir.
-Referans platform `helpers_gles31_glfw.c` dosyasıdır; hedef platform aynı
-environment arayüzünü EGL veya kendi API'siyle uygulayabilir. GLAD1 kullanımı
-için `GS_GLES31_USE_GLAD1` tanımlanır ve depodaki `glad.c` derlenir.
-Başlık artık uygulama gövdelerini içermediği için yalnızca include etmek
-bağlama için yeterli değildir.
+Runner, `init()` öncesinde GLES 3.1 veya üzeri context oluşturmalı, çağıran
+thread'de current yapmalı ve gerekiyorsa GL giriş noktalarını yüklemelidir.
+Context kurulumu bu TP'lerde yapılmaz; GLFW veya EGL backend'i TP'lere bağlı
+değildir. Runner başlangıç GL hata durumunu temiz tutmalıdır.
 
-Her TP sırayla `init()`, `draw()`, `close()` olarak çağrılır. `draw()` boştur;
-test `init()` içinde yapılır. Başarısız setup dahil her koşudan sonra `close()`
-çağrılmalıdır. Aynı süreçte sonraki `init()` sonuçları yeniden başlatır.
-Referans GLFW ortamı tek aktif fixture varsayar; TP'ler sırayla çalıştırılır.
+Her TP için `init() -> draw() -> close()` sırası kullanılır. Test `init()`
+içindedir; `draw()` boştur. Başarısız setup sonrasında da `close()` aynı
+context current iken çağrılır. TP yalnızca kendi oluşturduğu GL nesnelerini
+siler; context'i kapatmaz. `close()` tekrar çağrılabilir; bir koşu kapatıldıktan
+sonra yeni `init()` önceki sonuçları taşımadan çalışır. Aynı TP'nin eşzamanlı
+koşuları desteklenmez.
+
+TP'ler program/pipeline ve kullandıkları SSBO bağlarını değiştirir. TP010
+binding 0 ve 1'i, diğer SSBO kullanan testler binding 0'ı kullanır. Önceki
+bağlar saklanıp geri yüklenmez; sonraki TP/runner kendi durumunu kurmalıdır.
+Bir context üzerinde TP'ler sırayla çalıştırılır; numara sırasına bağımlılık yoktur.
+
+## HLR kapsamı
 
 | TP | GS-GLES31-CS-DC HLR son eki | Senaryo |
 | --- | --- | --- |
@@ -35,26 +42,39 @@ Referans GLFW ortamı tek aktif fixture varsayar; TP'ler sırayla çalıştırı
 001 ve 002'nin dosya adlarındaki `GS_GL43C` öneki eski addır; içerikleri ve
 dış fonksiyonları `GS_GLES31_CS_DC_TP_001/002` olarak GLES 3.1 kullanır.
 
-## GPU gerektirmeyen altyapı kontrolü
+## Derleme
 
-`tests/gles31_helpers_test.c` sonuçların yeniden başlatılmasını, hata
-yalıtımını, barrier/map/unmap başarısızlıklarını, program durumunu ve kısmi
-kurulumun temizlenmesini GLAD stub'larıyla kontrol eder. Shader yürütmesini
-veya sürücü uyumluluğunu doğrulamaz. Testin bilerek ürettiği FAIL mesajları
-beklenir; başarılı bitişte son mesaj `GLES31 helper regression checks passed`
-ve süreç çıkış kodu sıfırdır. On TP de aynı executable'a bağlanarak mükerrer
-dış fonksiyon tanımları denetlenir.
+Tüm TP kaynakları aynı API/loader seçimiyle derlenir:
 
-Depo kökünden PowerShell ve GCC ile:
+| Seçim | API başlığı |
+| --- | --- |
+| `GS_GLES31_USE_GLAD1` | `<glad/glad.h>`; depodaki GLAD1 paketi |
+| `GS_GLES31_USE_GLAD2` | `<glad/gles2.h>`; hedefin GLES 3.1 GLAD2 paketi |
+| İkisi de tanımsız | `<GLES3/gl31.h>`; hedef SDK'nın GLES 3.1 API'si |
+
+İki GLAD seçeneği birlikte tanımlanamaz. GLAD kullanıldığında runner yüklemeyi
+current context üzerinde, ilk `init()` çağrısından önce yapmalıdır.
+`helpers_gles31.c` ve `helpers_gles31_glfw.c` bu TP'ler için derlemeye eklenmez.
+Gerçek executable, TP kaynakları + runner + seçilen loader/GLES ve runner'ın
+platform kütüphaneleriyle bağlanır. Bu klasör bir `main()` sağlamaz.
+
+Depo kökünde PowerShell/GCC ile GPU gerektirmeyen sözdizimi kontrolü:
 
 ```powershell
-New-Item -ItemType Directory -Force build/gles31 | Out-Null
 $tpSources = @(Get-ChildItem 'HLR+TP/TP/ComputeShader/glDispatchCompute/*.c' | ForEach-Object FullName)
-gcc '-Iothers (for Compute)/include' -c 'others (for Compute)/glad.c' -o build/gles31/glad.o
-gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -DGS_GLES31_USE_GLAD1 '-Iothers (for Compute)/include' tests/gles31_helpers_test.c 'HLR+TP/TP/helpers_gles31.c' @tpSources build/gles31/glad.o -o build/gles31/helpers_test.exe
-./build/gles31/helpers_test.exe
+gcc -std=c11 -Wall -Wextra -Wpedantic -Werror -DGS_GLES31_USE_GLAD1 '-Iothers (for Compute)/include' -fsyntax-only @tpSources
+gcc -m32 -std=c11 -Wall -Wextra -Wpedantic -Werror -DGS_GLES31_USE_GLAD1 '-Iothers (for Compute)/include' -fsyntax-only @tpSources
 ```
 
-Bu stub testine GLFW platform dosyası eklenmez; environment fonksiyonlarını
-test dosyası sağlar. Gerçek TP çalıştırması için stub dosyası yerine hedef
-platform ve `init/draw/close` çağrılarını yapan test runner kullanılır.
+## Doğrulama sınırı
+
+Derleme veya sahte GL cevaplarıyla yapılan kontrol, shader'ın gerçek GPU'da
+çalıştığını kanıtlamaz. HLR doğrulaması için TP'ler hedef GLES sürücüsünde
+çalıştırılmalıdır. Hatasız dispatch tek başına pozitif testleri geçirmez;
+TP001–004 ve TP010 gerçek buffer çıktısını kontrol eder. TP009 önce çalışan
+bir pozitif kontrol ister, ardından sıfır X/Y/Z dispatch'lerini sınar.
+TP008, Y başarısız olsa da Z senaryosunu çalıştırır ve ayrı TC sonuçları üretir.
+
+`tests/gles31_helpers_test.c`, eski helper modülünü sınayan ayrı bir testtir;
+bu helpersız TP'leri çalıştırmaz veya doğrulamaz. Helper dokümantasyonu ve
+onun regresyon komutu [helper rehberinde](../../README_helpers.md) bulunur.
