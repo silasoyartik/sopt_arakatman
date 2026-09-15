@@ -1,5 +1,3 @@
-#include <string.h>
-
 #if defined(GS_GLES31_USE_GLAD1) && defined(GS_GLES31_USE_GLAD2)
 #error "Select only one GLAD loader."
 #elif defined(GS_GLES31_USE_GLAD1)
@@ -47,82 +45,21 @@ static const char *fragment_shader_source =
     "    fragmentColor = vec4(1.0);\n"
     "}\n";
 
-
 void GS_GLES31_CS_DC_TP_006_init(void)
 {
-    const GLubyte *version;
-    GLint major = 0, minor = 0;
     GLenum error;
     GLboolean success = GL_FALSE;
     const char *failure = "Test setup did not complete";
     GLint status = GL_FALSE;
-    GLint active_program = 0, active_pipeline = 0;
     char info_log[512] = {0};
     const GLenum stages[] = {GL_VERTEX_SHADER, GL_FRAGMENT_SHADER};
     const char *sources[] = {vertex_shader_source, fragment_shader_source};
-    GLint limits[3] = {0, 0, 0};
     GLuint index;
-
-    if (shaders[0] != 0 || shaders[1] != 0 || program != 0)
-    {
-        failure = "Previous run must be closed before init is called again";
-        goto report;
-    }
-
-#if defined(GS_GLES31_USE_GLAD1) || defined(GS_GLES31_USE_GLAD2)
-    if (glAttachShader == NULL ||
-        glBindProgramPipeline == NULL ||
-        glCompileShader == NULL ||
-        glCreateProgram == NULL ||
-        glCreateShader == NULL ||
-        glDeleteProgram == NULL ||
-        glDeleteShader == NULL ||
-        glDispatchCompute == NULL ||
-        glGetError == NULL ||
-        glGetIntegeri_v == NULL ||
-        glGetIntegerv == NULL ||
-        glGetProgramInfoLog == NULL ||
-        glGetProgramiv == NULL ||
-        glGetShaderInfoLog == NULL ||
-        glGetShaderiv == NULL ||
-        glGetString == NULL ||
-        glLinkProgram == NULL ||
-        glShaderSource == NULL ||
-        glUseProgram == NULL)
-    {
-        failure = "Runner has not loaded all required GLES entry points";
-        goto report;
-    }
-#endif
-
-    version = glGetString(GL_VERSION);
-    if (version == NULL || strncmp((const char *)version, "OpenGL ES ", 10) != 0)
-    {
-        failure = "Runner must provide a current OpenGL ES context";
-        goto report;
-    }
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
-    error = glGetError();
-    if (error != GL_NO_ERROR || major < 3 || (major == 3 && minor < 1))
-    {
-        failure = "GLES 3.1 or later and a clean initial GL error state are required";
-        goto report;
-    }
-
-    for (index = 0; index < 3; ++index)
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, index, &limits[index]);
-    if (glGetError() != GL_NO_ERROR || limits[0] < (GLint)(1) ||
-        limits[1] < (GLint)(1) || limits[2] < (GLint)(1))
-    {
-        failure = "Could not establish valid dispatch limits";
-        goto report;
-    }
 
     for (index = 0; index < 2; ++index)
     {
         shaders[index] = glCreateShader(stages[index]);
-        if (glGetError() != GL_NO_ERROR || shaders[index] == 0)
+        if (shaders[index] == 0)
         {
             failure = "Could not create a graphics shader";
             goto report;
@@ -131,7 +68,7 @@ void GS_GLES31_CS_DC_TP_006_init(void)
         glCompileShader(shaders[index]);
         status = GL_FALSE;
         glGetShaderiv(shaders[index], GL_COMPILE_STATUS, &status);
-        if (glGetError() != GL_NO_ERROR || status != GL_TRUE)
+        if (status != GL_TRUE)
         {
             glGetShaderInfoLog(shaders[index], (GLsizei)sizeof(info_log), NULL, info_log);
             TEST_LOG_INFO("Graphics shader %u: %s", index, info_log);
@@ -140,7 +77,7 @@ void GS_GLES31_CS_DC_TP_006_init(void)
         }
     }
     program = glCreateProgram();
-    if (glGetError() != GL_NO_ERROR || program == 0)
+    if (program == 0)
     {
         failure = "Could not create the graphics program";
         goto report;
@@ -149,7 +86,7 @@ void GS_GLES31_CS_DC_TP_006_init(void)
     glAttachShader(program, shaders[1]);
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &status);
-    if (glGetError() != GL_NO_ERROR || status != GL_TRUE)
+    if (status != GL_TRUE)
     {
         glGetProgramInfoLog(program, (GLsizei)sizeof(info_log), NULL, info_log);
         TEST_LOG_INFO("Graphics-only program linking: %s", info_log);
@@ -159,10 +96,7 @@ void GS_GLES31_CS_DC_TP_006_init(void)
 
     glBindProgramPipeline(0);
     glUseProgram(program);
-    glGetIntegerv(GL_CURRENT_PROGRAM, &active_program);
-    glGetIntegerv(GL_PROGRAM_PIPELINE_BINDING, &active_pipeline);
-    if (glGetError() != GL_NO_ERROR || (GLuint)active_program != program ||
-        active_pipeline != 0)
+    if (glGetError() != GL_NO_ERROR)
     {
         failure = "The linked graphics-only program could not be made active";
         goto report;
@@ -193,7 +127,6 @@ void GS_GLES31_CS_DC_TP_006_draw(void) {}
 
 void GS_GLES31_CS_DC_TP_006_close(void)
 {
-    GLenum error;
     GLuint index;
     if (program == 0 && shaders[0] == 0 && shaders[1] == 0)
         return;
@@ -211,6 +144,4 @@ void GS_GLES31_CS_DC_TP_006_close(void)
             shaders[index] = 0;
         }
     }
-    while ((error = glGetError()) != GL_NO_ERROR)
-        TEST_LOG_FAIL(test_case, test_procedure, "GL error during cleanup: 0x%x", error);
 }

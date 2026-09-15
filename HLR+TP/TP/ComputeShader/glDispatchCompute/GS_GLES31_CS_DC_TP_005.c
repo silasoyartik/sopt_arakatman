@@ -1,5 +1,3 @@
-#include <string.h>
-
 #if defined(GS_GLES31_USE_GLAD1) && defined(GS_GLES31_USE_GLAD2)
 #error "Select only one GLAD loader."
 #elif defined(GS_GLES31_USE_GLAD1)
@@ -30,62 +28,15 @@
 static const char *test_case = "GS_GLES31_CS_DC_TC_003";
 static const char *test_procedure = "GS_GLES31_CS_DC_TP_005";
 
-
 void GS_GLES31_CS_DC_TP_005_init(void)
 {
-    const GLubyte *version;
-    GLint major = 0, minor = 0;
     GLenum error;
     GLboolean success = GL_FALSE;
     const char *failure = "Test setup did not complete";
-    GLint active_program = 0, active_pipeline = 0;
-    GLint limits[3] = {0, 0, 0};
-    GLuint index;
-
-#if defined(GS_GLES31_USE_GLAD1) || defined(GS_GLES31_USE_GLAD2)
-    if (glBindProgramPipeline == NULL ||
-        glDispatchCompute == NULL ||
-        glGetError == NULL ||
-        glGetIntegeri_v == NULL ||
-        glGetIntegerv == NULL ||
-        glGetString == NULL ||
-        glUseProgram == NULL)
-    {
-        failure = "Runner has not loaded all required GLES entry points";
-        goto report;
-    }
-#endif
-
-    version = glGetString(GL_VERSION);
-    if (version == NULL || strncmp((const char *)version, "OpenGL ES ", 10) != 0)
-    {
-        failure = "Runner must provide a current OpenGL ES context";
-        goto report;
-    }
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
-    error = glGetError();
-    if (error != GL_NO_ERROR || major < 3 || (major == 3 && minor < 1))
-    {
-        failure = "GLES 3.1 or later and a clean initial GL error state are required";
-        goto report;
-    }
-
-    for (index = 0; index < 3; ++index)
-        glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, index, &limits[index]);
-    if (glGetError() != GL_NO_ERROR || limits[0] < (GLint)(1) ||
-        limits[1] < (GLint)(1) || limits[2] < (GLint)(1))
-    {
-        failure = "Could not establish valid dispatch limits";
-        goto report;
-    }
 
     glBindProgramPipeline(0);
     glUseProgram(0);
-    glGetIntegerv(GL_CURRENT_PROGRAM, &active_program);
-    glGetIntegerv(GL_PROGRAM_PIPELINE_BINDING, &active_pipeline);
-    if (glGetError() != GL_NO_ERROR || active_program != 0 ||
-        active_pipeline != 0)
+    if (glGetError() != GL_NO_ERROR)
     {
         failure = "Could not clear the active program and pipeline";
         goto report;

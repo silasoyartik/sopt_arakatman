@@ -10,7 +10,9 @@ ilgili TP'nin `init()` ve `close()` fonksiyonlarındadır.
 Runner, `init()` öncesinde GLES 3.1 veya üzeri context oluşturmalı, çağıran
 thread'de current yapmalı ve gerekiyorsa GL giriş noktalarını yüklemelidir.
 Context kurulumu bu TP'lerde yapılmaz; GLFW veya EGL backend'i TP'lere bağlı
-değildir. Runner başlangıç GL hata durumunu temiz tutmalıdır.
+değildir. Runner başlangıç GL hata durumunu temiz tutmalıdır. Context sürümü
+ve gerekli GL fonksiyonlarının yüklenmiş olması runner tarafından doğrulanır;
+TP'lerde bu platform kontrolleri tekrarlanmaz.
 
 Her TP için `init() -> draw() -> close()` sırası kullanılır. Test `init()`
 içindedir; `draw()` boştur. Başarısız setup sonrasında da `close()` aynı
@@ -39,8 +41,24 @@ Bir context üzerinde TP'ler sırayla çalıştırılır; numara sırasına bağ
 | 009 | 008 | Pozitif kontrol ardından her eksende sıfır dispatch |
 | 010 | 012 | İki farklı SSBO giriş/çıkış çiftiyle binding, okuma ve yazma |
 
-001 ve 002'nin dosya adlarındaki `GS_GL43C` öneki eski addır; içerikleri ve
-dış fonksiyonları `GS_GLES31_CS_DC_TP_001/002` olarak GLES 3.1 kullanır.
+Dosya adları ve dış fonksiyonlar `GS_GLES31_CS_DC_TP_001`–`010` biçimindedir.
+
+## Hata kontrolleri
+
+Her GL çağrısından sonra ayrı hata bloğu kullanılmaz. Shader/program nesnesi,
+derleme/link sonucu ve buffer nesnesi kontrolleri başarısız kurulumda testi
+durdurur. Kurulum çağrılarının GL hataları, dispatch öncesindeki kontrol
+noktalarında alınır; böylece kurulum hatası beklenen dispatch hatası sanılmaz.
+
+Dispatch sonrasındaki hata karşılaştırmaları testin parçasıdır ve korunur.
+Buffer okuyan TP'lerde barrier/map işlemlerinin ortak hata kontrolü, NULL
+mapping kontrolü ve unmap sonucu da korunur. Aksi halde okunamayan veya
+geçersiz veri üzerinden SUCCESS raporlanabilir.
+
+Sabit küçük dispatch sayıları için limit sorgusu tekrarlanmaz. TP007/008'de
+limitin bir fazlasını sınamak için gereken sorgular, TP003'te yerel grup
+boyutu sorgusu ve tüm beklenen çıktı kontrolleri kalır. `close()` yalnızca
+kaynak temizliği yapar; TP'lerde `main()` veya context oluşturma kodu yoktur.
 
 ## Derleme
 
