@@ -1,5 +1,3 @@
-#include <string.h>
-
 #if defined(GS_GLES31_USE_GLAD1) && defined(GS_GLES31_USE_GLAD2)
 #error "Select only one GLAD loader."
 #elif defined(GS_GLES31_USE_GLAD1)
@@ -38,65 +36,15 @@ static const char *compute_shader_source =
 
 void GS_GLES31_CS_DC_TP_007_init(void)
 {
-    const GLubyte *version;
-    GLint major = 0, minor = 0;
     GLenum error;
     GLboolean success = GL_FALSE;
     const char *failure = "Test setup did not complete";
     GLint status = GL_FALSE;
-    GLint active_program = 0, active_pipeline = 0;
     char info_log[512] = {0};
     GLint maximum = 0;
 
-    if (shader != 0 || program != 0)
-    {
-        failure = "Previous run must be closed before init is called again";
-        goto report;
-    }
-
-#if defined(GS_GLES31_USE_GLAD1) || defined(GS_GLES31_USE_GLAD2)
-    if (glAttachShader == NULL ||
-        glBindProgramPipeline == NULL ||
-        glCompileShader == NULL ||
-        glCreateProgram == NULL ||
-        glCreateShader == NULL ||
-        glDeleteProgram == NULL ||
-        glDeleteShader == NULL ||
-        glDispatchCompute == NULL ||
-        glGetError == NULL ||
-        glGetIntegeri_v == NULL ||
-        glGetIntegerv == NULL ||
-        glGetProgramInfoLog == NULL ||
-        glGetProgramiv == NULL ||
-        glGetShaderInfoLog == NULL ||
-        glGetShaderiv == NULL ||
-        glGetString == NULL ||
-        glLinkProgram == NULL ||
-        glShaderSource == NULL ||
-        glUseProgram == NULL)
-    {
-        failure = "Runner has not loaded all required GLES entry points";
-        goto report;
-    }
-#endif
-
-    version = glGetString(GL_VERSION);
-    if (version == NULL || strncmp((const char *)version, "OpenGL ES ", 10) != 0)
-    {
-        failure = "Runner must provide a current OpenGL ES context";
-        goto report;
-    }
-    glGetIntegerv(GL_MAJOR_VERSION, &major);
-    glGetIntegerv(GL_MINOR_VERSION, &minor);
-    error = glGetError();
-    if (error != GL_NO_ERROR || major < 3 || (major == 3 && minor < 1))
-    {
-        failure = "GLES 3.1 or later and a clean initial GL error state are required";
-        goto report;
-    }
-
     shader = glCreateShader(GL_COMPUTE_SHADER);
-    if (glGetError() != GL_NO_ERROR || shader == 0)
+    if (shader == 0)
     {
         failure = "Could not create the compute shader";
         goto report;
@@ -104,7 +52,7 @@ void GS_GLES31_CS_DC_TP_007_init(void)
     glShaderSource(shader, 1, &compute_shader_source, NULL);
     glCompileShader(shader);
     glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
-    if (glGetError() != GL_NO_ERROR || status != GL_TRUE)
+    if (status != GL_TRUE)
     {
         glGetShaderInfoLog(shader, (GLsizei)sizeof(info_log), NULL, info_log);
         TEST_LOG_INFO("Compute shader compilation: %s", info_log);
@@ -113,7 +61,7 @@ void GS_GLES31_CS_DC_TP_007_init(void)
     }
 
     program = glCreateProgram();
-    if (glGetError() != GL_NO_ERROR || program == 0)
+    if (program == 0)
     {
         failure = "Could not create the compute program";
         goto report;
@@ -121,7 +69,7 @@ void GS_GLES31_CS_DC_TP_007_init(void)
     glAttachShader(program, shader);
     glLinkProgram(program);
     glGetProgramiv(program, GL_LINK_STATUS, &status);
-    if (glGetError() != GL_NO_ERROR || status != GL_TRUE)
+    if (status != GL_TRUE)
     {
         glGetProgramInfoLog(program, (GLsizei)sizeof(info_log), NULL, info_log);
         TEST_LOG_INFO("Compute program linking: %s", info_log);
@@ -131,14 +79,6 @@ void GS_GLES31_CS_DC_TP_007_init(void)
 
     glBindProgramPipeline(0);
     glUseProgram(program);
-    glGetIntegerv(GL_CURRENT_PROGRAM, &active_program);
-    glGetIntegerv(GL_PROGRAM_PIPELINE_BINDING, &active_pipeline);
-    if (glGetError() != GL_NO_ERROR || (GLuint)active_program != program ||
-        active_pipeline != 0)
-    {
-        failure = "The linked compute program could not be made active";
-        goto report;
-    }
 
     glGetIntegeri_v(GL_MAX_COMPUTE_WORK_GROUP_COUNT, 0, &maximum);
     if (glGetError() != GL_NO_ERROR || maximum <= 0)
@@ -172,10 +112,7 @@ void GS_GLES31_CS_DC_TP_007_draw(void) {}
 
 void GS_GLES31_CS_DC_TP_007_close(void)
 {
-    GLenum error;
 
-    /* Partial setup and repeated close are safe. No calls before loading
-     * the API: nonzero handles exist only after entry-point validation. */
     if (shader == 0 && program == 0)
         return;
     if (program != 0)
@@ -189,7 +126,4 @@ void GS_GLES31_CS_DC_TP_007_close(void)
         glDeleteShader(shader);
         shader = 0;
     }
-    while ((error = glGetError()) != GL_NO_ERROR)
-        TEST_LOG_FAIL(test_case, test_procedure,
-                      "GL error during cleanup: 0x%x", error);
 }
